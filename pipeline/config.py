@@ -52,6 +52,37 @@ WS_RECONNECT_MAX_DELAY = 60.0
 HTTP_TIMEOUT = 30.0              # httpx timeout in seconds
 
 # ---------------------------------------------------------------------------
+# Phase 2: User/wallet data polling intervals
+# ---------------------------------------------------------------------------
+LEADERBOARD_SYNC_INTERVAL = 3600       # 1 hour
+HOLDER_SYNC_INTERVAL = 900              # 15 minutes
+POSITION_SYNC_INTERVAL = 300            # 5 minutes
+PROFILE_ENRICH_INTERVAL = 600           # 10 minutes (batch enrichment cycle)
+
+# Phase 2: Tuning
+LEADERBOARD_MAX_RESULTS = 200           # Top N per category/period/order combo
+HOLDER_SYNC_TOP_MARKETS = 50            # Top N markets by volume for holder tracking
+TRACKED_WALLET_MAX = 500                # Max wallets to track positions for
+PROFILE_BATCH_SIZE = 20                 # Wallets per profile enrichment cycle
+
+# ---------------------------------------------------------------------------
+# Phase 3: Advanced analytics intervals
+# ---------------------------------------------------------------------------
+ARBITRAGE_SCAN_INTERVAL = 120           # 2 minutes
+WALLET_ANALYZE_INTERVAL = 1800          # 30 minutes
+SIGNAL_COMPOSITE_INTERVAL = 300         # 5 minutes
+
+# Phase 3: Tuning
+ARB_FEE_THRESHOLD = 0.02               # Min |sum - 1.0| to flag as arbitrage
+ARB_RELATED_MARKET_THRESHOLD = 0.05    # Min pricing inconsistency for related markets
+CLUSTER_TIME_WINDOW = 60               # Seconds: trades within this window are "synchronized"
+CLUSTER_MIN_OVERLAP = 3                # Min shared markets to consider clustering
+CLUSTER_MIN_SIMILARITY = 0.6           # Min similarity score to form a cluster
+INSIDER_FRESHNESS_DAYS = 30            # Wallet age below this is "fresh"
+INSIDER_WIN_RATE_THRESHOLD = 0.75      # Win rate above this in niche markets is suspicious
+COMPOSITE_TOP_MARKETS = 500            # Compute composite signals for top N markets by volume
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 HEALTH_CHECK_PORT = int(os.environ.get("HEALTH_CHECK_PORT", "8080"))

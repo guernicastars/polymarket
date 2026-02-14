@@ -1,4 +1,4 @@
-"""Schema migration — reads the SQL file and runs it against ClickHouse."""
+"""Schema migration — reads SQL files and runs them against ClickHouse."""
 
 from __future__ import annotations
 
@@ -9,17 +9,20 @@ from pipeline.clickhouse_writer import ClickHouseWriter
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_FILE = Path(__file__).parent / "schema" / "001_init.sql"
+SCHEMA_DIR = Path(__file__).parent / "schema"
+SCHEMA_FILES = ["001_init.sql", "002_phase2_users.sql", "003_phase3_analytics.sql"]
 
 
 def run_migration() -> None:
-    """Execute the full schema migration against ClickHouse Cloud."""
+    """Execute all schema migrations against ClickHouse Cloud."""
     writer = ClickHouseWriter.get_instance()
 
-    if not SCHEMA_FILE.exists():
-        logger.warning("migration_skip", extra={"reason": "no schema file"})
-        return
+    for schema_file in SCHEMA_FILES:
+        schema_path = SCHEMA_DIR / schema_file
+        if not schema_path.exists():
+            logger.warning("migration_skip", extra={"file": schema_file, "reason": "not found"})
+            continue
 
-    sql = SCHEMA_FILE.read_text()
-    writer.run_migration(sql)
-    logger.info("migration_applied", extra={"file": str(SCHEMA_FILE)})
+        sql = schema_path.read_text()
+        writer.run_migration(sql)
+        logger.info("migration_applied", extra={"file": schema_file})

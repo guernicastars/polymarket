@@ -6,6 +6,8 @@ import {
   TrendingUp,
   BarChart3,
   Zap,
+  Users,
+  Brain,
 } from "lucide-react";
 import "./globals.css";
 
@@ -28,7 +30,9 @@ const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/#markets", label: "Markets", icon: BarChart3 },
   { href: "/#trending", label: "Trending", icon: TrendingUp },
-  { href: "/#movers", label: "Signals", icon: Zap },
+  { href: "/signals", label: "Signals", icon: Zap },
+  { href: "/whales", label: "Whales", icon: Users },
+  { href: "/analytics", label: "Analytics", icon: Brain },
 ];
 
 export default function RootLayout({

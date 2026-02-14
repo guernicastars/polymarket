@@ -52,6 +52,71 @@ TABLE_COLUMNS: dict[str, list[str]] = {
     "market_events": [
         "condition_id", "event_type", "event_data", "event_time",
     ],
+    # Phase 2: User/wallet tables
+    "trader_rankings": [
+        "proxy_wallet", "user_name", "profile_image",
+        "rank", "category", "time_period", "order_by",
+        "pnl", "volume",
+        "verified_badge", "x_username",
+        "snapshot_time",
+    ],
+    "market_holders": [
+        "condition_id", "token_id",
+        "proxy_wallet", "pseudonym", "profile_image", "outcome_index",
+        "amount",
+        "snapshot_time",
+    ],
+    "wallet_positions": [
+        "proxy_wallet", "condition_id", "asset", "outcome", "outcome_index",
+        "size", "avg_price", "initial_value", "current_value", "cur_price",
+        "cash_pnl", "percent_pnl", "realized_pnl",
+        "title", "market_slug", "end_date",
+        "updated_at",
+    ],
+    "wallet_activity": [
+        "proxy_wallet", "condition_id", "asset",
+        "activity_type", "side", "outcome", "outcome_index",
+        "size", "usdc_size", "price",
+        "transaction_hash",
+        "title", "market_slug",
+        "timestamp",
+    ],
+    "trader_profiles": [
+        "proxy_wallet", "pseudonym", "name", "bio", "profile_image",
+        "x_username", "verified_badge",
+        "display_username_public", "profile_created_at",
+        "discovered_via", "first_seen_at", "updated_at",
+    ],
+    # Phase 3: Advanced analytics tables
+    "arbitrage_opportunities": [
+        "condition_id", "event_slug",
+        "arb_type", "expected_sum", "actual_sum", "spread", "fee_threshold",
+        "related_condition_ids", "description",
+        "status",
+        "detected_at", "resolved_at", "updated_at",
+    ],
+    "wallet_clusters": [
+        "cluster_id",
+        "wallets", "size",
+        "similarity_score", "timing_corr", "market_overlap", "direction_agreement",
+        "common_markets", "label",
+        "created_at", "updated_at",
+    ],
+    "insider_scores": [
+        "proxy_wallet",
+        "score",
+        "factors",
+        "freshness_score", "win_rate_score", "niche_score", "size_score", "timing_score",
+        "computed_at",
+    ],
+    "composite_signals": [
+        "condition_id",
+        "score", "confidence",
+        "components",
+        "obi_score", "volume_score", "trade_bias_score", "momentum_score",
+        "smart_money_score", "concentration_score", "arbitrage_flag", "insider_activity",
+        "computed_at",
+    ],
 }
 
 
@@ -140,6 +205,37 @@ class ClickHouseWriter:
 
     async def write_events(self, rows: list[list[Any]]) -> None:
         await self.write("market_events", rows)
+
+    # Phase 2 convenience helpers
+
+    async def write_rankings(self, rows: list[list[Any]]) -> None:
+        await self.write("trader_rankings", rows)
+
+    async def write_holders(self, rows: list[list[Any]]) -> None:
+        await self.write("market_holders", rows)
+
+    async def write_positions(self, rows: list[list[Any]]) -> None:
+        await self.write("wallet_positions", rows)
+
+    async def write_activity(self, rows: list[list[Any]]) -> None:
+        await self.write("wallet_activity", rows)
+
+    async def write_profiles(self, rows: list[list[Any]]) -> None:
+        await self.write("trader_profiles", rows)
+
+    # Phase 3 convenience helpers
+
+    async def write_arbitrage(self, rows: list[list[Any]]) -> None:
+        await self.write("arbitrage_opportunities", rows)
+
+    async def write_clusters(self, rows: list[list[Any]]) -> None:
+        await self.write("wallet_clusters", rows)
+
+    async def write_insider_scores(self, rows: list[list[Any]]) -> None:
+        await self.write("insider_scores", rows)
+
+    async def write_composite_signals(self, rows: list[list[Any]]) -> None:
+        await self.write("composite_signals", rows)
 
     # ------------------------------------------------------------------
     # Internal

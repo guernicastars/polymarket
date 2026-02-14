@@ -10,6 +10,9 @@ from pipeline.clickhouse_writer import ClickHouseWriter
 
 logger = logging.getLogger(__name__)
 
+# Module-level list of active condition IDs sorted by volume (updated each sync)
+active_condition_ids: list[str] = []
+
 
 async def run_market_sync() -> list[str]:
     """Fetch all active events/markets and upsert into the markets table.
@@ -75,6 +78,13 @@ async def run_market_sync() -> list[str]:
 
             if m["resolved"]:
                 resolved_count += 1
+
+        # Update module-level condition IDs for Phase 2 holder sync
+        global active_condition_ids
+        active_condition_ids = [
+            m["condition_id"] for m in markets
+            if m["active"] and not m["closed"]
+        ]
 
         if rows:
             await writer.write_markets(rows)

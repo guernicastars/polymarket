@@ -8,10 +8,12 @@ import {
   getMarketDetail,
   getMarketPriceHistory,
   getMarketTrades,
+  getTopHolders,
 } from "@/lib/queries";
 import { formatUSD, formatPrice } from "@/lib/format";
 import { PriceChart, PriceChartSkeleton } from "@/components/price-chart";
 import { TradesTable } from "@/components/trades-table";
+import { TopHoldersTable } from "@/components/top-holders-table";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +24,11 @@ interface MarketPageProps {
 export default async function MarketPage({ params }: MarketPageProps) {
   const { id } = await params;
 
-  const [market, priceHistory, trades] = await Promise.all([
+  const [market, priceHistory, trades, holders] = await Promise.all([
     getMarketDetail(id),
     getMarketPriceHistory(id, "Yes", "1m"),
     getMarketTrades(id, 50),
+    getTopHolders(id, 20),
   ]);
 
   if (!market) {
@@ -207,6 +210,18 @@ export default async function MarketPage({ params }: MarketPageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Holders */}
+      {holders.length > 0 && (
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-base">Top Holders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TopHoldersTable data={holders} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
