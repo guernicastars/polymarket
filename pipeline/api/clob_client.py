@@ -39,18 +39,26 @@ class ClobClient:
         """POST /prices for multiple tokens.
 
         Returns {token_id: {"BUY": "0.65", "SELL": "0.35"}, ...}.
-        Batches into groups of PRICE_BATCH_SIZE.
+        Batches into groups of PRICE_BATCH_SIZE, with up to 5 concurrent requests.
         """
         result: dict[str, dict[str, str]] = {}
-        for batch in _chunks(token_ids, PRICE_BATCH_SIZE):
-            body = [{"token_id": tid, "side": "BUY"} for tid in batch]
-            try:
-                resp = await self._client.post("/prices", json=body)
-                resp.raise_for_status()
-                result.update(resp.json())
-            except Exception:
-                logger.warning("fetch_prices_error", exc_info=True)
-            await asyncio.sleep(_RATE_LIMIT_SLEEP)
+        sem = asyncio.Semaphore(5)
+
+        async def _fetch_batch(batch: list[str]) -> dict:
+            async with sem:
+                body = [{"token_id": tid, "side": "BUY"} for tid in batch]
+                try:
+                    resp = await self._client.post("/prices", json=body)
+                    resp.raise_for_status()
+                    return resp.json()
+                except Exception:
+                    logger.warning("fetch_prices_error", exc_info=True)
+                    return {}
+
+        tasks = [_fetch_batch(batch) for batch in _chunks(token_ids, PRICE_BATCH_SIZE)]
+        results = await asyncio.gather(*tasks)
+        for r in results:
+            result.update(r)
         return result
 
     async def fetch_midpoints(
@@ -74,15 +82,23 @@ class ClobClient:
     ) -> dict[str, str]:
         """POST /spreads.  Returns {token_id: "0.02", ...}."""
         result: dict[str, str] = {}
-        for batch in _chunks(token_ids, PRICE_BATCH_SIZE):
-            body = [{"token_id": tid} for tid in batch]
-            try:
-                resp = await self._client.post("/spreads", json=body)
-                resp.raise_for_status()
-                result.update(resp.json())
-            except Exception:
-                logger.warning("fetch_spreads_error", exc_info=True)
-            await asyncio.sleep(_RATE_LIMIT_SLEEP)
+        sem = asyncio.Semaphore(5)
+
+        async def _fetch_batch(batch: list[str]) -> dict:
+            async with sem:
+                body = [{"token_id": tid} for tid in batch]
+                try:
+                    resp = await self._client.post("/spreads", json=body)
+                    resp.raise_for_status()
+                    return resp.json()
+                except Exception:
+                    logger.warning("fetch_spreads_error", exc_info=True)
+                    return {}
+
+        tasks = [_fetch_batch(batch) for batch in _chunks(token_ids, PRICE_BATCH_SIZE)]
+        results = await asyncio.gather(*tasks)
+        for r in results:
+            result.update(r)
         return result
 
     # ------------------------------------------------------------------

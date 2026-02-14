@@ -16,7 +16,9 @@ from pipeline.config import (
     MARKET_SYNC_INTERVAL,
     ORDERBOOK_INTERVAL,
     PRICE_POLL_INTERVAL,
+    PRICE_POLL_MAX_TOKENS,
     TRADE_COLLECT_INTERVAL,
+    WS_MAX_TOTAL_TOKENS,
 )
 from pipeline.api.ws_client import WebSocketClient
 from pipeline.jobs.market_sync import run_market_sync
@@ -49,10 +51,18 @@ class PipelineScheduler:
             logger.error("initial_sync_failed", exc_info=True)
             self._active_token_ids = []
 
-        # Start WebSocket listener
+        # Start WebSocket listener (limited to top tokens by volume)
         self._ws_client = WebSocketClient(callback=self._ws_callback)
-        if self._active_token_ids:
-            await self._ws_client.start(self._active_token_ids)
+        ws_tokens = self._active_token_ids[:WS_MAX_TOTAL_TOKENS]
+        if ws_tokens:
+            await self._ws_client.start(ws_tokens)
+            logger.info(
+                "ws_tokens_limited",
+                extra={
+                    "total_active": len(self._active_token_ids),
+                    "ws_subscribed": len(ws_tokens),
+                },
+            )
 
         # Register scheduled jobs
         self._scheduler.add_job(
@@ -137,18 +147,24 @@ class PipelineScheduler:
             token_ids = await run_market_sync()
             if token_ids != self._active_token_ids:
                 self._active_token_ids = token_ids
+                ws_tokens = token_ids[:WS_MAX_TOTAL_TOKENS]
                 if self._ws_client:
-                    await self._ws_client.update_subscriptions(token_ids)
+                    await self._ws_client.update_subscriptions(ws_tokens)
                 logger.info(
                     "token_list_updated",
-                    extra={"count": len(token_ids)},
+                    extra={
+                        "total": len(token_ids),
+                        "ws_subscribed": len(ws_tokens),
+                    },
                 )
         except Exception:
             logger.error("market_sync_error", exc_info=True)
 
     async def _job_price_poller(self) -> None:
         try:
-            await run_price_poller(self._active_token_ids)
+            # Only poll top-N tokens; WS covers the rest in real-time
+            poll_tokens = self._active_token_ids[:PRICE_POLL_MAX_TOKENS]
+            await run_price_poller(poll_tokens)
         except Exception:
             logger.error("price_poller_error", exc_info=True)
 

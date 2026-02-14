@@ -29,6 +29,10 @@ async def run_market_sync() -> list[str]:
         resolved_count = 0
         new_count = 0
 
+        # Sort by 24h volume descending so the most active tokens come first
+        # when we collect token IDs — this lets downstream jobs slice top-N.
+        markets.sort(key=lambda m: m["volume_24h"], reverse=True)
+
         for m in markets:
             row = [
                 m["condition_id"],
@@ -65,6 +69,7 @@ async def run_market_sync() -> list[str]:
             rows.append(row)
 
             # Collect active token IDs for downstream polling
+            # (ordered by volume since markets are sorted above)
             if m["active"] and not m["closed"]:
                 active_token_ids.extend(m["token_ids"])
 

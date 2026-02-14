@@ -42,9 +42,11 @@ WRITER_BASE_BACKOFF = 1.0        # Seconds, doubles per retry
 # ---------------------------------------------------------------------------
 # API client settings
 # ---------------------------------------------------------------------------
-PRICE_BATCH_SIZE = 50            # Tokens per POST /prices call
+PRICE_BATCH_SIZE = 100           # Tokens per POST /prices call
+PRICE_POLL_MAX_TOKENS = 1000    # Only poll top N tokens (by volume) for prices
 ORDERBOOK_TOP_N = 100            # Top N markets by volume for orderbook snapshots
 WS_MAX_TOKENS_PER_CONN = 500    # Max instruments per WebSocket connection
+WS_MAX_TOTAL_TOKENS = 5000      # Limit WebSocket to top N tokens by volume
 WS_RECONNECT_BASE_DELAY = 1.0   # Seconds, doubles per retry
 WS_RECONNECT_MAX_DELAY = 60.0
 HTTP_TIMEOUT = 30.0              # httpx timeout in seconds
