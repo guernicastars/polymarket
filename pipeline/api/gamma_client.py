@@ -106,7 +106,7 @@ class GammaClient:
             "event_slug": event.get("slug", ""),
             "neg_risk": 1 if m.get("negRisk") else 0,
             # Classification
-            "category": event.get("category") or "",
+            "category": tags[0] if tags else "",
             "tags": tags,
             "outcomes": outcomes,
             "outcome_prices": outcome_prices,
