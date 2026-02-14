@@ -25,9 +25,7 @@ export function MarketTable({ initialData }: MarketTableProps) {
   const router = useRouter();
   const { data: markets } = useSWR<MarketRow[]>("/api/markets?limit=50", fetcher, {
     fallbackData: initialData,
-    refreshInterval: 10_000,
-    revalidateOnFocus: true,
-    dedupingInterval: 5_000,
+    revalidateOnFocus: false,
   });
 
   if (!markets || markets.length === 0) {

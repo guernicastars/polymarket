@@ -65,7 +65,7 @@ export function PriceChart({ conditionId, initialData }: PriceChartProps) {
 
   const { data: bars } = useSWR<OHLCVBar[]>(apiUrl, fetcher, {
     fallbackData: initialData,
-    refreshInterval: 30_000,
+    revalidateOnFocus: false,
   });
 
   const initChart = useCallback(() => {

@@ -6,11 +6,5 @@
       "runtime": "nodejs20.x",
       "maxDuration": 30
     }
-  },
-  "crons": [
-    {
-      "path": "/api/markets?limit=1",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  }
 }
