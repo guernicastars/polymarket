@@ -33,36 +33,22 @@ export async function getTopMarkets(limit = 50): Promise<MarketRow[]> {
 
 export async function getTopMovers(limit = 20): Promise<TopMover[]> {
   return query<TopMover>(
-    `WITH current_prices AS (
-      SELECT
-        condition_id,
-        outcome,
-        argMax(price, timestamp) AS current_price
-      FROM market_prices
-      WHERE timestamp >= now() - INTERVAL 1 HOUR
-      GROUP BY condition_id, outcome
-    ),
-    previous_prices AS (
-      SELECT
-        condition_id,
-        outcome,
-        argMax(price, timestamp) AS prev_price
-      FROM market_prices
-      WHERE timestamp BETWEEN now() - INTERVAL 25 HOUR AND now() - INTERVAL 24 HOUR
-      GROUP BY condition_id, outcome
-    )
-    SELECT
-      c.condition_id,
-      m.question,
-      c.outcome,
-      c.current_price,
-      p.prev_price,
-      c.current_price - p.prev_price AS price_change,
-      (c.current_price - p.prev_price) / p.prev_price * 100 AS pct_change
-    FROM current_prices c
-    JOIN previous_prices p ON c.condition_id = p.condition_id AND c.outcome = p.outcome
-    LEFT JOIN (SELECT condition_id, question FROM markets FINAL) AS m ON c.condition_id = m.condition_id
-    WHERE p.prev_price > 0.05
+    `SELECT
+      condition_id,
+      question,
+      'Yes' AS outcome,
+      outcome_prices[1] AS current_price,
+      outcome_prices[1] - one_day_price_change AS prev_price,
+      one_day_price_change AS price_change,
+      if(abs(outcome_prices[1] - one_day_price_change) > 0.001,
+         one_day_price_change / (outcome_prices[1] - one_day_price_change) * 100,
+         0) AS pct_change
+    FROM markets FINAL
+    WHERE active = 1
+      AND closed = 0
+      AND abs(one_day_price_change) > 0.001
+      AND outcome_prices[1] > 0.05
+      AND (outcome_prices[1] - one_day_price_change) > 0.05
     ORDER BY abs(pct_change) DESC
     LIMIT {limit:UInt32}`,
     { limit }
@@ -73,42 +59,19 @@ export async function getTrendingMarkets(
   limit = 20
 ): Promise<TrendingMarket[]> {
   return query<TrendingMarket>(
-    `WITH recent AS (
-      SELECT
-        condition_id,
-        sum(size) AS volume_1h
-      FROM market_trades
-      WHERE timestamp >= now() - INTERVAL 1 HOUR
-      GROUP BY condition_id
-    ),
-    baseline AS (
-      SELECT
-        condition_id,
-        sum(size) / 24 AS avg_hourly_volume
-      FROM market_trades
-      WHERE timestamp BETWEEN now() - INTERVAL 25 HOUR AND now() - INTERVAL 1 HOUR
-      GROUP BY condition_id
-    ),
-    latest AS (
-      SELECT
-        condition_id,
-        argMax(price, timestamp) AS current_price
-      FROM market_prices
-      WHERE timestamp >= now() - INTERVAL 1 HOUR
-      GROUP BY condition_id
-    )
-    SELECT
-      r.condition_id,
-      m.question,
-      r.volume_1h,
-      b.avg_hourly_volume,
-      r.volume_1h / greatest(b.avg_hourly_volume, 0.01) AS volume_ratio,
-      l.current_price
-    FROM recent r
-    JOIN baseline b ON r.condition_id = b.condition_id
-    LEFT JOIN latest l ON r.condition_id = l.condition_id
-    LEFT JOIN (SELECT condition_id, question FROM markets FINAL) AS m ON r.condition_id = m.condition_id
-    WHERE b.avg_hourly_volume > 0
+    `SELECT
+      condition_id,
+      question,
+      volume_24h AS volume_1h,
+      volume_1wk / 7 AS avg_hourly_volume,
+      volume_24h / greatest(volume_1wk / 7, 0.01) AS volume_ratio,
+      outcome_prices[1] AS current_price
+    FROM markets FINAL
+    WHERE active = 1
+      AND closed = 0
+      AND volume_1wk > 0
+      AND volume_24h > 0
+      AND volume_24h / (volume_1wk / 7) > 1.5
     ORDER BY volume_ratio DESC
     LIMIT {limit:UInt32}`,
     { limit }
@@ -246,7 +209,8 @@ export async function getOverviewStats(): Promise<OverviewStats> {
       count() AS total_markets,
       countIf(active = 1 AND closed = 0) AS active_markets,
       sum(volume_24h) AS total_volume_24h,
-      0 AS trending_count
+      countIf(active = 1 AND closed = 0 AND volume_1wk > 0 AND volume_24h > 0
+              AND volume_24h / (volume_1wk / 7) > 1.5) AS trending_count
     FROM markets FINAL`
   );
   return rows[0] ?? {
