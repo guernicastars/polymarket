@@ -99,9 +99,9 @@ Next.js 16 + React 19 server components querying ClickHouse Cloud directly, depl
 - ClickHouse `FINAL` cannot be used directly in JOINs — must wrap in subquery: `JOIN (SELECT ... FROM markets FINAL) AS m`
 
 **Key files:**
-- `dashboard/src/lib/queries.ts` — All ClickHouse queries (29 named functions: 10 market, 5 signal, 8 whale, 6 analytics)
+- `dashboard/src/lib/queries.ts` — All ClickHouse queries (27 named functions: 10 market, 5 signal, 7 whale, 5 analytics)
 - `dashboard/src/lib/clickhouse.ts` — Singleton ClickHouse client
-- `dashboard/src/types/market.ts` — All TypeScript interfaces (9 Phase 1 + 9 Phase 2 + 5 Phase 3 types)
+- `dashboard/src/types/market.ts` — All TypeScript interfaces (29 total: 12 base + 5 Phase 1 + 7 Phase 2 + 5 Phase 3)
 - `dashboard/src/components/price-chart.tsx` — TradingView chart with candlestick + volume
 - `dashboard/src/components/signals-stats-cards.tsx` — Signal count stat cards
 - `dashboard/src/components/signals-tabs.tsx` — Tab wrapper for Composite / OBI / Volume / Large Trades tables
@@ -237,9 +237,122 @@ New tables: `arbitrage_opportunities`, `wallet_clusters`, `insider_scores`, `com
 
 Dashboard `/analytics` page with 5 stats cards (open arbitrages, wallet clusters, insider alerts, markets scored, avg confidence) and 4 tabbed views (Composite Scores, Arbitrage, Clusters, Insider). `/signals` page enhanced with Composite tab. Sidebar navigation includes Analytics link.
 
-**System totals:** 11 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3), 3 schema files (14 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 29 query functions.
+**System totals:** 11 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3), 3 schema files (14 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components.
+
+## Research & Planning
+
+Research and design documents are stored in version control for reference:
+
+### Research (.research/)
+- `r1-apis.md` — Polymarket public API user endpoints (8 endpoints documented with params/responses)
+- `r2-blockchain.md` — On-chain tracking via Polygon (smart contracts, OrderFilled events, The Graph subgraphs, Dune Analytics)
+- `r3-volumes.md` — Per-user volume/trading metrics (Data API, Goldsky subgraphs, computable metrics)
+- `r4-tools.md` — Existing tracking tools audit (30+ commercial tools, open-source repos, Telegram bots)
+- `r5-signals.md` — Analytics opportunities and signal roadmap (8 signal categories, 3-phase plan)
+
+### Design Specs (.planning/)
+- `phase1-spec.md` — Phase 1 design: signal queries from existing data (no DDL changes)
+- `phase2-spec.md` — Phase 2 design: Data API client, 4 pipeline jobs, 5 tables, /whales page
+- `phase3-spec.md` — Phase 3 design: 3 analytics jobs, 4 tables, /analytics page, composite engine
+
+## Polymarket API Reference
+
+All public endpoints used by the pipeline (no auth required for reads):
+
+### Gamma API (`https://gamma-api.polymarket.com`)
+| Endpoint | Pipeline Job | Purpose |
+|----------|-------------|---------|
+| `GET /events?closed=false&limit=500&offset=N` | market_sync | Fetch all active events + markets |
+| `GET /public-profile?address={wallet}` | profile_enricher | User profile (pseudonym, bio, X handle) |
+
+### CLOB API (`https://clob.polymarket.com`)
+| Endpoint | Pipeline Job | Purpose |
+|----------|-------------|---------|
+| `POST /prices` (body: token IDs) | price_poller | Current bid/ask/mid prices |
+| `GET /book?token_id={id}` | orderbook_snapshot | L2 orderbook depth |
+
+### Data API (`https://data-api.polymarket.com`)
+| Endpoint | Pipeline Job | Purpose |
+|----------|-------------|---------|
+| `GET /trades?market={id}&limit=500` | trade_collector | Recent trades by market |
+| `GET /v1/leaderboard?category=X&timePeriod=Y&orderBy=Z&limit=50&offset=N` | leaderboard_sync | Trader rankings |
+| `GET /positions?user={wallet}&limit=500` | position_sync | Wallet positions with PnL |
+| `GET /activity?user={wallet}&start=T&limit=500` | position_sync | Wallet trade/activity history |
+| `GET /holders?market={conditionId}&limit=20` | holder_sync | Top holders per market |
+| `GET /value?user={wallet}` | (available, not polled) | Portfolio value |
+
+### WebSocket (`wss://ws-subscriptions-clob.polymarket.com/ws/market`)
+| Event | Pipeline Job | Purpose |
+|-------|-------------|---------|
+| `price_change` | ws_listener | Real-time price updates |
+| `trade` | ws_listener | Real-time trade events |
+
+## Config Reference (pipeline/config.py)
+
+### Intervals
+| Constant | Value | Job |
+|----------|-------|-----|
+| `MARKET_SYNC_INTERVAL` | 300s (5 min) | market_sync |
+| `PRICE_POLL_INTERVAL` | 30s | price_poller |
+| `TRADE_COLLECT_INTERVAL` | 60s | trade_collector |
+| `ORDERBOOK_INTERVAL` | 60s | orderbook_snapshot |
+| `LEADERBOARD_SYNC_INTERVAL` | 3600s (1 hr) | leaderboard_sync |
+| `HOLDER_SYNC_INTERVAL` | 900s (15 min) | holder_sync |
+| `POSITION_SYNC_INTERVAL` | 300s (5 min) | position_sync |
+| `PROFILE_ENRICH_INTERVAL` | 600s (10 min) | profile_enricher |
+| `ARBITRAGE_SCAN_INTERVAL` | 120s (2 min) | arbitrage_scanner |
+| `WALLET_ANALYZE_INTERVAL` | 1800s (30 min) | wallet_analyzer |
+| `SIGNAL_COMPOSITE_INTERVAL` | 300s (5 min) | signal_compositor |
+
+### Tuning Parameters
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `PRICE_POLL_MAX_TOKENS` | 1000 | Top N tokens for price polling |
+| `WS_MAX_TOTAL_TOKENS` | 5000 | Max tokens across all WS connections |
+| `PRICE_BATCH_SIZE` | 100 | Tokens per price API call |
+| `ORDERBOOK_TOP_N` | 100 | Markets for orderbook snapshots |
+| `LEADERBOARD_MAX_RESULTS` | 200 | Top N per leaderboard combo |
+| `HOLDER_SYNC_TOP_MARKETS` | 50 | Markets for holder tracking |
+| `TRACKED_WALLET_MAX` | 500 | Max wallets for position polling |
+| `PROFILE_BATCH_SIZE` | 20 | Wallets per enrichment cycle |
+| `ARB_FEE_THRESHOLD` | 0.02 | Min sum-to-one deviation to flag |
+| `CLUSTER_MIN_SIMILARITY` | 0.6 | Min similarity for wallet clustering |
+| `INSIDER_FRESHNESS_DAYS` | 30 | Wallet age threshold for "fresh" |
+| `INSIDER_WIN_RATE_THRESHOLD` | 0.75 | Suspicious win rate threshold |
+| `COMPOSITE_TOP_MARKETS` | 500 | Markets for composite scoring |
+
+### Composite Signal Weights
+| Component | Weight | Source |
+|-----------|--------|--------|
+| Smart Money | 0.25 | wallet_activity + trader_rankings |
+| OBI | 0.20 | orderbook_snapshots |
+| Large Trade Bias | 0.15 | market_trades |
+| Momentum | 0.15 | markets.one_day_price_change |
+| Volume Anomaly | 0.10 | market_trades + markets |
+| Concentration Risk | 0.10 | market_holders |
+| Insider Activity | 0.05 | insider_scores + wallet_activity |
+
+## Dashboard Components
+
+### Overview Page (`/`)
+`stats-cards.tsx`, `market-table.tsx`, `top-movers.tsx`, `trending-markets.tsx`, `category-breakdown.tsx`
+
+### Market Detail (`/market/[id]`)
+`price-chart.tsx` (TradingView Lightweight Charts v5), `trades-table.tsx`, `top-holders-table.tsx`
+
+### Signals Page (`/signals`)
+`signals-stats-cards.tsx`, `signals-tabs.tsx` (Composite / OBI / Volume / Large Trades), `composite-signals-table.tsx`, `obi-signals-table.tsx`, `volume-anomalies-table.tsx`, `large-trades-table.tsx`
+
+### Whales Page (`/whales`)
+`whales-stats-cards.tsx`, `whales-tabs.tsx` (Leaderboard / Activity / Smart Money / Concentration), `leaderboard-table.tsx`, `whale-activity-table.tsx`, `smart-money-table.tsx`, `concentration-table.tsx`
+
+### Analytics Page (`/analytics`)
+`analytics-stats-cards.tsx`, `analytics-tabs.tsx` (Composite / Arbitrage / Clusters / Insider), `composite-signals-table.tsx`, `arbitrage-table.tsx`, `wallet-clusters-table.tsx`, `insider-alerts-table.tsx`
 
 ## Known Issues
 - WebSocket connections 0-3 reconnect every ~10s (Polymarket server-side idle timeout)
 - `vercel.json` must NOT have a `runtime` field (causes build error)
 - Dashboard queries use Gamma API pre-computed fields (one_day_price_change, volume_24h/1wk/1mo) — accumulated pipeline data will supplement as history builds
+- Wallet clustering capped at 200 wallets pairwise (O(n^2) constraint) — may miss clusters among lower-activity wallets
+- Insider `timing_score` is a placeholder (0.0) until resolution/news event timestamps are tracked
+- Phase 3 jobs READ from ClickHouse via synchronous `clickhouse_connect` wrapped in `asyncio.to_thread()` — different pattern from Phase 1/2 jobs that only write
