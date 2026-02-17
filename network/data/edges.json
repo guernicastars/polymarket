@@ -1,0 +1,76 @@
+[
+  {"source": "dnipro", "target": "pavlohrad", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 80, "description": "M04 highway — primary supply artery"},
+  {"source": "dnipro", "target": "pavlohrad", "edge_type": "RAIL", "weight": 0.2, "capacity": 1.0, "distance_km": 85, "description": "Main rail line Dnipro-Pavlohrad"},
+  {"source": "pavlohrad", "target": "pokrovsk", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.9, "distance_km": 100, "description": "M04 highway continuation to Pokrovsk"},
+  {"source": "pavlohrad", "target": "pokrovsk", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 110, "description": "Rail line to Pokrovsk junction"},
+
+  {"source": "pokrovsk", "target": "myrnohrad", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 15, "description": "Short connector road"},
+  {"source": "pokrovsk", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.7, "capacity": 0.5, "distance_km": 20, "description": "Road to Selydove (now RU)"},
+  {"source": "pokrovsk", "target": "hryshyne", "edge_type": "SECONDARY_ROAD", "weight": 0.8, "capacity": 0.4, "distance_km": 18, "is_frontline": true, "description": "Contested approach road"},
+  {"source": "myrnohrad", "target": "ocheretyne", "edge_type": "SECONDARY_ROAD", "weight": 0.9, "capacity": 0.3, "distance_km": 25, "is_frontline": true, "description": "Frontline road"},
+
+  {"source": "pokrovsk", "target": "kostiantynivka", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.8, "distance_km": 55, "description": "Northern supply route"},
+  {"source": "pokrovsk", "target": "druzhkivka", "edge_type": "RAIL", "weight": 0.4, "capacity": 0.7, "distance_km": 60, "description": "Rail connection north"},
+
+  {"source": "kramatorsk", "target": "sloviansk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 15, "description": "Twin cities connector"},
+  {"source": "kramatorsk", "target": "druzhkivka", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 18, "description": "Kramatorsk-Druzhkivka road"},
+  {"source": "kramatorsk", "target": "kostiantynivka", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 25, "description": "Southern connector"},
+  {"source": "kramatorsk", "target": "siversk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.6, "distance_km": 40, "description": "Road to eastern defense line"},
+  {"source": "kramatorsk", "target": "lyman", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 35, "description": "Northern axis road"},
+
+  {"source": "sloviansk", "target": "lyman", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 25, "description": "Road to Lyman"},
+  {"source": "sloviansk", "target": "izium", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 45, "description": "Road to Izium via Donets river"},
+
+  {"source": "lyman", "target": "siversk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 30, "description": "Lyman-Siversk connector"},
+  {"source": "lyman", "target": "borova", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "Road east along Oskil"},
+  {"source": "lyman", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Active frontline zone"},
+
+  {"source": "siversk", "target": "lysychansk", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 15, "is_frontline": true, "description": "Frontline crossing"},
+  {"source": "siversk", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 25, "is_frontline": true, "description": "Luhansk frontline"},
+
+  {"source": "kostiantynivka", "target": "chasiv_yar", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 20, "description": "Road to Chasiv Yar"},
+  {"source": "kostiantynivka", "target": "toretsk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 18, "description": "Road to Toretsk"},
+
+  {"source": "chasiv_yar", "target": "bakhmut", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 8, "is_frontline": true, "description": "Chasiv Yar-Bakhmut frontline"},
+  {"source": "toretsk", "target": "horlivka", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 12, "is_frontline": true, "description": "Toretsk-Horlivka frontline"},
+  {"source": "toretsk", "target": "chasiv_yar", "edge_type": "SECONDARY_ROAD", "weight": 0.7, "capacity": 0.5, "distance_km": 22, "description": "Lateral connector"},
+
+  {"source": "bakhmut", "target": "horlivka", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.8, "distance_km": 35, "description": "RU-controlled road"},
+  {"source": "bakhmut", "target": "lysychansk", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 40, "description": "RU supply route north"},
+  {"source": "bakhmut", "target": "severodonetsk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.6, "distance_km": 50, "description": "RU lateral supply"},
+
+  {"source": "horlivka", "target": "donetsk_city", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 30, "description": "RU interior highway"},
+  {"source": "donetsk_city", "target": "makiivka", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 15, "description": "Twin cities (RU)"},
+  {"source": "donetsk_city", "target": "avdiivka", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 15, "description": "Donetsk-Avdiivka road"},
+  {"source": "donetsk_city", "target": "marinka", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 20, "description": "Donetsk-Marinka road"},
+
+  {"source": "avdiivka", "target": "ocheretyne", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 15, "description": "RU advance axis"},
+  {"source": "avdiivka", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "RU advance westward"},
+  {"source": "selydove", "target": "kurakhove", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 20, "description": "RU southern axis"},
+  {"source": "kurakhove", "target": "marinka", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "RU connector"},
+  {"source": "kurakhove", "target": "vuhledar", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.4, "distance_km": 30, "description": "Southern Donetsk road"},
+  {"source": "hryshyne", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.8, "capacity": 0.3, "distance_km": 12, "is_frontline": true, "description": "Contested zone"},
+
+  {"source": "izium", "target": "borova", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 30, "description": "Izium-Borova road"},
+  {"source": "izium", "target": "kupiansk", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 60, "description": "Road to Kupiansk via P79"},
+  {"source": "kupiansk", "target": "oskil", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 25, "description": "Oskil river road"},
+  {"source": "kupiansk", "target": "svatove", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 30, "is_frontline": true, "description": "Kupiansk-Svatove frontline"},
+  {"source": "borova", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Borova-Kreminna frontline"},
+  {"source": "borova", "target": "svatove", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 40, "is_frontline": true, "description": "Northern Luhansk front"},
+
+  {"source": "kreminna", "target": "svatove", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 45, "description": "RU supply road"},
+  {"source": "kreminna", "target": "lysychansk", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 20, "description": "RU road"},
+  {"source": "lysychansk", "target": "severodonetsk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 8, "description": "Twin cities (RU)"},
+  {"source": "severodonetsk", "target": "luhansk_city", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.9, "distance_km": 90, "description": "RU interior road"},
+
+  {"source": "zaporizhzhia", "target": "orikhiv", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 40, "description": "Zap-Orikhiv highway"},
+  {"source": "zaporizhzhia", "target": "hulyaipole", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 60, "description": "Road to Hulyaipole"},
+  {"source": "zaporizhzhia", "target": "nikopol", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 70, "description": "Dnipro river road"},
+  {"source": "zaporizhzhia", "target": "dnipro", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 85, "description": "Zap-Dnipro highway"},
+  {"source": "orikhiv", "target": "polohy", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 15, "is_frontline": true, "description": "Southern frontline"},
+  {"source": "orikhiv", "target": "hulyaipole", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "Lateral road"},
+  {"source": "hulyaipole", "target": "polohy", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Southern frontline"},
+  {"source": "polohy", "target": "tokmak", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 30, "description": "RU supply route"},
+  {"source": "tokmak", "target": "melitopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 55, "description": "RU main supply road"},
+  {"source": "nikopol", "target": "enerhodar", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 10, "is_frontline": true, "description": "Across Dnipro river"}
+]

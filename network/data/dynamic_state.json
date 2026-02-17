@@ -1,0 +1,15 @@
+[
+  {"settlement_id": "pokrovsk", "assault_intensity": 0.7, "shelling_intensity": 0.8, "supply_disruption": 0.2, "frontline_distance_km": 8, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "chasiv_yar", "assault_intensity": 0.8, "shelling_intensity": 0.9, "supply_disruption": 0.3, "frontline_distance_km": 2, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "toretsk", "assault_intensity": 0.7, "shelling_intensity": 0.8, "supply_disruption": 0.3, "frontline_distance_km": 3, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "kupiansk", "assault_intensity": 0.5, "shelling_intensity": 0.6, "supply_disruption": 0.1, "frontline_distance_km": 15, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "orikhiv", "assault_intensity": 0.3, "shelling_intensity": 0.5, "supply_disruption": 0.1, "frontline_distance_km": 5, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "hryshyne", "control_override": "CONTESTED", "assault_intensity": 0.9, "shelling_intensity": 0.9, "supply_disruption": 0.5, "frontline_distance_km": 0, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "myrnohrad", "control_override": "CONTESTED", "assault_intensity": 0.6, "shelling_intensity": 0.7, "supply_disruption": 0.2, "frontline_distance_km": 5, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "kramatorsk", "assault_intensity": 0.1, "shelling_intensity": 0.4, "supply_disruption": 0.0, "frontline_distance_km": 30, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "sloviansk", "assault_intensity": 0.1, "shelling_intensity": 0.3, "supply_disruption": 0.0, "frontline_distance_km": 35, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "siversk", "assault_intensity": 0.4, "shelling_intensity": 0.6, "supply_disruption": 0.1, "frontline_distance_km": 5, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "lyman", "assault_intensity": 0.3, "shelling_intensity": 0.5, "supply_disruption": 0.1, "frontline_distance_km": 10, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "zaporizhzhia", "assault_intensity": 0.0, "shelling_intensity": 0.2, "supply_disruption": 0.0, "frontline_distance_km": 40, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "kostiantynivka", "assault_intensity": 0.2, "shelling_intensity": 0.5, "supply_disruption": 0.1, "frontline_distance_km": 15, "last_updated": "2026-02-17T00:00:00Z"}
+]

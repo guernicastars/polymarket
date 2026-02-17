@@ -1,0 +1,44 @@
+{
+  "pokrovsk": {
+    "slug": "will-russia-capture-pokrovsk",
+    "description": "Will Russia capture Pokrovsk by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "chasiv_yar": {
+    "slug": "will-russia-capture-chasiv-yar",
+    "description": "Will Russia capture Chasiv Yar by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "toretsk": {
+    "slug": "will-russia-capture-toretsk",
+    "description": "Will Russia capture Toretsk by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "kupiansk": {
+    "slug": "will-russia-capture-kupiansk",
+    "description": "Will Russia capture Kupiansk by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "zaporizhzhia": {
+    "slug": "will-russia-capture-zaporizhzhia",
+    "description": "Will Russia capture Zaporizhzhia by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "orikhiv": {
+    "slug": "will-russia-capture-orikhiv",
+    "description": "Will Russia capture Orikhiv by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  },
+  "hryshyne": {
+    "slug": "will-russia-capture-hryshyne",
+    "description": "Will Russia capture Hryshyne by end of 2026?",
+    "condition_id": null,
+    "token_id": null
+  }
+}
