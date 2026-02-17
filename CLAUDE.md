@@ -349,6 +349,65 @@ All public endpoints used by the pipeline (no auth required for reads):
 ### Analytics Page (`/analytics`)
 `analytics-stats-cards.tsx`, `analytics-tabs.tsx` (Composite / Arbitrage / Clusters / Insider), `composite-signals-table.tsx`, `arbitrage-table.tsx`, `wallet-clusters-table.tsx`, `insider-alerts-table.tsx`
 
+### Network Module (network/)
+Donbas settlement graph model + GNN-TCN temporal prediction model for Polymarket conflict markets.
+
+**Core Graph (network/core/):**
+- `graph.py` — 40-node Donbas multigraph (NetworkX), loads from JSON seed data
+- `types.py` — Data classes: Settlement, Edge, DynamicState, VulnerabilityScore, MarketSignal
+- `metrics.py` — Graph metrics: betweenness, articulation points, bridges
+
+**Signal Analyzers (network/signals/):**
+- `vulnerability.py` — 7-component vulnerability scoring (connectivity, supply, terrain, fortification, assault, frontline, force balance)
+- `supply_chain.py` — Supply chain analysis from Dnipro: shortest paths, redundancy, min-cut
+- `cascade.py` — Cascade simulation: what happens if a settlement falls
+- `market_signal.py` — Trading signals: model probability vs market price, Kelly criterion sizing
+
+**GNN-TCN Model (network/gnn/) — Phase 4:**
+Temporal Graph Neural Network for market prediction, following Anastasiia's 12-feature TCN architecture.
+
+- `config.py` — All hyperparameters: FeatureConfig (12 features, 64-step window, 5-min steps), ModelConfig (GAT + TCN + prediction head), BacktestConfig (Sharpe, hurdle, Kelly)
+- `model.py` — GNN-TCN architecture: Graph Attention Network (4-head, 32-dim) → Temporal Convolutional Network (4 layers, dilation [1,2,4,8], RF=61) → FC prediction head. Includes `PlattScaling` post-hoc calibration.
+- `features.py` — 12-feature extractor from ClickHouse: log returns, high-low spread, MA distance, bid-ask spread, OBI, depth ratio, volume delta, OI change, sentiment (smart money proxy), news velocity, inverse TTL, correlation delta
+- `dataset.py` — Temporal graph dataset: ClickHouse → (N_nodes, window_size, 12_features) tensors + adjacency matrix
+- `backtest.py` — Backtesting engine: dynamic hurdle rate (market impact), Kelly criterion sizing, walk-forward evaluation with 200ms latency + 0.5% spread. Metrics: Sharpe, max drawdown, win rate, profit factor, Calmar ratio.
+- `train.py` — Training loop with early stopping, cosine LR scheduler, gradient clipping. Modes: train, backtest, predict. CLI: `python -m network.gnn.train`
+- `inference.py` — Production inference: load model → extract features → predict → write to ClickHouse `gnn_predictions` table
+
+**12 Features (Anastasiia's spec):**
+| # | Feature | Source |
+|---|---------|--------|
+| F1 | Log Returns | market_prices |
+| F2 | High-Low Spread | market_prices |
+| F3 | Distance from MA | market_prices (SMA-12) |
+| F4 | Bid-Ask Spread | orderbook_snapshots |
+| F5 | Order Book Imbalance | orderbook_snapshots |
+| F6 | Depth Ratio (spoof detection) | orderbook_snapshots |
+| F7 | Volume Delta | market_trades |
+| F8 | Open Interest Change | market_holders |
+| F9 | Sentiment Score | composite_signals.smart_money_score |
+| F10 | News Velocity | market_trades (large trades count) |
+| F11 | Inverse Time to Expiry | markets.end_date |
+| F12 | Correlation Delta | sibling market prices |
+
+**Data (network/data/):**
+- `settlements.json` — 40 Donbas nodes (original)
+- `settlements_ukraine.json` — 67 nodes (full Ukraine + Russian staging + Crimea)
+- `edges.json` / `edges_ukraine.json` — Graph edges (highway, rail, frontline, supply)
+- `timeline.json` — 19 conflict timeline events (Feb 2022 → Feb 2025) with control changes
+- `dynamic_state.json` — OSINT overlay (assault intensity, shelling, supply disruption)
+- `polymarket_mapping.json` — 7 PM target settlements → market slugs
+
+**Visualization (network/viz/):**
+- `donbas-network.html` — Leaflet.js map of Donbas region with network overlay
+- `ukraine-network.html` — Full Ukraine map with temporal slider (19 events), Russian logistics, Crimea, 67 nodes
+
+**Schema (pipeline/schema/):**
+- `004_network.sql` — 4 tables: network_vulnerability, network_supply_risk, network_cascade_scenarios, network_signals
+- `005_gnn_predictions.sql` — 3 tables: gnn_predictions, gnn_backtest_runs, gnn_backtest_trades
+
+**Tests:** 8 smoke tests (network) + 33 GNN tests (model, TCN causality, GAT masking, Platt scaling, Kelly, hurdle, backtest, config, integration)
+
 ## Known Issues
 - WebSocket connections 0-3 reconnect every ~10s (Polymarket server-side idle timeout)
 - `vercel.json` must NOT have a `runtime` field (causes build error)

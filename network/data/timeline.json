@@ -1,0 +1,165 @@
+[
+  {
+    "date": "2022-02-24",
+    "label": "Full-scale invasion begins",
+    "changes": [
+      {"id": "kyiv", "control": "UA", "assault_intensity": 0.9, "note": "Battle of Kyiv begins"},
+      {"id": "chernihiv", "control": "UA", "assault_intensity": 0.8, "note": "Siege begins"},
+      {"id": "sumy", "control": "UA", "assault_intensity": 0.7, "note": "Siege begins"},
+      {"id": "kharkiv", "control": "UA", "assault_intensity": 0.9, "note": "Battle of Kharkiv begins"},
+      {"id": "kherson_city", "control": "RU", "assault_intensity": 0.0, "note": "Kherson falls quickly"},
+      {"id": "melitopol", "control": "RU", "assault_intensity": 0.0, "note": "Captured rapidly"},
+      {"id": "berdyansk", "control": "RU", "assault_intensity": 0.0, "note": "Captured rapidly"},
+      {"id": "enerhodar", "control": "RU", "assault_intensity": 0.0, "note": "Nuclear plant seized"},
+      {"id": "nova_kakhovka", "control": "RU", "assault_intensity": 0.0, "note": "Dam area captured"}
+    ]
+  },
+  {
+    "date": "2022-03-25",
+    "label": "Siege of Mariupol intensifies",
+    "changes": [
+      {"id": "mariupol", "control": "UA", "assault_intensity": 0.95, "note": "Azovstal siege"},
+      {"id": "izium", "control": "RU", "assault_intensity": 0.0, "note": "RU captures Izium"}
+    ]
+  },
+  {
+    "date": "2022-04-02",
+    "label": "Russia withdraws from Kyiv axis",
+    "changes": [
+      {"id": "kyiv", "control": "UA", "assault_intensity": 0.0, "note": "Siege lifted"},
+      {"id": "chernihiv", "control": "UA", "assault_intensity": 0.0, "note": "Siege lifted"},
+      {"id": "sumy", "control": "UA", "assault_intensity": 0.0, "note": "Siege lifted"}
+    ]
+  },
+  {
+    "date": "2022-05-20",
+    "label": "Mariupol falls, Donbas push begins",
+    "changes": [
+      {"id": "mariupol", "control": "RU", "assault_intensity": 0.0, "note": "Azovstal surrender"},
+      {"id": "lyman", "control": "RU", "assault_intensity": 0.0, "note": "RU captures Lyman"},
+      {"id": "severodonetsk", "control": "UA", "assault_intensity": 0.9, "note": "Battle begins"}
+    ]
+  },
+  {
+    "date": "2022-06-25",
+    "label": "Fall of Severodonetsk-Lysychansk",
+    "changes": [
+      {"id": "severodonetsk", "control": "RU", "assault_intensity": 0.0, "note": "Falls to Russia"},
+      {"id": "lysychansk", "control": "RU", "assault_intensity": 0.0, "note": "Falls to Russia"}
+    ]
+  },
+  {
+    "date": "2022-09-11",
+    "label": "Kharkiv counteroffensive",
+    "changes": [
+      {"id": "izium", "control": "UA", "assault_intensity": 0.0, "note": "Recaptured by Ukraine"},
+      {"id": "kupiansk", "control": "UA", "assault_intensity": 0.0, "note": "Recaptured by Ukraine"},
+      {"id": "lyman", "control": "UA", "assault_intensity": 0.0, "note": "Recaptured by Ukraine"},
+      {"id": "oskil", "control": "UA", "assault_intensity": 0.0, "note": "Recaptured"}
+    ]
+  },
+  {
+    "date": "2022-11-11",
+    "label": "Kherson liberation",
+    "changes": [
+      {"id": "kherson_city", "control": "UA", "assault_intensity": 0.0, "note": "Russia withdraws across Dnipro"}
+    ]
+  },
+  {
+    "date": "2023-01-15",
+    "label": "Battle of Bakhmut begins",
+    "changes": [
+      {"id": "bakhmut", "control": "UA", "assault_intensity": 0.9, "note": "Wagner assault intensifies"}
+    ]
+  },
+  {
+    "date": "2023-05-25",
+    "label": "Bakhmut falls",
+    "changes": [
+      {"id": "bakhmut", "control": "RU", "assault_intensity": 0.0, "note": "Wagner captures Bakhmut"}
+    ]
+  },
+  {
+    "date": "2023-06-06",
+    "label": "Nova Kakhovka dam destroyed",
+    "changes": [
+      {"id": "nova_kakhovka", "control": "RU", "assault_intensity": 0.0, "note": "Dam breach, massive flooding"}
+    ]
+  },
+  {
+    "date": "2023-06-08",
+    "label": "Ukrainian counteroffensive begins (south)",
+    "changes": [
+      {"id": "orikhiv", "control": "UA", "assault_intensity": 0.3, "note": "Counteroffensive launch point"},
+      {"id": "hulyaipole", "control": "UA", "assault_intensity": 0.3, "note": "Southern push"}
+    ]
+  },
+  {
+    "date": "2023-09-01",
+    "label": "Counteroffensive stalls at Tokmak line",
+    "changes": [
+      {"id": "orikhiv", "control": "UA", "assault_intensity": 0.1, "note": "Slow progress"},
+      {"id": "tokmak", "control": "RU", "assault_intensity": 0.0, "note": "Defense holds"}
+    ]
+  },
+  {
+    "date": "2023-12-25",
+    "label": "Marinka falls after long battle",
+    "changes": [
+      {"id": "marinka", "control": "RU", "assault_intensity": 0.0, "note": "Falls after months of fighting"}
+    ]
+  },
+  {
+    "date": "2024-02-17",
+    "label": "Avdiivka falls",
+    "changes": [
+      {"id": "avdiivka", "control": "RU", "assault_intensity": 0.0, "note": "UA withdrawal after encirclement threat"},
+      {"id": "toretsk", "control": "UA", "assault_intensity": 0.4, "note": "RU pushes toward Toretsk"}
+    ]
+  },
+  {
+    "date": "2024-04-15",
+    "label": "Ocheretyne falls, Pokrovsk axis opens",
+    "changes": [
+      {"id": "ocheretyne", "control": "RU", "assault_intensity": 0.0, "note": "Rapid capture"},
+      {"id": "pokrovsk", "control": "UA", "assault_intensity": 0.3, "note": "Threat to Pokrovsk grows"}
+    ]
+  },
+  {
+    "date": "2024-08-06",
+    "label": "Kursk incursion begins",
+    "changes": [
+      {"id": "sudzha", "control": "UA", "assault_intensity": 0.0, "note": "UA captures Sudzha"},
+      {"id": "kursk_city", "control": "RU", "assault_intensity": 0.3, "note": "UA advances toward Kursk"}
+    ]
+  },
+  {
+    "date": "2024-10-01",
+    "label": "Vuhledar and Selydove fall",
+    "changes": [
+      {"id": "vuhledar", "control": "RU", "assault_intensity": 0.0, "note": "Flanking capture"},
+      {"id": "selydove", "control": "RU", "assault_intensity": 0.0, "note": "UA withdraws"}
+    ]
+  },
+  {
+    "date": "2024-11-15",
+    "label": "Kurakhove falls, Pokrovsk pressure mounts",
+    "changes": [
+      {"id": "kurakhove", "control": "RU", "assault_intensity": 0.0, "note": "Falls after encirclement"},
+      {"id": "pokrovsk", "control": "UA", "assault_intensity": 0.6, "note": "Direct threat"},
+      {"id": "hryshyne", "control": "CONTESTED", "assault_intensity": 0.8, "note": "Active combat"},
+      {"id": "myrnohrad", "control": "CONTESTED", "assault_intensity": 0.5, "note": "Under pressure"}
+    ]
+  },
+  {
+    "date": "2025-02-01",
+    "label": "Current situation (early 2025)",
+    "changes": [
+      {"id": "chasiv_yar", "control": "UA", "assault_intensity": 0.7, "note": "Heavy pressure"},
+      {"id": "toretsk", "control": "UA", "assault_intensity": 0.6, "note": "Grinding battle"},
+      {"id": "kupiansk", "control": "UA", "assault_intensity": 0.4, "note": "Slow RU advance"},
+      {"id": "pokrovsk", "control": "UA", "assault_intensity": 0.7, "note": "Key defensive battle"},
+      {"id": "sudzha", "control": "UA", "assault_intensity": 0.3, "note": "UA holds bridgehead"}
+    ]
+  }
+]

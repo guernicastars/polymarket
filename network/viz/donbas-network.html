@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donbas Network Graph — Polymarket Signals</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e17;
+    color: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+  #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+
+  /* Hide Leaflet attribution clutter */
+  .leaflet-control-attribution { font-size: 9px !important; opacity: 0.4; }
+
+  /* Panels */
+  #info-panel {
+    position: fixed; top: 16px; left: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px; padding: 20px; width: 300px;
+    backdrop-filter: blur(20px); z-index: 1000;
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+  }
+  #info-panel h1 {
+    font-size: 18px; font-weight: 700;
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  #info-panel .subtitle { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+  .stat-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0; font-size: 13px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: #94a3b8; }
+  .stat-value { font-weight: 600; }
+
+  #legend {
+    position: fixed; bottom: 16px; left: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px; padding: 14px 16px;
+    backdrop-filter: blur(20px); z-index: 1000;
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+  }
+  #legend h3 {
+    font-size: 12px; font-weight: 600; color: #94a3b8;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 20px; height: 2px; flex-shrink: 0; }
+
+  #signal-panel {
+    position: fixed; top: 16px; right: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px; padding: 18px; width: 280px;
+    backdrop-filter: blur(20px); z-index: 1000;
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+    max-height: calc(100vh - 32px); overflow-y: auto;
+  }
+  #signal-panel h3 { font-size: 14px; font-weight: 700; color: #818cf8; margin-bottom: 10px; }
+  .signal-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .signal-card:hover { border-color: rgba(99, 102, 241, 0.5); background: rgba(30, 41, 59, 0.8); }
+  .signal-card .sc-name { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+  .signal-card .sc-row { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
+  .signal-card .sc-dir { font-weight: 700; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  .buy { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+  .sell { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .hold { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+
+  #tooltip {
+    position: fixed; display: none;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 10px; padding: 14px 18px; font-size: 13px;
+    max-width: 280px; backdrop-filter: blur(20px); z-index: 2000;
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.15); pointer-events: none;
+  }
+  #tooltip .tt-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  #tooltip .tt-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  #tooltip .tt-label { color: #94a3b8; }
+  #tooltip .tt-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="info-panel">
+  <h1>Donbas Network Model</h1>
+  <div class="subtitle">Polymarket Conflict Signals — Settlement Graph</div>
+  <div class="stat-row"><span class="stat-label">Nodes</span><span class="stat-value">40</span></div>
+  <div class="stat-row"><span class="stat-label">Edges</span><span class="stat-value">60</span></div>
+  <div class="stat-row"><span class="stat-label">UA-held</span><span class="stat-value" style="color:#3b82f6">19</span></div>
+  <div class="stat-row"><span class="stat-label">RU-held</span><span class="stat-value" style="color:#ef4444">19</span></div>
+  <div class="stat-row"><span class="stat-label">Contested</span><span class="stat-value" style="color:#f59e0b">2</span></div>
+  <div class="stat-row"><span class="stat-label">PM Targets</span><span class="stat-value" style="color:#a78bfa">7</span></div>
+</div>
+
+<div id="legend">
+  <h3>Legend</h3>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Ukrainian-held</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Russian-held</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Contested</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa;box-shadow:0 0 8px #a78bfa"></div>Polymarket Target</div>
+  <div style="height:6px"></div>
+  <div class="legend-item"><div class="legend-line" style="background:#64748b"></div>Highway / Road</div>
+  <div class="legend-item"><div class="legend-line" style="background:#ef4444;opacity:0.6"></div>Frontline</div>
+  <div class="legend-item"><div class="legend-line" style="background:#22c55e;opacity:0.6"></div>Rail / Supply</div>
+</div>
+
+<div id="signal-panel">
+  <h3>Trading Signals</h3>
+  <div id="signals-list"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const COLORS = { UA: '#3b82f6', RU: '#ef4444', CONTESTED: '#f59e0b' };
+const PM_COLOR = '#a78bfa';
+
+const settlements = [
+  {id:"pokrovsk",name:"Pokrovsk",lat:48.2833,lng:37.1833,control:"UA",pop:60000,pm:true,fort:0.7,assault:0.7,frontDist:8,vuln:0.64},
+  {id:"chasiv_yar",name:"Chasiv Yar",lat:48.6,lng:37.85,control:"UA",pop:12000,pm:true,fort:0.8,assault:0.8,frontDist:2,vuln:0.58},
+  {id:"toretsk",name:"Toretsk",lat:48.3956,lng:37.8464,control:"UA",pop:32000,pm:true,fort:0.6,assault:0.7,frontDist:3,vuln:0.62},
+  {id:"kupiansk",name:"Kupiansk",lat:49.7133,lng:37.6167,control:"UA",pop:27000,pm:true,fort:0.6,assault:0.5,frontDist:15,vuln:0.38},
+  {id:"zaporizhzhia",name:"Zaporizhzhia",lat:47.8388,lng:35.1396,control:"UA",pop:710000,pm:true,fort:0.9,assault:0.0,frontDist:40,vuln:0.08},
+  {id:"orikhiv",name:"Orikhiv",lat:47.5667,lng:35.7833,control:"UA",pop:14000,pm:true,fort:0.6,assault:0.3,frontDist:5,vuln:0.35},
+  {id:"hryshyne",name:"Hryshyne",lat:48.15,lng:37.0333,control:"CONTESTED",pop:800,pm:true,fort:0.3,assault:0.9,frontDist:0,vuln:0.64},
+  {id:"kramatorsk",name:"Kramatorsk",lat:48.7356,lng:37.5856,control:"UA",pop:150000,pm:false,fort:0.8,assault:0.1,frontDist:30},
+  {id:"sloviansk",name:"Sloviansk",lat:48.8511,lng:37.6167,control:"UA",pop:106000,pm:false,fort:0.7,assault:0.1,frontDist:35},
+  {id:"kostiantynivka",name:"Kostiantynivka",lat:48.5297,lng:37.7081,control:"UA",pop:68000,pm:false,fort:0.5,assault:0.2,frontDist:15},
+  {id:"druzhkivka",name:"Druzhkivka",lat:48.6181,lng:37.5286,control:"UA",pop:55000,pm:false,fort:0.5,assault:0.1,frontDist:25},
+  {id:"bakhmut",name:"Bakhmut",lat:48.5953,lng:38.0003,control:"RU",pop:73000,pm:false,fort:0.3},
+  {id:"siversk",name:"Siversk",lat:48.8667,lng:38.1,control:"UA",pop:11000,pm:false,fort:0.7,assault:0.4,frontDist:5},
+  {id:"lyman",name:"Lyman",lat:48.9833,lng:37.8167,control:"UA",pop:20000,pm:false,fort:0.6,assault:0.3,frontDist:10},
+  {id:"avdiivka",name:"Avdiivka",lat:48.1397,lng:37.7472,control:"RU",pop:31000,pm:false,fort:0.2},
+  {id:"marinka",name:"Marinka",lat:47.9422,lng:37.5058,control:"RU",pop:9000,pm:false,fort:0.1},
+  {id:"vuhledar",name:"Vuhledar",lat:47.7833,lng:37.25,control:"RU",pop:14000,pm:false,fort:0.2},
+  {id:"kurakhove",name:"Kurakhove",lat:47.9833,lng:37.3,control:"RU",pop:20000,pm:false,fort:0.2},
+  {id:"selydove",name:"Selydove",lat:48.15,lng:37.3,control:"RU",pop:21000,pm:false,fort:0.2},
+  {id:"pavlohrad",name:"Pavlohrad",lat:48.5333,lng:35.8667,control:"UA",pop:104000,pm:false,fort:0.6,assault:0.0,frontDist:100},
+  {id:"dnipro",name:"Dnipro",lat:48.4647,lng:35.0462,control:"UA",pop:980000,pm:false,fort:0.9,assault:0.0,frontDist:150},
+  {id:"nikopol",name:"Nikopol",lat:47.5719,lng:34.3978,control:"UA",pop:108000,pm:false,fort:0.5},
+  {id:"izium",name:"Izium",lat:49.2156,lng:37.2611,control:"UA",pop:46000,pm:false,fort:0.6,assault:0.1,frontDist:40},
+  {id:"borova",name:"Borova",lat:49.05,lng:37.6667,control:"UA",pop:5000,pm:false,fort:0.4,assault:0.2,frontDist:10},
+  {id:"oskil",name:"Oskil",lat:49.5333,lng:37.3333,control:"UA",pop:3000,pm:false,fort:0.5},
+  {id:"donetsk_city",name:"Donetsk",lat:48.0159,lng:37.8028,control:"RU",pop:905000,pm:false,fort:0.8},
+  {id:"horlivka",name:"Horlivka",lat:48.3069,lng:38.0525,control:"RU",pop:240000,pm:false,fort:0.6},
+  {id:"makiivka",name:"Makiivka",lat:48.0453,lng:37.9653,control:"RU",pop:340000,pm:false,fort:0.6},
+  {id:"luhansk_city",name:"Luhansk",lat:48.574,lng:39.3078,control:"RU",pop:400000,pm:false,fort:0.7},
+  {id:"severodonetsk",name:"Severodonetsk",lat:48.9483,lng:38.4933,control:"RU",pop:100000,pm:false,fort:0.4},
+  {id:"lysychansk",name:"Lysychansk",lat:48.9042,lng:38.4375,control:"RU",pop:95000,pm:false,fort:0.4},
+  {id:"kreminna",name:"Kreminna",lat:49.05,lng:38.2167,control:"RU",pop:18000,pm:false,fort:0.5},
+  {id:"svatove",name:"Svatove",lat:49.4083,lng:38.1583,control:"RU",pop:16000,pm:false,fort:0.5},
+  {id:"hulyaipole",name:"Hulyaipole",lat:47.6667,lng:36.25,control:"UA",pop:13000,pm:false,fort:0.5},
+  {id:"polohy",name:"Polohy",lat:47.4833,lng:36.25,control:"RU",pop:18000,pm:false,fort:0.5},
+  {id:"tokmak",name:"Tokmak",lat:47.25,lng:35.7,control:"RU",pop:30000,pm:false,fort:0.7},
+  {id:"melitopol",name:"Melitopol",lat:46.8489,lng:35.3653,control:"RU",pop:150000,pm:false,fort:0.7},
+  {id:"enerhodar",name:"Enerhodar",lat:47.4989,lng:34.6536,control:"RU",pop:52000,pm:false,fort:0.5},
+  {id:"myrnohrad",name:"Myrnohrad",lat:48.3,lng:37.2667,control:"CONTESTED",pop:50000,pm:false,fort:0.5,assault:0.6,frontDist:5,vuln:0.52},
+  {id:"ocheretyne",name:"Ocheretyne",lat:48.2,lng:37.5333,control:"RU",pop:3000,pm:false,fort:0.2},
+];
+
+const edges = [
+  {s:"dnipro",t:"pavlohrad",type:"HIGHWAY"},{s:"dnipro",t:"pavlohrad",type:"RAIL"},
+  {s:"pavlohrad",t:"pokrovsk",type:"HIGHWAY"},{s:"pavlohrad",t:"pokrovsk",type:"RAIL"},
+  {s:"pokrovsk",t:"myrnohrad",type:"HIGHWAY"},{s:"pokrovsk",t:"selydove",type:"SECONDARY_ROAD"},
+  {s:"pokrovsk",t:"hryshyne",type:"SECONDARY_ROAD",front:true},
+  {s:"myrnohrad",t:"ocheretyne",type:"SECONDARY_ROAD",front:true},
+  {s:"pokrovsk",t:"kostiantynivka",type:"HIGHWAY"},{s:"pokrovsk",t:"druzhkivka",type:"RAIL"},
+  {s:"kramatorsk",t:"sloviansk",type:"HIGHWAY"},{s:"kramatorsk",t:"druzhkivka",type:"HIGHWAY"},
+  {s:"kramatorsk",t:"kostiantynivka",type:"HIGHWAY"},{s:"kramatorsk",t:"siversk",type:"SECONDARY_ROAD"},
+  {s:"kramatorsk",t:"lyman",type:"HIGHWAY"},{s:"sloviansk",t:"lyman",type:"HIGHWAY"},
+  {s:"sloviansk",t:"izium",type:"HIGHWAY"},{s:"lyman",t:"siversk",type:"SECONDARY_ROAD"},
+  {s:"lyman",t:"borova",type:"SECONDARY_ROAD"},
+  {s:"lyman",t:"kreminna",type:"FRONTLINE",front:true},
+  {s:"siversk",t:"lysychansk",type:"FRONTLINE",front:true},
+  {s:"siversk",t:"kreminna",type:"FRONTLINE",front:true},
+  {s:"kostiantynivka",t:"chasiv_yar",type:"HIGHWAY"},
+  {s:"kostiantynivka",t:"toretsk",type:"SECONDARY_ROAD"},
+  {s:"chasiv_yar",t:"bakhmut",type:"FRONTLINE",front:true},
+  {s:"toretsk",t:"horlivka",type:"FRONTLINE",front:true},
+  {s:"toretsk",t:"chasiv_yar",type:"SECONDARY_ROAD"},
+  {s:"bakhmut",t:"horlivka",type:"HIGHWAY"},{s:"bakhmut",t:"lysychansk",type:"HIGHWAY"},
+  {s:"bakhmut",t:"severodonetsk",type:"SECONDARY_ROAD"},
+  {s:"horlivka",t:"donetsk_city",type:"HIGHWAY"},
+  {s:"donetsk_city",t:"makiivka",type:"HIGHWAY"},{s:"donetsk_city",t:"avdiivka",type:"HIGHWAY"},
+  {s:"donetsk_city",t:"marinka",type:"SECONDARY_ROAD"},
+  {s:"avdiivka",t:"ocheretyne",type:"SECONDARY_ROAD"},{s:"avdiivka",t:"selydove",type:"SECONDARY_ROAD"},
+  {s:"selydove",t:"kurakhove",type:"SECONDARY_ROAD"},
+  {s:"kurakhove",t:"marinka",type:"SECONDARY_ROAD"},{s:"kurakhove",t:"vuhledar",type:"SECONDARY_ROAD"},
+  {s:"hryshyne",t:"selydove",type:"SECONDARY_ROAD",front:true},
+  {s:"izium",t:"borova",type:"SECONDARY_ROAD"},{s:"izium",t:"kupiansk",type:"HIGHWAY"},
+  {s:"kupiansk",t:"oskil",type:"SECONDARY_ROAD"},
+  {s:"kupiansk",t:"svatove",type:"FRONTLINE",front:true},
+  {s:"borova",t:"kreminna",type:"FRONTLINE",front:true},
+  {s:"borova",t:"svatove",type:"FRONTLINE",front:true},
+  {s:"kreminna",t:"svatove",type:"HIGHWAY"},{s:"kreminna",t:"lysychansk",type:"SECONDARY_ROAD"},
+  {s:"lysychansk",t:"severodonetsk",type:"HIGHWAY"},
+  {s:"severodonetsk",t:"luhansk_city",type:"HIGHWAY"},
+  {s:"zaporizhzhia",t:"orikhiv",type:"HIGHWAY"},
+  {s:"zaporizhzhia",t:"hulyaipole",type:"SECONDARY_ROAD"},
+  {s:"zaporizhzhia",t:"nikopol",type:"HIGHWAY"},
+  {s:"zaporizhzhia",t:"dnipro",type:"HIGHWAY"},
+  {s:"orikhiv",t:"polohy",type:"FRONTLINE",front:true},
+  {s:"orikhiv",t:"hulyaipole",type:"SECONDARY_ROAD"},
+  {s:"hulyaipole",t:"polohy",type:"FRONTLINE",front:true},
+  {s:"polohy",t:"tokmak",type:"HIGHWAY"},{s:"tokmak",t:"melitopol",type:"HIGHWAY"},
+  {s:"nikopol",t:"enerhodar",type:"FRONTLINE",front:true},
+];
+
+const signals = [
+  {id:"hryshyne",name:"Hryshyne",model:0.72,market:0.75,edge:-0.03,dir:"HOLD",kelly:0},
+  {id:"chasiv_yar",name:"Chasiv Yar",model:0.41,market:0.55,edge:-0.14,dir:"SELL",kelly:0.18},
+  {id:"toretsk",name:"Toretsk",model:0.38,market:0.50,edge:-0.12,dir:"SELL",kelly:0.15},
+  {id:"pokrovsk",name:"Pokrovsk",model:0.30,market:0.35,edge:-0.05,dir:"HOLD",kelly:0},
+  {id:"kupiansk",name:"Kupiansk",model:0.18,market:0.20,edge:-0.02,dir:"HOLD",kelly:0},
+  {id:"orikhiv",name:"Orikhiv",model:0.19,market:0.15,edge:0.04,dir:"HOLD",kelly:0},
+  {id:"zaporizhzhia",name:"Zaporizhzhia",model:0.04,market:0.03,edge:0.01,dir:"HOLD",kelly:0},
+];
+
+// ============================================================
+// MAP SETUP
+// ============================================================
+const map = L.map('map', {
+  center: [48.3, 37.0],
+  zoom: 8,
+  zoomControl: false,
+  attributionControl: true,
+});
+
+// Dark map tiles
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 16,
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// Build lookup
+const nodeMap = {};
+settlements.forEach(s => { nodeMap[s.id] = s; });
+
+// ============================================================
+// DRAW EDGES
+// ============================================================
+const edgeLayers = [];
+edges.forEach(e => {
+  const src = nodeMap[e.s];
+  const tgt = nodeMap[e.t];
+  if (!src || !tgt) return;
+
+  let color, weight, dashArray, opacity;
+  if (e.front) {
+    color = '#ef4444'; weight = 2; dashArray = '6 6'; opacity = 0.55;
+  } else if (e.type === 'RAIL') {
+    color = '#22c55e'; weight = 1.8; dashArray = '3 8'; opacity = 0.4;
+  } else if (e.type === 'HIGHWAY') {
+    color = '#94a3b8'; weight = 1.5; dashArray = null; opacity = 0.25;
+  } else {
+    color = '#475569'; weight = 1; dashArray = null; opacity = 0.18;
+  }
+
+  const line = L.polyline([[src.lat, src.lng], [tgt.lat, tgt.lng]], {
+    color, weight, dashArray, opacity, interactive: false,
+  }).addTo(map);
+  edgeLayers.push(line);
+});
+
+// ============================================================
+// DRAW NODES
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+const markerLayers = {};
+
+settlements.forEach(s => {
+  const baseColor = COLORS[s.control] || '#64748b';
+  const r = Math.max(5, Math.log10(s.pop + 1) * 4);
+  const pmR = s.pm ? r + 5 : r;
+
+  // Assault glow ring
+  if (s.assault && s.assault > 0.3) {
+    const glowR = r + 10 + s.assault * 15;
+    L.circleMarker([s.lat, s.lng], {
+      radius: glowR, fillColor: '#ef4444', fillOpacity: s.assault * 0.15,
+      stroke: false, interactive: false, pane: 'shadowPane',
+    }).addTo(map);
+  }
+
+  // PM outer ring
+  if (s.pm) {
+    L.circleMarker([s.lat, s.lng], {
+      radius: pmR, color: PM_COLOR, weight: 2, fillColor: 'transparent',
+      fillOpacity: 0, opacity: 0.7, interactive: false,
+    }).addTo(map);
+  }
+
+  // Main marker
+  const marker = L.circleMarker([s.lat, s.lng], {
+    radius: r,
+    fillColor: baseColor,
+    fillOpacity: 0.85,
+    color: s.pm ? PM_COLOR : 'rgba(255,255,255,0.2)',
+    weight: s.pm ? 1.5 : 0.8,
+  }).addTo(map);
+
+  markerLayers[s.id] = marker;
+
+  // Label
+  const labelClass = s.pm ? 'pm-label' : (s.pop > 80000 ? 'major-label' : 'minor-label');
+  const labelIcon = L.divIcon({
+    className: 'node-label',
+    html: `<div style="
+      color: ${s.pm ? '#e2e8f0' : 'rgba(226,232,240,0.7)'};
+      font-size: ${s.pm ? '12px' : (s.pop > 80000 ? '11px' : '10px')};
+      font-weight: ${s.pm ? '700' : (s.pop > 80000 ? '600' : '400')};
+      text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.7);
+      white-space: nowrap;
+      text-align: center;
+      pointer-events: none;
+    ">${s.name}${s.vuln ? `<br><span style="font-size:9px;color:${s.vuln>0.5?'#f87171':'#facc15'};font-weight:700">${(s.vuln*100).toFixed(0)}% vuln</span>` : ''}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, -(r + 8)],
+  });
+  L.marker([s.lat, s.lng], { icon: labelIcon, interactive: false }).addTo(map);
+
+  // Tooltip on hover
+  marker.on('mouseover', (ev) => {
+    marker.setStyle({ fillOpacity: 1, weight: 2.5, color: '#fff' });
+    const sig = signals.find(x => x.id === s.id);
+    let html = `<div class="tt-name" style="color:${s.pm ? PM_COLOR : baseColor}">${s.name}</div>`;
+    html += `<div class="tt-row"><span class="tt-label">Control</span><span style="color:${baseColor}">${s.control}</span></div>`;
+    html += `<div class="tt-row"><span class="tt-label">Population</span><span>${s.pop.toLocaleString()}</span></div>`;
+    if (s.assault) html += `<div class="tt-row"><span class="tt-label">Assault</span><span style="color:#f87171">${(s.assault*100).toFixed(0)}%</span></div>`;
+    if (s.vuln) html += `<div class="tt-row"><span class="tt-label">Vulnerability</span><span style="color:${s.vuln>0.5?'#f87171':'#facc15'}">${(s.vuln*100).toFixed(0)}%</span></div>`;
+    if (s.frontDist !== undefined) html += `<div class="tt-row"><span class="tt-label">Front dist</span><span>${s.frontDist} km</span></div>`;
+    if (s.pm) html += `<div class="tt-badge" style="background:rgba(167,139,250,0.2);color:#a78bfa">Polymarket Target</div>`;
+    if (sig) {
+      const dc = sig.dir === 'BUY' ? 'buy' : sig.dir === 'SELL' ? 'sell' : 'hold';
+      html += `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(51,65,85,0.5)">`;
+      html += `<div class="tt-row"><span class="tt-label">Model</span><span>${(sig.model*100).toFixed(0)}%</span></div>`;
+      html += `<div class="tt-row"><span class="tt-label">Market</span><span>${(sig.market*100).toFixed(0)}%</span></div>`;
+      html += `<div class="tt-badge ${dc}">${sig.dir} ${sig.edge>0?'+':''}${(sig.edge*100).toFixed(1)}%</div></div>`;
+    }
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+  });
+  marker.on('mouseout', () => {
+    marker.setStyle({
+      fillOpacity: 0.85,
+      weight: s.pm ? 1.5 : 0.8,
+      color: s.pm ? PM_COLOR : 'rgba(255,255,255,0.2)',
+    });
+    tooltip.style.display = 'none';
+  });
+  marker.on('click', () => { map.flyTo([s.lat, s.lng], 11, { duration: 0.8 }); });
+});
+
+// ============================================================
+// SIGNAL CARDS
+// ============================================================
+const sigList = document.getElementById('signals-list');
+signals.forEach(sig => {
+  const dc = sig.dir === 'BUY' ? 'buy' : sig.dir === 'SELL' ? 'sell' : 'hold';
+  const card = document.createElement('div');
+  card.className = 'signal-card';
+  card.innerHTML = `
+    <div class="sc-name">${sig.name} <span class="sc-dir ${dc}">${sig.dir}</span></div>
+    <div class="sc-row"><span>Model P(fall)</span><span>${(sig.model*100).toFixed(0)}%</span></div>
+    <div class="sc-row"><span>Market Price</span><span>${(sig.market*100).toFixed(0)}%</span></div>
+    <div class="sc-row"><span>Edge</span><span style="color:${sig.edge>0?'#4ade80':sig.edge<-0.05?'#f87171':'#94a3b8'}">${sig.edge>0?'+':''}${(sig.edge*100).toFixed(1)}%</span></div>
+    ${sig.kelly > 0 ? `<div class="sc-row"><span>Kelly Size</span><span>${(sig.kelly*100).toFixed(1)}%</span></div>` : ''}
+  `;
+  card.addEventListener('click', () => {
+    const node = nodeMap[sig.id];
+    if (node) map.flyTo([node.lat, node.lng], 11, { duration: 0.8 });
+  });
+  sigList.appendChild(card);
+});
+
+// Mouse tracking for tooltip
+document.addEventListener('mousemove', e => {
+  tooltip.style.left = (e.clientX + 15) + 'px';
+  tooltip.style.top = (e.clientY + 15) + 'px';
+});
+</script>
+</body>
+</html>
