@@ -28,7 +28,7 @@ def test_graph_loads(graph):
     assert graph.node_count == 40
     assert graph.edge_count >= 55
     summary = graph.summary()
-    assert summary["polymarket_targets"] == 7
+    assert summary["polymarket_targets"] == 10
 
 
 # ------------------------------------------------------------------

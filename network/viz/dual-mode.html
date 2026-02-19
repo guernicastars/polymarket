@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Network Visualization - Dual Mode</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #2a3a5a;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .controls {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 0;
+            background: rgba(42, 58, 90, 0.3);
+            border: 1px solid #2a3a5a;
+            border-radius: 6px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .tab-btn.active {
+            background: #4da6ff;
+            color: #0a0e27;
+        }
+
+        .tab-btn:hover {
+            color: #4da6ff;
+        }
+
+        .mode-toggle {
+            position: relative;
+            display: flex;
+            background: rgba(42, 58, 90, 0.3);
+            border: 1px solid #2a3a5a;
+            border-radius: 30px;
+            padding: 4px;
+            gap: 8px;
+        }
+
+        .mode-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border-radius: 28px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .mode-btn.active {
+            color: #0a0e27;
+        }
+
+        .mode-toggle::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: #4da6ff;
+            border-radius: 28px;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        .mode-toggle.graph-mode::before {
+            left: calc(50% + 4px);
+        }
+
+        .search-box {
+            flex: 0 1 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            background: rgba(42, 58, 90, 0.3);
+            border: 1px solid #2a3a5a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input::placeholder {
+            color: #666;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            background: rgba(77, 166, 255, 0.1);
+            border-color: #4da6ff;
+        }
+
+        .info-panel {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.ua {
+            background: #4da6ff;
+        }
+
+        .legend-dot.ru {
+            background: #ff4444;
+        }
+
+        .legend-dot.contested {
+            background: #ffa500;
+        }
+
+        .legend-dot.other {
+            background: #888;
+        }
+
+        .canvas {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            background: #0a0e27;
+        }
+
+        #graph-container {
+            width: 100%;
+            height: 100%;
+            background: #0a0e27;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #graph-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 1;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
+
+        #map-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .leaflet-container {
+            background: #0a0e27 !important;
+        }
+
+        .leaflet-tile {
+            opacity: 0.95;
+        }
+
+        .node-tooltip {
+            position: absolute;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid #4da6ff;
+            border-radius: 6px;
+            padding: 0.8rem;
+            font-size: 0.85rem;
+            color: #e0e0e0;
+            pointer-events: none;
+            z-index: 1001;
+            max-width: 250px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .node-tooltip h4 {
+            margin-bottom: 0.4rem;
+            color: #4da6ff;
+        }
+
+        .node-tooltip p {
+            margin: 0.2rem 0;
+            color: #ccc;
+        }
+
+        .node-tooltip .strategic-value {
+            margin-top: 0.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #2a3a5a;
+        }
+
+        .node-tooltip .market-price {
+            margin-top: 0.4rem;
+            color: #ffa500;
+        }
+
+        .footer {
+            background: rgba(10, 14, 39, 0.95);
+            border-top: 1px solid #2a3a5a;
+            padding: 0.8rem 1rem;
+            font-size: 0.75rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid #4da6ff;
+            border-radius: 8px;
+            padding: 2rem;
+            color: #e0e0e0;
+            z-index: 2000;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        svg {
+            display: block;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .node:hover {
+            opacity: 0.8;
+        }
+
+        .link {
+            stroke: #2a3a5a;
+            stroke-opacity: 0.6;
+            stroke-width: 1.5px;
+        }
+
+        .link.frontline {
+            stroke-dasharray: 4,4;
+        }
+
+        .node-label {
+            font-size: 11px;
+            pointer-events: none;
+            text-anchor: middle;
+            fill: #e0e0e0;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .node-price {
+            font-size: 9px;
+            pointer-events: none;
+            text-anchor: middle;
+            fill: #ffa500;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .metrics-panel {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid #2a3a5a;
+            border-radius: 8px;
+            padding: 1.2rem;
+            font-size: 0.85rem;
+            color: #e0e0e0;
+            z-index: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            max-width: 280px;
+        }
+
+        .metrics-panel h3 {
+            margin-bottom: 0.8rem;
+            color: #4da6ff;
+            font-size: 0.95rem;
+            margin-top: 0;
+        }
+
+        .metrics-panel .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid #1a2a4a;
+        }
+
+        .metrics-panel .metric-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .metrics-panel .metric-label {
+            color: #888;
+            font-weight: 500;
+        }
+
+        .metrics-panel .metric-value {
+            color: #4da6ff;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 0.5rem;
+                width: 100%;
+            }
+
+            .search-box {
+                flex: 0 1 100%;
+            }
+
+            .mode-toggle {
+                width: 100%;
+            }
+
+            .mode-btn {
+                flex: 1;
+            }
+
+            .metrics-panel {
+                top: 4.5rem;
+                right: 1rem;
+                max-width: 240px;
+                padding: 0.8rem;
+                font-size: 0.8rem;
+            }
+
+            .metrics-panel h3 {
+                font-size: 0.85rem;
+                margin-bottom: 0.6rem;
+            }
+
+            .metrics-panel .metric-row {
+                margin-bottom: 0.4rem;
+                padding-bottom: 0.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="controls">
+                <div class="tab-group">
+                    <button class="tab-btn active" id="ukraine-btn" data-network="ukraine">UKRAINE</button>
+                    <button class="tab-btn" id="mideast-btn" data-network="mideast">MIDDLE EAST</button>
+                </div>
+
+                <div class="mode-toggle" id="mode-toggle">
+                    <button class="mode-btn active" id="map-btn">MAP</button>
+                    <button class="mode-btn" id="graph-btn">GRAPH</button>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search settlements or markets...">
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-item">
+                    <span class="legend-dot ua"></span>
+                    <span>Ukraine/Israel</span>
+                </div>
+                <div class="info-item">
+                    <span class="legend-dot ru"></span>
+                    <span>Russia/Hostile</span>
+                </div>
+                <div class="info-item">
+                    <span class="legend-dot contested"></span>
+                    <span>Contested</span>
+                </div>
+                <div class="info-item">
+                    <span class="legend-dot other"></span>
+                    <span>Other</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas">
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+            <div id="graph-container"></div>
+            <div class="metrics-panel" id="metrics-panel">
+                <h3>Graph Metrics</h3>
+                <div class="metric-row">
+                    <span class="metric-label">Nodes:</span>
+                    <span class="metric-value" id="metric-nodes">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Edges:</span>
+                    <span class="metric-value" id="metric-edges">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Density:</span>
+                    <span class="metric-value" id="metric-density">0.00</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Avg Degree:</span>
+                    <span class="metric-value" id="metric-avg-degree">0.00</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Clustering Coeff:</span>
+                    <span class="metric-value" id="metric-clustering">0.00</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Components:</span>
+                    <span class="metric-value" id="metric-components">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <strong>OSINT Notice:</strong> This visualization displays geopolitical settlement data and market sentiment from Polymarket prediction markets. All displayed data is from public sources and is for informational purposes only. Current positions and control status subject to change.
+        </div>
+    </div>
+
+    <div id="loading" class="loading hidden">Loading network data...</div>
+
+    <script>
+        // ==================== DATA ====================
+        const NETWORKS = {
+            ukraine: {
+                name: 'Ukraine',
+                bounds: [[40.5, 22], [52, 42]],
+                center: [48.5, 32],
+                zoom: 6,
+                settlements: [
+                    {id:"pokrovsk",name:"Pokrovsk",lat:48.28,lng:37.18,control:"UA",region:"donbas",strategic:0.9},
+                    {id:"kupiansk",name:"Kupiansk",lat:49.71,lng:37.61,control:"CONTESTED",region:"donbas",strategic:0.8},
+                    {id:"lyman",name:"Lyman",lat:48.98,lng:37.80,control:"CONTESTED",region:"donbas",strategic:0.7},
+                    {id:"toretske",name:"Toretske",lat:48.39,lng:37.85,control:"CONTESTED",region:"donbas",strategic:0.7},
+                    {id:"sloviansk",name:"Sloviansk",lat:48.85,lng:37.60,control:"UA",region:"donbas",strategic:0.8},
+                    {id:"bakhmut",name:"Bakhmut",lat:48.59,lng:38.00,control:"RU",region:"donbas",strategic:0.6},
+                    {id:"kramatorsk",name:"Kramatorsk",lat:48.74,lng:37.56,control:"UA",region:"donbas",strategic:0.9},
+                    {id:"zaporizhzhia",name:"Zaporizhzhia",lat:47.84,lng:35.14,control:"UA",region:"south",strategic:0.85},
+                    {id:"kherson",name:"Kherson",lat:46.64,lng:32.62,control:"UA",region:"south",strategic:0.8},
+                    {id:"mariupol",name:"Mariupol",lat:47.10,lng:37.55,control:"RU",region:"south",strategic:0.7},
+                    {id:"donetsk",name:"Donetsk",lat:48.00,lng:37.80,control:"RU",region:"donbas",strategic:0.85},
+                    {id:"melitopol",name:"Melitopol",lat:46.84,lng:35.37,control:"RU",region:"south",strategic:0.6},
+                    {id:"orikhiv",name:"Orikhiv",lat:47.57,lng:35.78,control:"UA",region:"south",strategic:0.5},
+                    {id:"huliaipole",name:"Huliaipole",lat:47.66,lng:36.27,control:"UA",region:"south",strategic:0.4},
+                    {id:"dnipro",name:"Dnipro",lat:48.46,lng:35.05,control:"UA",region:"central",strategic:0.95}
+                ],
+                edges: [
+                    // Donbas intra-region (weight 0.8)
+                    {source:"pokrovsk",target:"kramatorsk",type:"highway",weight:0.8},
+                    {source:"kramatorsk",target:"sloviansk",type:"supply",weight:0.8},
+                    {source:"sloviansk",target:"kupiansk",type:"highway",weight:0.8},
+                    {source:"kupiansk",target:"lyman",type:"supply",weight:0.8},
+                    {source:"lyman",target:"bakhmut",type:"frontline",weight:0.8},
+                    {source:"bakhmut",target:"toretske",type:"supply",weight:0.8},
+                    {source:"toretske",target:"donetsk",type:"highway",weight:0.8},
+                    {source:"donetsk",target:"bakhmut",type:"supply",weight:0.8},
+                    {source:"pokrovsk",target:"sloviansk",type:"supply",weight:0.8},
+                    {source:"kramatorsk",target:"kupiansk",type:"highway",weight:0.8},
+                    // South intra-region (weight 0.8)
+                    {source:"zaporizhzhia",target:"orikhiv",type:"highway",weight:0.8},
+                    {source:"orikhiv",target:"huliaipole",type:"supply",weight:0.8},
+                    {source:"huliaipole",target:"melitopol",type:"frontline",weight:0.8},
+                    {source:"melitopol",target:"mariupol",type:"highway",weight:0.8},
+                    {source:"kherson",target:"zaporizhzhia",type:"supply",weight:0.8},
+                    // Central (weight 0.8)
+                    {source:"dnipro",target:"zaporizhzhia",type:"highway",weight:0.8},
+                    // Strategic cross-region (weight 0.5)
+                    {source:"pokrovsk",target:"dnipro",type:"supply",weight:0.5},
+                    {source:"kramatorsk",target:"dnipro",type:"supply",weight:0.5},
+                    {source:"kherson",target:"dnipro",type:"supply",weight:0.5},
+                    {source:"donetsk",target:"mariupol",type:"highway",weight:0.5},
+                    {source:"bakhmut",target:"zaporizhzhia",type:"supply",weight:0.5},
+                    {source:"sloviansk",target:"kherson",type:"supply",weight:0.5},
+                    {source:"kupiansk",target:"kherson",type:"highway",weight:0.5},
+                    {source:"toretske",target:"orikhiv",type:"supply",weight:0.5},
+                    {source:"mariupol",target:"melitopol",type:"supply",weight:0.5},
+                    {source:"lyman",target:"dnipro",type:"supply",weight:0.5},
+                    {source:"kramatorsk",target:"zaporizhzhia",type:"highway",weight:0.5}
+                ]
+            },
+            mideast: {
+                name: 'Middle East',
+                bounds: [[10, 30], [38, 56]],
+                center: [29, 43],
+                zoom: 4,
+                settlements: [
+                    {id:"gaza_city",name:"Gaza City",lat:31.50,lng:34.47,control:"CONTESTED",region:"Gaza",strategic:0.9},
+                    {id:"rafah",name:"Rafah",lat:31.28,lng:34.24,control:"CONTESTED",region:"Gaza",strategic:0.85},
+                    {id:"khan_younis",name:"Khan Younis",lat:31.34,lng:34.30,control:"CONTESTED",region:"Gaza",strategic:0.8},
+                    {id:"tel_aviv",name:"Tel Aviv",lat:32.09,lng:34.78,control:"IL",region:"Israel",strategic:0.95},
+                    {id:"jerusalem",name:"Jerusalem",lat:31.77,lng:35.23,control:"IL",region:"Israel",strategic:0.95},
+                    {id:"beirut",name:"Beirut",lat:33.89,lng:35.50,control:"LB",region:"Lebanon",strategic:0.9},
+                    {id:"baalbek",name:"Baalbek",lat:34.01,lng:36.21,control:"LB",region:"Lebanon",strategic:0.6},
+                    {id:"damascus",name:"Damascus",lat:33.51,lng:36.29,control:"SY",region:"Syria",strategic:0.85},
+                    {id:"tehran",name:"Tehran",lat:35.69,lng:51.39,control:"IR",region:"Iran",strategic:0.95},
+                    {id:"sanaa",name:"Sanaa",lat:15.35,lng:44.21,control:"HOUTHI",region:"Yemen",strategic:0.7},
+                    {id:"aden",name:"Aden",lat:12.79,lng:45.04,control:"YE",region:"Yemen",strategic:0.6},
+                    {id:"bab_el_mandeb",name:"Bab el-Mandeb",lat:12.58,lng:43.33,control:"CONTESTED",region:"Yemen",strategic:0.85}
+                ],
+                edges: [
+                    // Gaza intra-region (weight 0.8)
+                    {source:"gaza_city",target:"khan_younis",type:"supply",weight:0.8},
+                    {source:"khan_younis",target:"rafah",type:"highway",weight:0.8},
+                    {source:"rafah",target:"gaza_city",type:"supply",weight:0.8},
+                    // Israel (weight 0.8)
+                    {source:"tel_aviv",target:"jerusalem",type:"highway",weight:0.8},
+                    // Lebanon (weight 0.8)
+                    {source:"beirut",target:"baalbek",type:"supply",weight:0.8},
+                    // Yemen (weight 0.8)
+                    {source:"sanaa",target:"aden",type:"highway",weight:0.8},
+                    {source:"aden",target:"bab_el_mandeb",type:"supply",weight:0.8},
+                    // Strategic cross-region (weight 0.5)
+                    {source:"gaza_city",target:"tel_aviv",type:"frontline",weight:0.5},
+                    {source:"rafah",target:"tel_aviv",type:"frontline",weight:0.5},
+                    {source:"khan_younis",target:"jerusalem",type:"supply",weight:0.5},
+                    {source:"gaza_city",target:"jerusalem",type:"supply",weight:0.5},
+                    {source:"tel_aviv",target:"beirut",type:"supply",weight:0.5},
+                    {source:"jerusalem",target:"damascus",type:"highway",weight:0.5},
+                    {source:"beirut",target:"damascus",type:"supply",weight:0.5},
+                    {source:"baalbek",target:"damascus",type:"supply",weight:0.5},
+                    {source:"damascus",target:"tehran",type:"supply",weight:0.5},
+                    {source:"sanaa",target:"tehran",type:"supply",weight:0.5},
+                    {source:"bab_el_mandeb",target:"aden",type:"frontline",weight:0.5},
+                    {source:"aden",target:"tehran",type:"supply",weight:0.5},
+                    {source:"beirut",target:"jerusalem",type:"supply",weight:0.5},
+                    {source:"baalbek",target:"tehran",type:"supply",weight:0.5},
+                    {source:"sanaa",target:"aden",type:"supply",weight:0.5},
+                    {source:"bab_el_mandeb",target:"tehran",type:"supply",weight:0.5},
+                    {source:"gaza_city",target:"beirut",type:"supply",weight:0.5},
+                    {source:"khan_younis",target:"beirut",type:"supply",weight:0.5},
+                    {source:"rafah",target:"damascus",type:"supply",weight:0.5}
+                ]
+            }
+        };
+
+        // ==================== COLOR MAPPING ====================
+        function getControlColor(control) {
+            const colorMap = {
+                'UA': '#4da6ff',
+                'IL': '#4da6ff',
+                'RU': '#ff4444',
+                'CONTESTED': '#ffa500',
+                'LB': '#888888',
+                'SY': '#888888',
+                'IR': '#888888',
+                'HOUTHI': '#888888',
+                'YE': '#888888'
+            };
+            return colorMap[control] || '#888888';
+        }
+
+        // ==================== STATE ====================
+        let state = {
+            currentNetwork: 'ukraine',
+            currentMode: 'map',
+            map: null,
+            mapLayers: new Map(),
+            marketData: new Map(),
+            selectedNode: null,
+            graphSimulation: null,
+            searchQuery: ''
+        };
+
+        // ==================== MARKET DATA FETCHING ====================
+        const CORS_PROXIES = [
+            '', // direct (works from http:// origins)
+            'https://corsproxy.io/?url=',
+            'https://api.allorigins.win/raw?url='
+        ];
+
+        async function fetchWithProxy(url) {
+            for (const proxy of CORS_PROXIES) {
+                try {
+                    const proxyUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                    const resp = await fetch(proxyUrl);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    return await resp.json();
+                } catch (e) {
+                    continue;
+                }
+            }
+            return null;
+        }
+
+        async function fetchMarketData() {
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+
+            try {
+                // Fetch Ukraine markets
+                const ukData = await fetchWithProxy('https://gamma-api.polymarket.com/events?closed=false&limit=20&title=ukraine');
+                if (ukData && Array.isArray(ukData)) {
+                    ukData.forEach(event => {
+                        if (event.title) {
+                            const key = event.title.toLowerCase();
+                            state.marketData.set(key, {
+                                title: event.title,
+                                price: event.lastPrice ? (event.lastPrice * 100).toFixed(1) + '%' : 'N/A'
+                            });
+                        }
+                    });
+                }
+
+                // Fetch Middle East markets
+                const meData = await fetchWithProxy('https://gamma-api.polymarket.com/events?closed=false&limit=20&title=israel');
+                if (meData && Array.isArray(meData)) {
+                    meData.forEach(event => {
+                        if (event.title) {
+                            const key = event.title.toLowerCase();
+                            state.marketData.set(key, {
+                                title: event.title,
+                                price: event.lastPrice ? (event.lastPrice * 100).toFixed(1) + '%' : 'N/A'
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Market data fetch failed:', e);
+            }
+
+            loading.classList.add('hidden');
+        }
+
+        // ==================== TOOLTIP ====================
+        function showTooltip(settlement, x, y) {
+            let html = `<h4>${settlement.name}</h4>`;
+            html += `<p><strong>Control:</strong> ${settlement.control}</p>`;
+            html += `<p><strong>Region:</strong> ${settlement.region}</p>`;
+            html += `<div class="strategic-value"><strong>Strategic Value:</strong> ${(settlement.strategic * 100).toFixed(0)}%</div>`;
+
+            // Try to find related market
+            const searchKey = settlement.name.toLowerCase();
+            let foundMarket = null;
+            for (let [key, data] of state.marketData) {
+                if (key.includes(searchKey)) {
+                    foundMarket = data;
+                    break;
+                }
+            }
+
+            if (foundMarket) {
+                html += `<div class="market-price"><strong>Market Price:</strong> ${foundMarket.price}</div>`;
+            }
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'node-tooltip';
+            tooltip.innerHTML = html;
+            tooltip.style.left = (x + 10) + 'px';
+            tooltip.style.top = (y + 10) + 'px';
+            tooltip.id = 'active-tooltip';
+
+            const existing = document.getElementById('active-tooltip');
+            if (existing) existing.remove();
+
+            document.body.appendChild(tooltip);
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('active-tooltip');
+            if (tooltip) tooltip.remove();
+        }
+
+        // ==================== MAP MODE ====================
+        function initMap() {
+            const net = NETWORKS[state.currentNetwork];
+
+            if (!state.map) {
+                state.map = L.map('map').setView(net.center, net.zoom);
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; CartoDB',
+                    maxZoom: 19,
+                    subdomains: 'abcd'
+                }).addTo(state.map);
+            } else {
+                state.map.setView(net.center, net.zoom);
+            }
+
+            // Clear existing markers
+            state.mapLayers.forEach(layer => state.map.removeLayer(layer));
+            state.mapLayers.clear();
+
+            // Add settlement circles
+            net.settlements.forEach(settlement => {
+                const color = getControlColor(settlement.control);
+                const size = settlement.strategic * 12 + 6;
+
+                const circle = L.circleMarker([settlement.lat, settlement.lng], {
+                    radius: size / 2,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.7
+                }).addTo(state.map);
+
+                circle.on('click', () => {
+                    state.selectedNode = settlement;
+                    const rect = circle._container.getBoundingClientRect();
+                    showTooltip(settlement, rect.left, rect.top);
+                });
+
+                circle.on('mouseover', () => {
+                    circle.setStyle({ weight: 3, opacity: 1 });
+                });
+
+                circle.on('mouseout', () => {
+                    circle.setStyle({ weight: 2, opacity: 0.8 });
+                });
+
+                // Label
+                const label = L.marker([settlement.lat, settlement.lng], {
+                    icon: L.divIcon({
+                        html: `<div class="node-label">${settlement.name}</div>`,
+                        className: '',
+                        iconSize: [60, 20]
+                    })
+                }).addTo(state.map);
+
+                state.mapLayers.set(settlement.id + '-label', label);
+                state.mapLayers.set(settlement.id + '-circle', circle);
+            });
+
+            // Add edges (simplified as lines)
+            net.edges.forEach(edge => {
+                const source = net.settlements.find(s => s.id === edge.source);
+                const target = net.settlements.find(s => s.id === edge.target);
+
+                if (source && target) {
+                    const color = edge.type === 'frontline' ? '#ff6b6b' : '#4da6ff';
+                    const dashArray = edge.type === 'frontline' ? '4 4' : '';
+
+                    const polyline = L.polyline([[source.lat, source.lng], [target.lat, target.lng]], {
+                        color: color,
+                        weight: 1.5,
+                        opacity: 0.5,
+                        dashArray: dashArray
+                    }).addTo(state.map);
+
+                    state.mapLayers.set(edge.source + '-' + edge.target, polyline);
+                }
+            });
+        }
+
+        // ==================== GRAPH MODE ====================
+        function initGraph() {
+            const net = NETWORKS[state.currentNetwork];
+            const container = document.getElementById('graph-container');
+
+            // Clear existing SVG
+            container.innerHTML = '';
+
+            const width = container.clientWidth || window.innerWidth;
+            const height = container.clientHeight || (window.innerHeight - 80);
+
+            const svg = d3.select('#graph-container')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .style('background', '#0a0e27');
+
+            // Zoom group
+            const g = svg.append('g');
+
+            // Add zoom/pan behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.3, 5])
+                .on('zoom', (event) => g.attr('transform', event.transform));
+            svg.call(zoom);
+
+            // Create graph data
+            const nodes = net.settlements.map(s => ({...s}));
+            const links = net.edges.map(e => ({
+                source: e.source,
+                target: e.target,
+                type: e.type,
+                weight: e.weight
+            }));
+
+            // Convert link source/target to node references
+            const linkData = links.map(link => ({
+                source: nodes.find(n => n.id === link.source) || link.source,
+                target: nodes.find(n => n.id === link.target) || link.target,
+                type: link.type,
+                weight: link.weight
+            })).filter(l => l.source && l.target && typeof l.source === 'object');
+
+            // Create simulation
+            const padding = 60;
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(linkData)
+                    .id(d => d.id)
+                    .distance(d => 80 / (d.weight || 0.5))
+                    .strength(0.4))
+                .force('charge', d3.forceManyBody().strength(-400))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collide', d3.forceCollide(d => d.strategic * 12 + 16))
+                .force('x', d3.forceX(width / 2).strength(0.05))
+                .force('y', d3.forceY(height / 2).strength(0.05));
+
+            state.graphSimulation = simulation;
+
+            // Render links
+            const linkGroup = g.append('g').attr('class', 'links').selectAll('line')
+                .data(linkData)
+                .enter()
+                .append('line')
+                .attr('class', d => 'link ' + d.type)
+                .attr('stroke', d => d.type === 'frontline' ? '#ff6b6b' : d.type === 'supply' ? '#ffd700' : '#4da6ff')
+                .attr('stroke-width', d => Math.max(1, (d.weight || 0.5) * 2))
+                .attr('stroke-opacity', 0.4)
+                .attr('stroke-dasharray', d => d.type === 'frontline' ? '4,4' : 'none');
+
+            // Render nodes
+            const nodeGroup = g.append('g').attr('class', 'nodes').selectAll('circle')
+                .data(nodes)
+                .enter()
+                .append('circle')
+                .attr('class', 'node')
+                .attr('r', d => d.strategic * 10 + 6)
+                .attr('fill', d => getControlColor(d.control))
+                .attr('stroke', d => getControlColor(d.control))
+                .attr('stroke-width', 2)
+                .attr('opacity', 0.8)
+                .call(d3.drag()
+                    .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+                    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+                    .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+                );
+
+            // Node labels
+            const labelGroup = g.append('g').attr('class', 'labels').selectAll('text')
+                .data(nodes)
+                .enter()
+                .append('text')
+                .attr('class', 'node-label')
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => -(d.strategic * 10 + 10))
+                .attr('fill', '#e0e0e0')
+                .attr('font-size', '11px')
+                .attr('font-family', 'Arial, sans-serif')
+                .text(d => d.name);
+
+            // Mouse interactions
+            nodeGroup.on('mouseover', function(e, d) {
+                d3.select(this).attr('opacity', 1).attr('stroke-width', 3);
+                showTooltip(d, e.clientX, e.clientY);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('opacity', 0.8).attr('stroke-width', 2);
+                hideTooltip();
+            });
+
+            // Constrain nodes within bounds on tick
+            simulation.on('tick', () => {
+                nodes.forEach(d => {
+                    d.x = Math.max(padding, Math.min(width - padding, d.x));
+                    d.y = Math.max(padding, Math.min(height - padding, d.y));
+                });
+
+                linkGroup
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                nodeGroup
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+
+                labelGroup
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+        }
+
+        // ==================== MODE SWITCHING ====================
+        function switchMode(mode) {
+            state.currentMode = mode;
+            const toggle = document.getElementById('mode-toggle');
+            const mapContainer = document.getElementById('map-container');
+            const graphContainer = document.getElementById('graph-container');
+
+            if (mode === 'map') {
+                toggle.classList.remove('graph-mode');
+                mapContainer.classList.remove('hidden');
+                graphContainer.classList.remove('active');
+                initMap();
+            } else {
+                toggle.classList.add('graph-mode');
+                mapContainer.classList.add('hidden');
+                graphContainer.classList.add('active');
+                initGraph();
+            }
+        }
+
+        // ==================== NETWORK SWITCHING ====================
+        function switchNetwork(network) {
+            state.currentNetwork = network;
+
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.network === network) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update graph metrics
+            updateGraphMetrics(network);
+
+            // Reinit current mode
+            if (state.currentMode === 'map') {
+                initMap();
+            } else {
+                initGraph();
+            }
+        }
+
+        // ==================== SEARCH ====================
+        function handleSearch(query) {
+            state.searchQuery = query.toLowerCase();
+            const net = NETWORKS[state.currentNetwork];
+
+            if (state.currentMode === 'map') {
+                state.mapLayers.forEach((layer, key) => {
+                    if (key.includes('-circle') || key.includes('-label')) {
+                        const settlementId = key.split('-')[0];
+                        const settlement = net.settlements.find(s => s.id === settlementId);
+                        if (settlement) {
+                            const match = settlement.name.toLowerCase().includes(query) ||
+                                        settlement.region.toLowerCase().includes(query) ||
+                                        settlement.control.toLowerCase().includes(query);
+                            if (!query || match) {
+                                layer.setStyle({ opacity: 1 });
+                            } else {
+                                layer.setStyle({ opacity: 0.2 });
+                            }
+                        }
+                    }
+                });
+            } else {
+                d3.selectAll('.node').attr('opacity', d => {
+                    const match = d.name.toLowerCase().includes(query) ||
+                                d.region.toLowerCase().includes(query) ||
+                                d.control.toLowerCase().includes(query);
+                    return !query || match ? 0.7 : 0.1;
+                });
+
+                d3.selectAll('.node-label').attr('opacity', d => {
+                    const match = d.name.toLowerCase().includes(query) ||
+                                d.region.toLowerCase().includes(query) ||
+                                d.control.toLowerCase().includes(query);
+                    return !query || match ? 1 : 0.2;
+                });
+            }
+        }
+
+        // ==================== GRAPH METRICS ====================
+        function buildAdjacencyMap(settlements, edges) {
+            const adjacency = new Map();
+
+            // Initialize all nodes
+            settlements.forEach(s => {
+                adjacency.set(s.id, []);
+            });
+
+            // Add edges
+            edges.forEach(edge => {
+                if (adjacency.has(edge.source) && adjacency.has(edge.target)) {
+                    adjacency.get(edge.source).push(edge.target);
+                    adjacency.get(edge.target).push(edge.source);
+                }
+            });
+
+            return adjacency;
+        }
+
+        function computeClusteringCoefficient(adjacency) {
+            let totalCoeff = 0;
+            let count = 0;
+
+            for (let [node, neighbors] of adjacency) {
+                const k = neighbors.length;
+                if (k < 2) continue;
+
+                let triangles = 0;
+                for (let i = 0; i < neighbors.length; i++) {
+                    for (let j = i + 1; j < neighbors.length; j++) {
+                        const neighbor1 = neighbors[i];
+                        const neighbor2 = neighbors[j];
+                        if (adjacency.get(neighbor1).includes(neighbor2)) {
+                            triangles++;
+                        }
+                    }
+                }
+
+                const possibleTriangles = k * (k - 1) / 2;
+                const coeff = triangles / possibleTriangles;
+                totalCoeff += coeff;
+                count++;
+            }
+
+            return count > 0 ? totalCoeff / count : 0;
+        }
+
+        function computeConnectedComponents(adjacency) {
+            const visited = new Set();
+            let components = 0;
+
+            function dfs(node) {
+                visited.add(node);
+                const neighbors = adjacency.get(node) || [];
+                for (let neighbor of neighbors) {
+                    if (!visited.has(neighbor)) {
+                        dfs(neighbor);
+                    }
+                }
+            }
+
+            for (let node of adjacency.keys()) {
+                if (!visited.has(node)) {
+                    dfs(node);
+                    components++;
+                }
+            }
+
+            return components;
+        }
+
+        function updateGraphMetrics(theater) {
+            const net = NETWORKS[theater];
+
+            const numNodes = net.settlements.length;
+            const numEdges = net.edges.length;
+            const density = numNodes > 1 ? (2 * numEdges) / (numNodes * (numNodes - 1)) : 0;
+            const avgDegree = numNodes > 0 ? (2 * numEdges) / numNodes : 0;
+
+            // Compute clustering coefficient
+            const adjacency = buildAdjacencyMap(net.settlements, net.edges);
+            const clusteringCoeff = computeClusteringCoefficient(adjacency);
+            const components = computeConnectedComponents(adjacency);
+
+            // Update DOM
+            document.getElementById('metric-nodes').textContent = numNodes;
+            document.getElementById('metric-edges').textContent = numEdges;
+            document.getElementById('metric-density').textContent = density.toFixed(2);
+            document.getElementById('metric-avg-degree').textContent = avgDegree.toFixed(2);
+            document.getElementById('metric-clustering').textContent = clusteringCoeff.toFixed(2);
+            document.getElementById('metric-components').textContent = components;
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('map-btn').addEventListener('click', () => switchMode('map'));
+        document.getElementById('graph-btn').addEventListener('click', () => switchMode('graph'));
+
+        document.getElementById('ukraine-btn').addEventListener('click', () => switchNetwork('ukraine'));
+        document.getElementById('mideast-btn').addEventListener('click', () => switchNetwork('mideast'));
+
+        document.getElementById('search-input').addEventListener('input', e => {
+            handleSearch(e.target.value);
+        });
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            await fetchMarketData();
+            updateGraphMetrics('ukraine');
+            initMap();
+        }
+
+        init();
+    </script>
+</body>
+</html>

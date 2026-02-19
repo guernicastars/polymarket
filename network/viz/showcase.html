@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Signals - Prediction Market Intelligence Platform</title>
+
+    <!-- Libraries from CDN -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0a0e27;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0e27;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4da6ff;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #66b3ff;
+        }
+
+        /* Section base styles */
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 40px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section:nth-child(1) { animation-delay: 0s; }
+        section:nth-child(2) { animation-delay: 0.2s; }
+        section:nth-child(3) { animation-delay: 0.2s; }
+        section:nth-child(4) { animation-delay: 0.2s; }
+        section:nth-child(5) { animation-delay: 0.2s; }
+        section:nth-child(6) { animation-delay: 0.2s; }
+        section:nth-child(7) { animation-delay: 0.2s; }
+        section:nth-child(8) { animation-delay: 0.2s; }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: #4da6ff;
+            text-align: center;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 2.8rem;
+            margin-bottom: 40px;
+            color: #4da6ff;
+            text-align: center;
+        }
+
+        p {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Hero Section */
+        #hero {
+            background: linear-gradient(135deg, #0a0e27 0%, #141829 100%);
+            justify-content: space-around;
+            position: relative;
+        }
+
+        #hero-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .hero-subtitle {
+            font-size: 1.8rem;
+            color: #9db4d9;
+            margin-bottom: 60px;
+            font-weight: 300;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .metric {
+            padding: 30px;
+            background: rgba(77, 166, 255, 0.08);
+            border: 1px solid #2a3a5a;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .metric:hover {
+            background: rgba(77, 166, 255, 0.15);
+            border-color: #4da6ff;
+            transform: translateY(-5px);
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            color: #4da6ff;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            font-size: 0.95rem;
+            color: #9db4d9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            color: #4da6ff;
+            z-index: 10;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        /* Pipeline Section */
+        .pipeline-container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .pipeline-flow {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 60px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .flow-box {
+            padding: 25px 35px;
+            background: rgba(77, 166, 255, 0.1);
+            border: 2px solid #4da6ff;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .flow-box:hover {
+            background: rgba(77, 166, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .flow-box-title {
+            font-weight: bold;
+            color: #4da6ff;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .flow-box-detail {
+            font-size: 0.85rem;
+            color: #9db4d9;
+        }
+
+        .flow-arrow {
+            font-size: 2rem;
+            color: #4da6ff;
+            animation: slideRight 2s ease-in-out infinite;
+        }
+
+        @keyframes slideRight {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        .phase-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-top: 50px;
+            width: 100%;
+        }
+
+        .phase-card {
+            padding: 25px;
+            background: rgba(42, 58, 90, 0.4);
+            border: 1px solid #2a3a5a;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .phase-card:hover {
+            border-color: #4da6ff;
+            background: rgba(77, 166, 255, 0.08);
+        }
+
+        .phase-card-title {
+            color: #4da6ff;
+            font-weight: bold;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .phase-card-stat {
+            font-size: 0.9rem;
+            color: #9db4d9;
+            margin-bottom: 6px;
+        }
+
+        /* Market Graph Section */
+        #market-graph-container {
+            width: 100%;
+            max-width: 1000px;
+            height: 500px;
+            margin: 40px 0;
+            background: rgba(20, 24, 41, 0.6);
+            border: 1px solid #2a3a5a;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        #market-graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-top: 30px;
+            font-size: 0.95rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        /* Conflict Networks Section */
+        .networks-container {
+            display: flex;
+            gap: 50px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .network-map-wrapper {
+            text-align: center;
+            flex: 1;
+            min-width: 400px;
+        }
+
+        .network-map-title {
+            font-size: 1.5rem;
+            color: #4da6ff;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .network-map {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #2a3a5a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .network-map-desc {
+            font-size: 0.9rem;
+            color: #9db4d9;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        /* GNN Section */
+        .gnn-container {
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .gnn-diagram {
+            background: rgba(20, 24, 41, 0.6);
+            border: 1px solid #2a3a5a;
+            border-radius: 12px;
+            padding: 40px;
+            margin: 40px 0;
+            position: relative;
+            min-height: 300px;
+        }
+
+        .gnn-layer {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .gnn-node-group {
+            text-align: center;
+        }
+
+        .gnn-node {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 10px;
+            background: rgba(77, 166, 255, 0.2);
+            border: 2px solid #4da6ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #4da6ff;
+            position: relative;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .gnn-node:nth-child(2) { animation-delay: 0.3s; }
+        .gnn-node:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(77, 166, 255, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(77, 166, 255, 0); }
+        }
+
+        .gnn-layer-label {
+            font-size: 0.85rem;
+            color: #9db4d9;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .gnn-arrow {
+            font-size: 2rem;
+            color: #4da6ff;
+            animation: slideRight 2s ease-in-out infinite;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            font-size: 0.85rem;
+        }
+
+        .feature-item {
+            padding: 12px;
+            background: rgba(77, 166, 255, 0.08);
+            border: 1px solid #2a3a5a;
+            border-radius: 6px;
+            color: #9db4d9;
+            text-align: left;
+        }
+
+        .feature-num {
+            color: #4da6ff;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        /* Signals Section */
+        .signals-container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin: 50px 0;
+        }
+
+        .signal-card {
+            padding: 30px;
+            background: rgba(42, 58, 90, 0.3);
+            border: 1px solid #2a3a5a;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .signal-card:hover {
+            background: rgba(77, 166, 255, 0.12);
+            border-color: #4da6ff;
+            transform: translateY(-8px);
+        }
+
+        .signal-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .signal-name {
+            font-size: 1.3rem;
+            color: #4da6ff;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .signal-desc {
+            font-size: 0.9rem;
+            color: #9db4d9;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .signal-weight {
+            font-size: 0.85rem;
+            color: #66b3ff;
+            background: rgba(77, 166, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .composite-formula {
+            margin: 40px 0;
+            padding: 25px;
+            background: rgba(77, 166, 255, 0.08);
+            border: 1px solid #4da6ff;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #e0e0e0;
+            overflow-x: auto;
+        }
+
+        /* Footer */
+        footer {
+            background: #0a0e27;
+            border-top: 1px solid #2a3a5a;
+            padding: 40px;
+            text-align: center;
+            color: #9db4d9;
+        }
+
+        footer p {
+            margin: 10px 0;
+            font-size: 1rem;
+        }
+
+        .footer-links {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #4da6ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #66b3ff;
+        }
+
+        .footer-credit {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #5a6a7a;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            h2 {
+                font-size: 2rem;
+            }
+
+            section {
+                padding: 40px 20px;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .networks-container {
+                gap: 30px;
+            }
+
+            .network-map-wrapper {
+                min-width: 300px;
+            }
+
+            .network-map {
+                height: 300px;
+            }
+
+            .signals-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 15px;
+            }
+
+            .gnn-diagram {
+                padding: 25px;
+            }
+        }
+
+        /* Animated Counter */
+        .counter {
+            font-weight: bold;
+            color: #4da6ff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section id="hero">
+        <svg id="hero-background"></svg>
+        <div class="hero-content">
+            <h1>Polymarket Signals</h1>
+            <p class="hero-subtitle">Prediction Market Intelligence Platform</p>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value"><span class="counter" data-target="45000">0</span>K+</div>
+                    <div class="metric-label">Markets Tracked</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value"><span class="counter" data-target="500">0</span></div>
+                    <div class="metric-label">Signals Computed</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value"><span class="counter" data-target="14">0</span></div>
+                    <div class="metric-label">Pipeline Jobs</div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator" onclick="scrollToNext(1)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Pipeline Architecture -->
+    <section id="pipeline">
+        <div class="pipeline-container">
+            <h2>Real-Time Data Pipeline</h2>
+            <p>Continuous ingestion from Polymarket APIs, through intelligent processing, to ClickHouse Cloud analytics</p>
+
+            <div class="pipeline-flow">
+                <div class="flow-box">
+                    <div class="flow-box-title">Polymarket APIs</div>
+                    <div class="flow-box-detail">Gamma · CLOB · Data · WebSocket</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Pipeline</div>
+                    <div class="flow-box-detail">11 Jobs · 4 Phases</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="flow-box-title">ClickHouse Cloud</div>
+                    <div class="flow-box-detail">14 Tables · 4 Views</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Analytics</div>
+                    <div class="flow-box-detail">Dashboard · GNN</div>
+                </div>
+            </div>
+
+            <div class="phase-stats">
+                <div class="phase-card">
+                    <div class="phase-card-title">Phase 1: Market Data</div>
+                    <div class="phase-card-stat">✓ 45K+ markets indexed</div>
+                    <div class="phase-card-stat">✓ 30s price polling</div>
+                    <div class="phase-card-stat">✓ 5,000 WebSocket tokens</div>
+                    <div class="phase-card-stat">✓ 10K row buffer</div>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-card-title">Phase 2: Whale Tracking</div>
+                    <div class="phase-card-stat">✓ 500 tracked wallets</div>
+                    <div class="phase-card-stat">✓ Hourly leaderboard sync</div>
+                    <div class="phase-card-stat">✓ Position monitoring</div>
+                    <div class="phase-card-stat">✓ Profile enrichment</div>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-card-title">Phase 3: Analytics</div>
+                    <div class="phase-card-stat">✓ Arbitrage detection</div>
+                    <div class="phase-card-stat">✓ Wallet clustering</div>
+                    <div class="phase-card-stat">✓ Insider scoring</div>
+                    <div class="phase-card-stat">✓ 8-factor signals</div>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-card-title">Phase 4: GNN-TCN</div>
+                    <div class="phase-card-stat">✓ Graph attention networks</div>
+                    <div class="phase-card-stat">✓ Temporal convolution</div>
+                    <div class="phase-card-stat">✓ 12-feature extraction</div>
+                    <div class="phase-card-stat">✓ Walk-forward backtest</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Market Graph -->
+    <section id="market-graph-section">
+        <h2>Market Similarity Network</h2>
+        <p>Markets connected by shared events, whale activity, price correlation, and signal fingerprints</p>
+        <div id="market-graph-container">
+            <svg id="market-graph"></svg>
+        </div>
+        <div class="graph-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Political Markets</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4ecdc4;"></div>
+                <span>Sports Markets</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #45b7d1;"></div>
+                <span>Crypto Markets</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd93d;"></div>
+                <span>Economic Markets</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Conflict Networks -->
+    <section id="networks">
+        <h2>Geopolitical Intelligence Networks</h2>
+        <p>Multi-region mapping of conflict zones and market implications</p>
+        <div class="networks-container">
+            <div class="network-map-wrapper">
+                <div class="network-map-title">Ukraine Theater</div>
+                <div id="map-ukraine" class="network-map"></div>
+                <div class="network-map-desc">8 key settlements tracking control, supply lines, and military engagement</div>
+            </div>
+            <div class="network-map-wrapper">
+                <div class="network-map-title">Middle East Theater</div>
+                <div id="map-middleeast" class="network-map"></div>
+                <div class="network-map-desc">7 key nodes monitoring regional tensions and humanitarian impact</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GNN-TCN Model -->
+    <section id="gnn-section">
+        <div class="gnn-container">
+            <h2>Graph Neural Network Predictions</h2>
+            <p>Deep learning architecture combining graph attention with temporal convolution for market forecasting</p>
+
+            <div class="gnn-diagram">
+                <div class="gnn-layer">
+                    <div class="gnn-node-group">
+                        <div class="gnn-node">Input</div>
+                        <div class="gnn-layer-label">12 Features<br>64 Timesteps</div>
+                    </div>
+                    <div class="gnn-arrow">→</div>
+                    <div class="gnn-node-group">
+                        <div class="gnn-node">GAT</div>
+                        <div class="gnn-layer-label">Graph Attention<br>4-Head, 32-Dim</div>
+                    </div>
+                    <div class="gnn-arrow">→</div>
+                    <div class="gnn-node-group">
+                        <div class="gnn-node">TCN</div>
+                        <div class="gnn-layer-label">Temporal Conv<br>4 Layers, RF=61</div>
+                    </div>
+                    <div class="gnn-arrow">→</div>
+                    <div class="gnn-node-group">
+                        <div class="gnn-node">Pred</div>
+                        <div class="gnn-layer-label">Probability<br>Output</div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 1rem; margin: 40px 0 20px 0;">12-Feature Extraction Pipeline</p>
+            <div class="features-grid">
+                <div class="feature-item"><span class="feature-num">F1</span> Log Returns</div>
+                <div class="feature-item"><span class="feature-num">F2</span> High-Low Spread</div>
+                <div class="feature-item"><span class="feature-num">F3</span> MA Distance</div>
+                <div class="feature-item"><span class="feature-num">F4</span> Bid-Ask Spread</div>
+                <div class="feature-item"><span class="feature-num">F5</span> Order Book Imbalance</div>
+                <div class="feature-item"><span class="feature-num">F6</span> Depth Ratio</div>
+                <div class="feature-item"><span class="feature-num">F7</span> Volume Delta</div>
+                <div class="feature-item"><span class="feature-num">F8</span> Open Interest</div>
+                <div class="feature-item"><span class="feature-num">F9</span> Sentiment Score</div>
+                <div class="feature-item"><span class="feature-num">F10</span> News Velocity</div>
+                <div class="feature-item"><span class="feature-num">F11</span> Inverse TTL</div>
+                <div class="feature-item"><span class="feature-num">F12</span> Correlation Delta</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Signals Dashboard -->
+    <section id="signals-section">
+        <div class="signals-container">
+            <h2>Trading Signals Dashboard</h2>
+            <p>Eight integrated signal sources combined into a unified prediction score</p>
+
+            <div class="signals-grid">
+                <div class="signal-card">
+                    <div class="signal-icon">📊</div>
+                    <div class="signal-name">Order Book Imbalance</div>
+                    <div class="signal-desc">Bid/ask volume ratio extremity from real-time orderbook</div>
+                    <div class="signal-weight">Weight: 0.20</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">🐋</div>
+                    <div class="signal-name">Smart Money</div>
+                    <div class="signal-desc">Top trader activity and position alignment</div>
+                    <div class="signal-weight">Weight: 0.25</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">📈</div>
+                    <div class="signal-name">Volume Anomaly</div>
+                    <div class="signal-desc">4h volume vs rolling daily average spike</div>
+                    <div class="signal-weight">Weight: 0.10</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">💰</div>
+                    <div class="signal-name">Large Trade Bias</div>
+                    <div class="signal-desc">Individual trades above USD threshold</div>
+                    <div class="signal-weight">Weight: 0.15</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">🔝</div>
+                    <div class="signal-name">Momentum</div>
+                    <div class="signal-desc">Price acceleration and trend strength</div>
+                    <div class="signal-weight">Weight: 0.15</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">⚠️</div>
+                    <div class="signal-name">Concentration Risk</div>
+                    <div class="signal-desc">Position concentration in top holders</div>
+                    <div class="signal-weight">Weight: 0.10</div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">🔄</div>
+                    <div class="signal-name">Arbitrage Detection</div>
+                    <div class="signal-desc">Sum-to-one deviations and cross-market pricing gaps</div>
+                    <span style="font-size: 0.85rem; color: #9db4d9;">Risk Indicator</span>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">🕵️</div>
+                    <div class="signal-name">Insider Activity</div>
+                    <div class="signal-desc">Win rate, freshness, niche focus scoring</div>
+                    <div class="signal-weight">Weight: 0.05</div>
+                </div>
+            </div>
+
+            <div class="composite-formula">
+Score = (0.20 × OBI) + (0.25 × SmartMoney) + (0.15 × LargeTradeBias) + (0.15 × Momentum) + (0.10 × VolumeAnomaly) + (0.10 × ConcentrationRisk) + (0.05 × Insider)
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p><strong>Built with</strong> Python · Docker · ClickHouse Cloud · Next.js · TypeScript · PyTorch</p>
+        <div class="footer-links">
+            <a href="https://github.com/guernicastars/polymarket" target="_blank">GitHub Repository</a>
+            <a href="https://polymarket-f9bnfijfb-eugene-ss-projects.vercel.app" target="_blank">Live Dashboard</a>
+            <a href="https://vercel.com" target="_blank">Deployed on Vercel</a>
+        </div>
+        <div class="footer-credit">
+            <p>Polymarket Signals © 2025-2026</p>
+            <p>Prediction Market Intelligence • Real-Time Pipeline • Advanced Analytics • AI-Powered Forecasting</p>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================================================
+        // HERO SECTION: Animated Particle Network
+        // ============================================================================
+        function initHeroBackground() {
+            const svg = d3.select("#hero-background");
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            svg.attr("width", width).attr("height", height);
+
+            // Create nodes (particles)
+            const nodes = d3.range(50).map(() => ({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 3 + 1
+            }));
+
+            // Force simulation
+            const simulation = d3.forceSimulation(nodes)
+                .force("charge", d3.forceManyBody().strength(-30))
+                .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05))
+                .force("collision", d3.forceCollide().radius(d => d.r + 10));
+
+            // Draw links
+            const links = svg.selectAll("line").data([]);
+            links.exit().remove();
+
+            // Draw nodes
+            svg.selectAll("circle")
+                .data(nodes)
+                .enter()
+                .append("circle")
+                .attr("r", d => d.r)
+                .attr("fill", "#4da6ff")
+                .attr("opacity", 0.4);
+
+            // Update positions on tick
+            simulation.on("tick", () => {
+                svg.selectAll("circle")
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+
+            // Redraw on resize
+            window.addEventListener("resize", () => {
+                const newWidth = window.innerWidth;
+                const newHeight = window.innerHeight;
+                svg.attr("width", newWidth).attr("height", newHeight);
+            });
+        }
+
+        // ============================================================================
+        // ANIMATED COUNTER
+        // ============================================================================
+        function animateCounters() {
+            const counters = document.querySelectorAll(".counter");
+            counters.forEach(counter => {
+                const target = parseInt(counter.dataset.target);
+                let current = 0;
+                const increment = target / 60; // 60 frames
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        counter.textContent = target;
+                        clearInterval(timer);
+                    } else {
+                        counter.textContent = Math.floor(current);
+                    }
+                }, 30);
+            });
+        }
+
+        // ============================================================================
+        // MARKET GRAPH: D3 Force-Directed Network
+        // ============================================================================
+        function initMarketGraph() {
+            const svg = d3.select("#market-graph");
+            const container = document.getElementById("market-graph-container");
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            svg.attr("width", width).attr("height", height);
+
+            // Sample market data (simplified)
+            const categories = ["Political", "Sports", "Crypto", "Economic"];
+            const categoryColors = {
+                Political: "#ff6b6b",
+                Sports: "#4ecdc4",
+                Crypto: "#45b7d1",
+                Economic: "#ffd93d"
+            };
+
+            const nodes = d3.range(30).map((i) => ({
+                id: i,
+                category: categories[Math.floor(Math.random() * categories.length)],
+                volume: Math.random() * 1000000 + 100000,
+                fx: null,
+                fy: null
+            }));
+
+            const links = [];
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (Math.random() > 0.85) {
+                        links.push({ source: i, target: j });
+                    }
+                }
+            }
+
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(20));
+
+            // Draw links
+            const link = svg.selectAll("line")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("stroke", "#2a3a5a")
+                .attr("stroke-width", 1)
+                .attr("opacity", 0.4);
+
+            // Draw nodes
+            const node = svg.selectAll("circle")
+                .data(nodes)
+                .enter()
+                .append("circle")
+                .attr("r", d => Math.sqrt(d.volume) / 1000 + 5)
+                .attr("fill", d => categoryColors[d.category])
+                .attr("opacity", 0.8)
+                .attr("stroke", "#4da6ff")
+                .attr("stroke-width", 1.5)
+                .call(d3.drag()
+                    .on("start", dragStarted)
+                    .on("drag", dragged)
+                    .on("end", dragEnded));
+
+            // Add hover tooltip
+            node.on("mouseenter", function(event, d) {
+                d3.select(this).transition().attr("r", Math.sqrt(d.volume) / 1000 + 10).attr("opacity", 1);
+            }).on("mouseleave", function(event, d) {
+                d3.select(this).transition().attr("r", Math.sqrt(d.volume) / 1000 + 5).attr("opacity", 0.8);
+            });
+
+            function dragStarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragEnded(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            simulation.on("tick", () => {
+                link.attr("x1", d => nodes[d.source.index].x)
+                    .attr("y1", d => nodes[d.source.index].y)
+                    .attr("x2", d => nodes[d.target.index].x)
+                    .attr("y2", d => nodes[d.target.index].y);
+
+                node.attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+        }
+
+        // ============================================================================
+        // LEAFLET MAPS: Ukraine and Middle East
+        // ============================================================================
+        function initUkraineMap() {
+            const map = L.map('map-ukraine').setView([48.8, 37.5], 7);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© CartoDB',
+                maxZoom: 19
+            }).addTo(map);
+
+            const nodes = [
+                {id: "pokrovsk", name: "Pokrovsk", lat: 48.28, lng: 37.18, control: "UA"},
+                {id: "kupiansk", name: "Kupiansk", lat: 49.71, lng: 37.61, control: "CONTESTED"},
+                {id: "bakhmut", name: "Bakhmut", lat: 48.59, lng: 38.00, control: "RU"},
+                {id: "kramatorsk", name: "Kramatorsk", lat: 48.74, lng: 37.56, control: "UA"},
+                {id: "donetsk", name: "Donetsk", lat: 48.00, lng: 37.80, control: "RU"},
+                {id: "zaporizhzhia", name: "Zaporizhzhia", lat: 47.84, lng: 35.14, control: "UA"},
+                {id: "kherson", name: "Kherson", lat: 46.64, lng: 32.62, control: "UA"},
+                {id: "mariupol", name: "Mariupol", lat: 47.10, lng: 37.55, control: "RU"}
+            ];
+
+            const controlColors = {
+                "UA": "#4da6ff",
+                "RU": "#ff6b6b",
+                "CONTESTED": "#ffd93d"
+            };
+
+            nodes.forEach(node => {
+                const color = controlColors[node.control];
+                L.circleMarker([node.lat, node.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: "#e0e0e0",
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.8
+                }).bindPopup(`<strong>${node.name}</strong><br>Control: ${node.control}`).addTo(map);
+            });
+        }
+
+        function initMiddleEastMap() {
+            const map = L.map('map-middleeast').setView([28, 40], 5);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© CartoDB',
+                maxZoom: 19
+            }).addTo(map);
+
+            const nodes = [
+                {id: "gaza", name: "Gaza City", lat: 31.50, lng: 34.47, control: "CONTESTED"},
+                {id: "rafah", name: "Rafah", lat: 31.28, lng: 34.24, control: "CONTESTED"},
+                {id: "tel_aviv", name: "Tel Aviv", lat: 32.09, lng: 34.78, control: "IL"},
+                {id: "beirut", name: "Beirut", lat: 33.89, lng: 35.50, control: "LB"},
+                {id: "tehran", name: "Tehran", lat: 35.69, lng: 51.39, control: "IR"},
+                {id: "sanaa", name: "Sanaa", lat: 15.35, lng: 44.21, control: "HOUTHI"},
+                {id: "bab_el_mandeb", name: "Bab el-Mandeb", lat: 12.58, lng: 43.33, control: "CONTESTED"}
+            ];
+
+            const controlColors = {
+                "IL": "#4da6ff",
+                "LB": "#9db4d9",
+                "IR": "#ff6b6b",
+                "HOUTHI": "#ffd93d",
+                "CONTESTED": "#ff9800"
+            };
+
+            nodes.forEach(node => {
+                const color = controlColors[node.control];
+                L.circleMarker([node.lat, node.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: "#e0e0e0",
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.8
+                }).bindPopup(`<strong>${node.name}</strong><br>Control: ${node.control}`).addTo(map);
+            });
+        }
+
+        // ============================================================================
+        // INTERSECTION OBSERVER: Trigger animations on scroll
+        // ============================================================================
+        function initIntersectionObserver() {
+            const sections = document.querySelectorAll("section");
+            const options = {
+                threshold: 0.3,
+                rootMargin: "0px 0px -100px 0px"
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+
+                        // Trigger specific animations
+                        if (id === "hero") {
+                            initHeroBackground();
+                            animateCounters();
+                        } else if (id === "market-graph-section") {
+                            setTimeout(() => initMarketGraph(), 300);
+                        } else if (id === "networks") {
+                            setTimeout(() => {
+                                initUkraineMap();
+                                initMiddleEastMap();
+                            }, 300);
+                        }
+
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, options);
+
+            sections.forEach(section => observer.observe(section));
+        }
+
+        // ============================================================================
+        // SCROLL TO NEXT SECTION
+        // ============================================================================
+        function scrollToNext(index) {
+            const sections = document.querySelectorAll("section");
+            if (sections[index]) {
+                sections[index].scrollIntoView({ behavior: "smooth" });
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener("DOMContentLoaded", () => {
+            initIntersectionObserver();
+        });
+
+        // Handle window resize for hero background
+        window.addEventListener("resize", () => {
+            const svg = d3.select("#hero-background");
+            if (!svg.empty()) {
+                svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
+            }
+        });
+    </script>
+</body>
+</html>

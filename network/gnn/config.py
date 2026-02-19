@@ -1,7 +1,15 @@
 """Configuration for the GNN-TCN temporal prediction model.
 
 Architecture follows Anastasiia's 12-feature TCN design adapted for
-graph-structured data (40-node Donbas settlement network).
+graph-structured data. Supports both geographic settlement graphs
+(Ukraine, Middle East) and generic market similarity graphs.
+
+In the OpenForage-inspired ensemble architecture, the GNN-TCN model is
+one signal source among many — its predictions feed into the quality-gated
+SignalEnsemble (see pipeline.causal.signal_ensemble) alongside composite
+signals, causal analysis outputs, and other predictors. The model's
+Platt-calibrated probability outputs are evaluated through the same
+in-sample/out-of-sample/uniqueness pipeline as all other signals.
 """
 
 from __future__ import annotations
@@ -59,7 +67,7 @@ class ModelConfig:
     # --- Prediction head ---
     fc_hidden: int = 64
     fc_dropout: float = 0.3
-    n_targets: int = 7              # 7 Polymarket target settlements
+    n_targets: int = 10             # 10 Polymarket target settlements
 
     # --- Training ---
     learning_rate: float = 1e-3
@@ -105,12 +113,41 @@ class BacktestConfig:
 
 
 @dataclass
+class GraphConfig:
+    """Graph construction configuration for market similarity graphs."""
+
+    # Similarity method: 'event', 'whale', 'correlation', 'signal', 'category', 'combined'
+    method: str = "combined"
+
+    # Component weights (must sum to ~1.0 for combined method)
+    event_weight: float = 0.30       # same event_slug → 1.0
+    whale_weight: float = 0.20       # Jaccard of top-20 holders
+    correlation_weight: float = 0.25  # Pearson of hourly log returns
+    signal_weight: float = 0.15      # cosine sim of 8 composite_signals components
+    category_weight: float = 0.10    # same category tag → 1.0
+
+    # Graph construction thresholds
+    min_similarity: float = 0.15     # edges below this become 0
+    add_self_loops: bool = True
+    symmetric: bool = True
+
+    # Query tuning
+    price_lookback_days: int = 7
+    min_data_points: int = 50        # min hourly bars for correlation
+    top_markets: int = 500           # max markets for similarity computation
+
+
+@dataclass
 class GNNConfig:
     """Top-level configuration aggregating all sub-configs."""
 
     features: FeatureConfig = field(default_factory=FeatureConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
+    graph: GraphConfig = field(default_factory=GraphConfig)
+
+    # Graph type: 'settlement' (geographic), 'market' (generic similarity)
+    graph_type: str = "settlement"
 
     # ClickHouse connection (inherited from pipeline env)
     clickhouse_host: str = "ch.bloomsburytech.com"

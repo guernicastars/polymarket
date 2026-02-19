@@ -8,6 +8,8 @@ import {
   Zap,
   Users,
   Brain,
+  Target,
+  GitBranch,
 } from "lucide-react";
 import "./globals.css";
 
@@ -33,6 +35,8 @@ const navItems = [
   { href: "/signals", label: "Signals", icon: Zap },
   { href: "/whales", label: "Whales", icon: Users },
   { href: "/analytics", label: "Analytics", icon: Brain },
+  { href: "/causal", label: "Causal", icon: GitBranch },
+  { href: "/backtest", label: "Backtest", icon: Target },
 ];
 
 export default function RootLayout({

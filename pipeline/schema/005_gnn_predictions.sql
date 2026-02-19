@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS gnn_predictions
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(predicted_at)
 ORDER BY (condition_id, predicted_at)
-TTL predicted_at + INTERVAL 1 YEAR DELETE
+TTL toDateTime(predicted_at) + INTERVAL 1 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS gnn_backtest_runs
 )
 ENGINE = MergeTree()
 ORDER BY (run_id, created_at)
-TTL created_at + INTERVAL 1 YEAR DELETE
+TTL toDateTime(created_at) + INTERVAL 1 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -126,5 +126,5 @@ CREATE TABLE IF NOT EXISTS gnn_backtest_trades
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(trade_time)
 ORDER BY (run_id, trade_time, trade_idx)
-TTL trade_time + INTERVAL 1 YEAR DELETE
+TTL toDateTime(trade_time) + INTERVAL 1 YEAR DELETE
 SETTINGS index_granularity = 8192;

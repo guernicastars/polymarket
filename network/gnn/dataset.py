@@ -211,7 +211,10 @@ class DonbasTemporalDataset(Dataset):
             logger.warning("Could not resolve condition IDs: %s", e)
 
     def _fetch_next_prices(self, end_time: datetime) -> np.ndarray:
-        """Fetch the next-step price for each target (label for supervised learning)."""
+        """Fetch the next-step price for each target (label for supervised learning).
+
+        Tries market_prices first, falls back to market_trades.
+        """
         step_min = self.cfg.features.step_minutes
         next_time = end_time + timedelta(minutes=step_min)
         y = np.full(len(self.target_ids), 0.5, dtype=np.float32)
@@ -222,9 +225,31 @@ class DonbasTemporalDataset(Dataset):
             if not cid:
                 continue
             try:
+                # Try market_prices first
                 rows = self.client.query(
                     """
                     SELECT price FROM market_prices
+                    WHERE condition_id = {condition_id:String}
+                      AND outcome = 'Yes'
+                      AND timestamp >= {start:DateTime64(3)}
+                      AND timestamp < {end:DateTime64(3)}
+                    ORDER BY timestamp ASC
+                    LIMIT 1
+                    """,
+                    parameters={
+                        "condition_id": cid,
+                        "start": end_time,
+                        "end": next_time + timedelta(minutes=step_min),
+                    },
+                ).result_rows
+                if rows:
+                    y[i] = rows[0][0]
+                    continue
+
+                # Fallback: use trade prices
+                rows = self.client.query(
+                    """
+                    SELECT price FROM market_trades
                     WHERE condition_id = {condition_id:String}
                       AND outcome = 'Yes'
                       AND timestamp >= {start:DateTime64(3)}

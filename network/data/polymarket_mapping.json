@@ -1,44 +1,70 @@
 {
   "pokrovsk": {
-    "slug": "will-russia-capture-pokrovsk",
-    "description": "Will Russia capture Pokrovsk by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+    "slug": "will-russia-capture-all-of-pokrovsk-by-march-31",
+    "description": "Will Russia capture all of Pokrovsk by March 31?",
+    "condition_id": "0x100f4c96c8ffb376074a4d12bbc5b3c9c4ae77042319de11249096b6cbfbcefc",
+    "token_id": "66269306641072351636961565307986748333577224262245957192572668300728882961637"
   },
-  "chasiv_yar": {
-    "slug": "will-russia-capture-chasiv-yar",
-    "description": "Will Russia capture Chasiv Yar by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+  "kostiantynivka": {
+    "slug": "will-russia-capture-kostyantynivka-by-december-31-2026-936-942",
+    "description": "Will Russia capture Kostyantynivka by December 31, 2026?",
+    "condition_id": "0x7e50b661a2bedc670bcf32fc9ece12616f6fc4fba5dbe8526292bf3447374009",
+    "token_id": "83552904656813968939383082097054433404653657244784709614448703928529504455469",
+    "sub_markets": {
+      "feb_28": {"slug": "will-russia-capture-kostyantynivka-by-february-28", "market_price": 0.05},
+      "mar_31": {"slug": "will-russia-capture-kostyantynivka-by-march-31-872-578", "market_price": 0.27},
+      "jun_30": {"slug": "will-russia-capture-kostyantynivka-by-june-30", "market_price": 0.12},
+      "dec_31": {"slug": "will-russia-capture-kostyantynivka-by-december-31-2026-936-942", "market_price": 0.30}
+    },
+    "prices_updated": "2026-02-17",
+    "resolution": "ISW map shows Kostyantynivka railroad station (Pravoberezhna vulytsia) shaded red"
   },
   "toretsk": {
-    "slug": "will-russia-capture-toretsk",
-    "description": "Will Russia capture Toretsk by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+    "slug": "will-russia-capture-toretske-by-march-31-2026",
+    "description": "Will Russia capture Toretske by March 31, 2026?",
+    "condition_id": "0x25d2af413845b63ff3daf09c4154c090aacb8b34640ddf01f754df02ff6462d6",
+    "token_id": "109615118914262848726134459562538492202453288986973576852948325569038771941384"
   },
   "kupiansk": {
-    "slug": "will-russia-capture-kupiansk",
-    "description": "Will Russia capture Kupiansk by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+    "slug": "will-russia-capture-all-of-kupiansk-by-march-31",
+    "description": "Will Russia capture all of Kupiansk by March 31?",
+    "condition_id": "0xd942d271e59cfbcc7c9b4fe0a463718bd4e50478836b2f9f5b66243d77b29e02",
+    "token_id": "45089382414483578938726883454769004518004044065888676737276582661191075840434"
   },
-  "zaporizhzhia": {
-    "slug": "will-russia-capture-zaporizhzhia",
-    "description": "Will Russia capture Zaporizhzhia by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+  "lyman": {
+    "slug": "will-russia-capture-lyman-by-march-31-2026-494",
+    "description": "Will Russia capture Lyman by March 31, 2026?",
+    "condition_id": "0x309ae759aefeb898fbc17881e16b796aceb3ce7ee99d077bae89f46904ef3635",
+    "token_id": "34254338241290516754163779889987574790033932358499741518448025208727830568442"
   },
   "orikhiv": {
-    "slug": "will-russia-capture-orikhiv",
-    "description": "Will Russia capture Orikhiv by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+    "slug": "will-russia-enter-orikhiv-by-march-31",
+    "description": "Will Russia enter Orikhiv by March 31?",
+    "condition_id": "0x829c1cf16943d85120a4aeb8b40e5984f20c8ff8c58c8c283a8f7c8e609de6bb",
+    "token_id": "18383110985753553577320023911481935085081650068070789350086929125763745346449"
   },
   "hryshyne": {
-    "slug": "will-russia-capture-hryshyne",
-    "description": "Will Russia capture Hryshyne by end of 2026?",
-    "condition_id": null,
-    "token_id": null
+    "slug": "will-russia-capture-hryshyne-by-march-31-2026",
+    "description": "Will Russia capture Hryshyne by March 31, 2026?",
+    "condition_id": "0xee0d9bcacab8880d63b1b44f24c8672b88718e0a935ff16fef2cc920bc596e69",
+    "token_id": "18730978422362583344635704599452590050275452404041361625425790481762026934944"
+  },
+  "hulyaipole": {
+    "slug": "will-russia-capture-all-of-huliaipole-by-february-28",
+    "description": "Will Russia capture all of Huliaipole by February 28?",
+    "condition_id": "0x9aa369619d83dde03b384844674fad655f92bab05b034a1c540e78d7f828a37b",
+    "token_id": "28667860392142823151877400432052515597411262182770824014128139317797432047906"
+  },
+  "sloviansk": {
+    "slug": "will-russia-capture-slovainsk-by-2027",
+    "description": "Will Russia capture Sloviansk by June 30?",
+    "condition_id": "0x1e5efe84a9a890e61044d77ea6e182f39b06d5b382c851b926cad54cb4972e68",
+    "token_id": "35387107368752328644982641185985574345241154905795306214146121961491417818763"
+  },
+  "borova": {
+    "slug": "will-russia-enter-borova-by-march-31",
+    "description": "Will Russia enter Borova by March 31?",
+    "condition_id": "0x447ebfa6074ef7b513711abe57fae9cfe80d6f93bfaf1c4e8d813fdd6cfac6f7",
+    "token_id": "77236426235125758956565839580730454202569477043200936799693583110955110463130"
   }
 }

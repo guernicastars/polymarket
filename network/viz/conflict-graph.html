@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Network Graph</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #graph-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            position: relative;
+        }
+
+        svg {
+            background: #0a0e27;
+            cursor: grab;
+        }
+
+        svg.dragging {
+            cursor: grabbing;
+        }
+
+        /* Theater Tabs */
+        #theater-tabs {
+            position: absolute;
+            top: 20px;
+            left: 300px;
+            display: flex;
+            gap: 8px;
+            z-index: 50;
+        }
+
+        .theater-tab {
+            padding: 8px 16px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            color: #a0a0a0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .theater-tab:hover {
+            background: #243a5a;
+            color: #4da6ff;
+        }
+
+        .theater-tab.active {
+            background: #4da6ff;
+            color: #0a0e27;
+            border-color: #4da6ff;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100%;
+            background: #0f1535;
+            border-right: 1px solid #2a3a5a;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            left: 280px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            color: #4da6ff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+
+        #sidebar.collapsed ~ .sidebar-toggle {
+            display: flex;
+            left: 0;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+        }
+
+        .stat-value {
+            color: #4da6ff;
+            font-weight: 600;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .legend-item:hover {
+            background: rgba(77, 166, 255, 0.1);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            flex: 1;
+        }
+
+        .legend-count {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .checkbox {
+            width: 14px;
+            height: 14px;
+            margin-right: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .slider-container {
+            margin-top: 10px;
+        }
+
+        .slider-label {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #2a3a5a;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4da6ff;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4da6ff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.5);
+        }
+
+        .slider-value {
+            font-size: 12px;
+            color: #4da6ff;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        .radio-group {
+            margin-top: 10px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .radio-item input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        /* Right Panel */
+        #details-panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 320px;
+            height: 100%;
+            background: #0f1535;
+            border-left: 1px solid #2a3a5a;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        #details-panel.hidden {
+            transform: translateX(100%);
+        }
+
+        .panel-toggle {
+            position: absolute;
+            right: 320px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            color: #4da6ff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+
+        #details-panel.hidden ~ .panel-toggle {
+            display: flex;
+            right: 0;
+        }
+
+        .details-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 16px;
+            word-break: break-word;
+        }
+
+        .details-item {
+            margin-bottom: 16px;
+        }
+
+        .details-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .details-value {
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            background: rgba(77, 166, 255, 0.2);
+            border: 1px solid rgba(77, 166, 255, 0.4);
+            color: #4da6ff;
+        }
+
+        .badge.target {
+            background: rgba(255, 217, 61, 0.2);
+            border-color: rgba(255, 217, 61, 0.4);
+            color: #ffd93d;
+        }
+
+        .vulnerability-bar {
+            margin-top: 8px;
+            height: 24px;
+            background: #1a2a4a;
+            border-radius: 4px;
+            border: 1px solid #2a3a5a;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .vulnerability-segment {
+            height: 100%;
+            flex: 0 0 auto;
+            transition: flex 0.3s;
+        }
+
+        .component-breakdown {
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(77, 166, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .breakdown-label {
+            color: #a0a0a0;
+        }
+
+        .breakdown-value {
+            color: #4da6ff;
+            font-weight: 600;
+        }
+
+        .external-link {
+            display: inline-block;
+            color: #4da6ff;
+            text-decoration: none;
+            font-size: 12px;
+            padding: 8px 12px;
+            border: 1px solid #4da6ff;
+            border-radius: 4px;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+
+        .external-link:hover {
+            background: rgba(77, 166, 255, 0.1);
+        }
+
+        .connected-settlements {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2a3a5a;
+        }
+
+        .connected-item {
+            font-size: 11px;
+            padding: 6px;
+            margin-bottom: 4px;
+            background: rgba(77, 166, 255, 0.1);
+            border-radius: 3px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .connected-item:hover {
+            background: rgba(77, 166, 255, 0.2);
+            color: #4da6ff;
+        }
+
+        /* Bottom Bar */
+        #bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #0f1535;
+            border-top: 1px solid #2a3a5a;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .bottom-left {
+            flex: 1;
+        }
+
+        .bottom-info {
+            color: #888;
+            margin-right: 20px;
+            display: inline-block;
+        }
+
+        .bottom-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .reset-btn {
+            background: #4da6ff;
+            color: #0a0e27;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #6bb8ff;
+            box-shadow: 0 0 12px rgba(77, 166, 255, 0.4);
+        }
+
+        .reset-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Search Box */
+        #search-box {
+            position: absolute;
+            top: 20px;
+            left: 300px;
+            width: 250px;
+            padding: 8px 12px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 12px;
+            z-index: 49;
+        }
+
+        #search-box::placeholder {
+            color: #666;
+        }
+
+        #search-box:focus {
+            outline: none;
+            border-color: #4da6ff;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.3);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            display: none;
+        }
+
+        .spinner.active {
+            display: block;
+        }
+
+        .spinner-circle {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #2a3a5a;
+            border-top: 3px solid #4da6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #1a2a4a;
+            color: #e0e0e0;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #2a3a5a;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 150;
+            max-width: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-item {
+            margin-bottom: 4px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a3a5a;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a4a6a;
+        }
+
+        /* Node styling */
+        .node {
+            cursor: pointer;
+            stroke: #2a3a5a;
+            stroke-width: 2px;
+            transition: all 0.2s;
+        }
+
+        .node:hover {
+            stroke: #4da6ff;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px rgba(77, 166, 255, 0.5));
+        }
+
+        .node.selected {
+            stroke: #ffd93d;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 12px rgba(255, 217, 61, 0.6));
+        }
+
+        .node.dimmed {
+            opacity: 0.2;
+        }
+
+        .node-label {
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        /* Link styling */
+        .link {
+            stroke: rgba(77, 166, 255, 0.3);
+            stroke-linecap: round;
+            pointer-events: none;
+            fill: none;
+        }
+
+        .link.dimmed {
+            opacity: 0.1;
+        }
+
+        .link.frontline {
+            stroke: #ff6b6b;
+            stroke-dasharray: 5, 5;
+            animation: dash 20s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 40;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            #sidebar {
+                width: 240px;
+            }
+
+            #details-panel {
+                width: 280px;
+            }
+
+            #theater-tabs {
+                left: 260px;
+                width: 200px;
+                flex-wrap: wrap;
+            }
+
+            #search-box {
+                left: 260px;
+                width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container">
+        <svg id="graph"></svg>
+
+        <div id="sidebar">
+            <div class="sidebar-title">Conflict Networks</div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Statistics</div>
+                <div class="stat-item">
+                    <span class="stat-label">Settlements</span>
+                    <span class="stat-value" id="stat-nodes">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Connections</span>
+                    <span class="stat-value" id="stat-edges">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Network Density</span>
+                    <span class="stat-value" id="stat-density">0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Avg Degree</span>
+                    <span class="stat-value" id="stat-avg-degree">0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Components</span>
+                    <span class="stat-value" id="stat-components">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Bridges</span>
+                    <span class="stat-value" id="stat-bridges">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Articulation Pts</span>
+                    <span class="stat-value" id="stat-art-points">0</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Control Status</div>
+                <div id="control-legend"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Edge Types</div>
+                <div id="edge-legend"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Force Strength</div>
+                <div class="slider-container">
+                    <label class="slider-label">Charge Force</label>
+                    <input type="range" id="charge-slider" min="-800" max="-100" value="-300" step="50">
+                    <div class="slider-value">
+                        <span id="charge-value">-300</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="slider-container">
+                    <label class="slider-label">Link Distance</label>
+                    <input type="range" id="distance-slider" min="50" max="300" value="120" step="10">
+                    <div class="slider-value">
+                        <span id="distance-value">120</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Node Sizing</div>
+                <div class="radio-group">
+                    <label class="radio-item">
+                        <input type="radio" name="sizing" value="population" checked>
+                        <span>Population</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="sizing" value="garrison">
+                        <span>Garrison</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="sizing" value="fortification">
+                        <span>Fortification</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="sizing" value="betweenness">
+                        <span>Betweenness</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button class="sidebar-toggle" title="Toggle sidebar">☰</button>
+
+        <div id="theater-tabs">
+            <button class="theater-tab active" data-theater="donbas">Donbas (40)</button>
+            <button class="theater-tab" data-theater="ukraine">Ukraine (67)</button>
+            <button class="theater-tab" data-theater="mideast">Middle East (34)</button>
+            <button class="theater-tab" data-theater="combined">Combined</button>
+        </div>
+
+        <input type="text" id="search-box" placeholder="Search settlements...">
+
+        <div id="details-panel" class="hidden">
+            <div class="details-title" id="details-settlement">Select a settlement to see details</div>
+            <div id="details-content"></div>
+        </div>
+
+        <button class="panel-toggle" title="Toggle details panel">⧘</button>
+
+        <div class="spinner" id="spinner">
+            <div class="spinner-circle"></div>
+        </div>
+
+        <div id="bottom-bar">
+            <div class="bottom-left">
+                <span class="bottom-info" id="theater-info">Donbas Theater</span>
+            </div>
+            <div class="bottom-right">
+                <button class="reset-btn" id="reset-btn">Reset Zoom</button>
+            </div>
+        </div>
+
+        <div class="tooltip" id="tooltip" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            controlColors: {
+                'UA': '#4da6ff',      // blue
+                'RU': '#ff6b6b',      // red
+                'CONTESTED': '#ffd93d', // yellow
+                'IL': '#4da6ff',      // blue
+                'LB': '#50C878',      // green
+                'IR': '#c77dff',      // purple
+                'HOUTHI': '#ff8c42',  // orange
+                'SY_REBEL': '#e0e0e0', // light gray
+                'INTL': '#888888',    // gray
+                'PA': '#50C878',      // green
+                'EG': '#a0a0a0',      // neutral gray
+                'JO': '#a0a0a0',      // neutral gray
+                'QA': '#a0a0a0'       // neutral gray
+            },
+            edgeColors: {
+                'HIGHWAY': '#4da6ff',
+                'RAIL': '#ffd93d',
+                'FRONTLINE': '#ff6b6b',
+                'SECONDARY_ROAD': '#666',
+                'SUPPLY_ROUTE': '#ff8c42',
+                'PROXY_SUPPLY': '#ff8c42',
+                'MARITIME': '#50C878',
+                'SHIPPING_LANE': '#50C878',
+                'BORDER': '#c77dff',
+                'BORDER_CROSSING': '#888',
+                'CONTROLLED_CROSSING': '#888',
+                'AIR_CORRIDOR': '#c77dff',
+                'DIPLOMATIC': '#888',
+                'URBAN_ROAD': '#666'
+            },
+            forceConfig: {
+                charge: -300,
+                linkDistance: 120,
+                collisionRadius: 8
+            }
+        };
+
+        // State
+        const state = {
+            allData: {},
+            currentTheater: 'donbas',
+            nodes: [],
+            edges: [],
+            selectedNode: null,
+            hoveredNode: null,
+            simulation: null,
+            data: { nodes: [], links: [] },
+            sizingMode: 'population',
+            betweennessCentrality: {}
+        };
+
+        // Inlined JSON datasets
+        const DONBAS_NODES = [{"id": "pokrovsk", "name": "Pokrovsk", "lat": 48.2833, "lng": 37.1833, "control": "UA", "population": 60000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-pokrovsk", "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "tags": ["logistics_hub", "rail_junction", "phase1_target"]}, {"id": "chasiv_yar", "name": "Chasiv Yar", "lat": 48.6, "lng": 37.85, "control": "UA", "population": 12000, "is_polymarket_target": false, "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.7, "garrison_estimate": 3000, "tags": ["high_ground", "canal_defense"]}, {"id": "toretsk", "name": "Toretsk", "lat": 48.3956, "lng": 37.8464, "control": "UA", "population": 32000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-toretsk", "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.5, "garrison_estimate": 2500, "tags": ["urban", "phase1_target"]}, {"id": "kupiansk", "name": "Kupiansk", "lat": 49.7133, "lng": 37.6167, "control": "UA", "population": 27000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-kupiansk", "oblast": "Kharkiv", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 3500, "tags": ["rail_junction", "oskil_river", "phase1_target"]}, {"id": "zaporizhzhia", "name": "Zaporizhzhia", "lat": 47.8388, "lng": 35.1396, "control": "UA", "population": 710000, "is_polymarket_target": false, "oblast": "Zaporizhzhia", "fortification_level": 0.9, "terrain_difficulty": 0.5, "garrison_estimate": 15000, "tags": ["regional_capital", "dnipro_river", "nuclear_plant_nearby"]}, {"id": "orikhiv", "name": "Orikhiv", "lat": 47.5667, "lng": 35.7833, "control": "UA", "population": 14000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-orikhiv", "oblast": "Zaporizhzhia", "fortification_level": 0.6, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "tags": ["southern_front", "2023_counteroffensive"]}, {"id": "hryshyne", "name": "Hryshyne", "lat": 48.15, "lng": 37.0333, "control": "CONTESTED", "population": 800, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-hryshyne", "oblast": "Donetsk", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 500, "tags": ["pokrovsk_approach", "active_combat"]}, {"id": "kramatorsk", "name": "Kramatorsk", "lat": 48.7356, "lng": 37.5856, "control": "UA", "population": 150000, "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.5, "garrison_estimate": 8000, "tags": ["ua_hq_donbas", "rail_hub"]}, {"id": "sloviansk", "name": "Sloviansk", "lat": 48.8511, "lng": 37.6167, "control": "UA", "population": 106000, "is_polymarket_target": true, "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.6, "garrison_estimate": 4000, "tags": ["hilltop_defense", "2014_battle", "phase4_target"]}, {"id": "kostiantynivka", "name": "Kostiantynivka", "lat": 48.5297, "lng": 37.7081, "control": "UA", "population": 68000, "is_polymarket_target": true, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "tags": ["supply_node", "phase4_target"]}, {"id": "druzhkivka", "name": "Druzhkivka", "lat": 48.6181, "lng": 37.5286, "control": "UA", "population": 55000, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 1500, "tags": ["supply_node"]}, {"id": "bakhmut", "name": "Bakhmut", "lat": 48.5953, "lng": 38.0003, "control": "RU", "population": 73000, "oblast": "Donetsk", "fortification_level": 0.3, "terrain_difficulty": 0.5, "garrison_estimate": 4000, "tags": ["fallen_2023", "devastated"]}, {"id": "siversk", "name": "Siversk", "lat": 48.8667, "lng": 38.1, "control": "UA", "population": 11000, "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.7, "garrison_estimate": 2000, "tags": ["donets_river_defense"]}, {"id": "lyman", "name": "Lyman", "lat": 48.9833, "lng": 37.8167, "control": "UA", "population": 20000, "is_polymarket_target": true, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.6, "garrison_estimate": 2500, "tags": ["recaptured_2022", "rail_junction", "phase4_target"]}, {"id": "avdiivka", "name": "Avdiivka", "lat": 48.1397, "lng": 37.7472, "control": "RU", "population": 31000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.4, "garrison_estimate": 3000, "tags": ["fallen_feb_2024", "coke_plant"]}, {"id": "marinka", "name": "Marinka", "lat": 47.9422, "lng": 37.5058, "control": "RU", "population": 9000, "oblast": "Donetsk", "fortification_level": 0.1, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "tags": ["fallen_2023", "devastated"]}, {"id": "vuhledar", "name": "Vuhledar", "lat": 47.7833, "lng": 37.25, "control": "RU", "population": 14000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.5, "garrison_estimate": 2000, "tags": ["fallen_2024", "hilltop"]}, {"id": "kurakhove", "name": "Kurakhove", "lat": 47.9833, "lng": 37.3, "control": "RU", "population": 20000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 1500, "tags": ["fallen_2024", "reservoir"]}, {"id": "selydove", "name": "Selydove", "lat": 48.15, "lng": 37.3, "control": "RU", "population": 21000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "tags": ["fallen_2024"]}, {"id": "pavlohrad", "name": "Pavlohrad", "lat": 48.5333, "lng": 35.8667, "control": "UA", "population": 104000, "oblast": "Dnipropetrovsk", "fortification_level": 0.6, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "tags": ["rear_logistics", "rail_hub"]}, {"id": "dnipro", "name": "Dnipro", "lat": 48.4647, "lng": 35.0462, "control": "UA", "population": 980000, "oblast": "Dnipropetrovsk", "fortification_level": 0.9, "terrain_difficulty": 0.5, "garrison_estimate": 20000, "tags": ["major_city", "supply_origin", "safe_rear"]}, {"id": "nikopol", "name": "Nikopol", "lat": 47.5719, "lng": 34.3978, "control": "UA", "population": 108000, "oblast": "Dnipropetrovsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "tags": ["dnipro_river", "shelling_target"]}, {"id": "izium", "name": "Izium", "lat": 49.2156, "lng": 37.2611, "control": "UA", "population": 46000, "oblast": "Kharkiv", "fortification_level": 0.6, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "tags": ["recaptured_2022", "donets_river"]}, {"id": "borova", "name": "Borova", "lat": 49.05, "lng": 37.6667, "control": "UA", "population": 5000, "is_polymarket_target": true, "oblast": "Kharkiv", "fortification_level": 0.4, "terrain_difficulty": 0.5, "garrison_estimate": 1000, "tags": ["oskil_river", "phase4_target"]}, {"id": "oskil", "name": "Oskil", "lat": 49.5333, "lng": 37.3333, "control": "UA", "population": 3000, "oblast": "Kharkiv", "fortification_level": 0.5, "terrain_difficulty": 0.5, "garrison_estimate": 800, "tags": ["river_defense"]}, {"id": "donetsk_city", "name": "Donetsk", "lat": 48.0159, "lng": 37.8028, "control": "RU", "population": 905000, "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.5, "garrison_estimate": 25000, "tags": ["ru_regional_hq"]}, {"id": "horlivka", "name": "Horlivka", "lat": 48.3069, "lng": 38.0525, "control": "RU", "population": 240000, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "tags": ["ru_held_since_2014"]}, {"id": "makiivka", "name": "Makiivka", "lat": 48.0453, "lng": 37.9653, "control": "RU", "population": 340000, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "tags": ["ru_held_since_2014"]}, {"id": "luhansk_city", "name": "Luhansk", "lat": 48.574, "lng": 39.3078, "control": "RU", "population": 400000, "oblast": "Luhansk", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 10000, "tags": ["ru_regional_hq"]}, {"id": "severodonetsk", "name": "Severodonetsk", "lat": 48.9483, "lng": 38.4933, "control": "RU", "population": 100000, "oblast": "Luhansk", "fortification_level": 0.4, "terrain_difficulty": 0.5, "garrison_estimate": 4000, "tags": ["fallen_2022"]}, {"id": "lysychansk", "name": "Lysychansk", "lat": 48.9042, "lng": 38.4375, "control": "RU", "population": 95000, "oblast": "Luhansk", "fortification_level": 0.4, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "tags": ["fallen_2022", "high_ground"]}, {"id": "kreminna", "name": "Kreminna", "lat": 49.05, "lng": 38.2167, "control": "RU", "population": 18000, "oblast": "Luhansk", "fortification_level": 0.5, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "tags": ["forest_defense", "contested_area"]}, {"id": "svatove", "name": "Svatove", "lat": 49.4083, "lng": 38.1583, "control": "RU", "population": 16000, "oblast": "Luhansk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 3000, "tags": ["supply_node"]}, {"id": "hulyaipole", "name": "Hulyaipole", "lat": 47.6667, "lng": 36.25, "control": "UA", "population": 13000, "is_polymarket_target": true, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 1500, "tags": ["southern_front", "phase4_target"]}, {"id": "polohy", "name": "Polohy", "lat": 47.4833, "lng": 36.25, "control": "RU", "population": 18000, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "tags": ["ru_held"]}, {"id": "tokmak", "name": "Tokmak", "lat": 47.25, "lng": 35.7, "control": "RU", "population": 30000, "oblast": "Zaporizhzhia", "fortification_level": 0.7, "terrain_difficulty": 0.3, "garrison_estimate": 4000, "tags": ["ru_logistics_hub", "2023_offensive_target"]}, {"id": "melitopol", "name": "Melitopol", "lat": 46.8489, "lng": 35.3653, "control": "RU", "population": 150000, "oblast": "Zaporizhzhia", "fortification_level": 0.7, "terrain_difficulty": 0.3, "garrison_estimate": 8000, "tags": ["ru_admin_center", "key_objective"]}, {"id": "enerhodar", "name": "Enerhodar", "lat": 47.4989, "lng": 34.6536, "control": "RU", "population": 52000, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "tags": ["nuclear_plant", "dnipro_river"]}, {"id": "myrnohrad", "name": "Myrnohrad", "lat": 48.3, "lng": 37.2667, "control": "CONTESTED", "population": 50000, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "tags": ["pokrovsk_defense_line"]}, {"id": "ocheretyne", "name": "Ocheretyne", "lat": 48.2, "lng": 37.5333, "control": "RU", "population": 3000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 800, "tags": ["fallen_2024", "pokrovsk_approach"]}];
+        const DONBAS_EDGES = [{"source": "dnipro", "target": "pavlohrad", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 80, "description": "M04 highway \u2014 primary supply artery"}, {"source": "dnipro", "target": "pavlohrad", "edge_type": "RAIL", "weight": 0.2, "capacity": 1.0, "distance_km": 85, "description": "Main rail line Dnipro-Pavlohrad"}, {"source": "pavlohrad", "target": "pokrovsk", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.9, "distance_km": 100, "description": "M04 highway continuation to Pokrovsk"}, {"source": "pavlohrad", "target": "pokrovsk", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 110, "description": "Rail line to Pokrovsk junction"}, {"source": "pokrovsk", "target": "myrnohrad", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 15, "description": "Short connector road"}, {"source": "pokrovsk", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.7, "capacity": 0.5, "distance_km": 20, "description": "Road to Selydove (now RU)"}, {"source": "pokrovsk", "target": "hryshyne", "edge_type": "SECONDARY_ROAD", "weight": 0.8, "capacity": 0.4, "distance_km": 18, "is_frontline": true, "description": "Contested approach road"}, {"source": "myrnohrad", "target": "ocheretyne", "edge_type": "SECONDARY_ROAD", "weight": 0.9, "capacity": 0.3, "distance_km": 25, "is_frontline": true, "description": "Frontline road"}, {"source": "pokrovsk", "target": "kostiantynivka", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.8, "distance_km": 55, "description": "Northern supply route"}, {"source": "pokrovsk", "target": "druzhkivka", "edge_type": "RAIL", "weight": 0.4, "capacity": 0.7, "distance_km": 60, "description": "Rail connection north"}, {"source": "kramatorsk", "target": "sloviansk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 15, "description": "Twin cities connector"}, {"source": "kramatorsk", "target": "druzhkivka", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 18, "description": "Kramatorsk-Druzhkivka road"}, {"source": "kramatorsk", "target": "kostiantynivka", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 25, "description": "Southern connector"}, {"source": "kramatorsk", "target": "siversk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.6, "distance_km": 40, "description": "Road to eastern defense line"}, {"source": "kramatorsk", "target": "lyman", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 35, "description": "Northern axis road"}, {"source": "sloviansk", "target": "lyman", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 25, "description": "Road to Lyman"}, {"source": "sloviansk", "target": "izium", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 45, "description": "Road to Izium via Donets river"}, {"source": "lyman", "target": "siversk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 30, "description": "Lyman-Siversk connector"}, {"source": "lyman", "target": "borova", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "Road east along Oskil"}, {"source": "lyman", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Active frontline zone"}, {"source": "siversk", "target": "lysychansk", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 15, "is_frontline": true, "description": "Frontline crossing"}, {"source": "siversk", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 25, "is_frontline": true, "description": "Luhansk frontline"}, {"source": "kostiantynivka", "target": "chasiv_yar", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 20, "description": "Road to Chasiv Yar"}, {"source": "kostiantynivka", "target": "toretsk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 18, "description": "Road to Toretsk"}, {"source": "chasiv_yar", "target": "bakhmut", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 8, "is_frontline": true, "description": "Chasiv Yar-Bakhmut frontline"}, {"source": "toretsk", "target": "horlivka", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 12, "is_frontline": true, "description": "Toretsk-Horlivka frontline"}, {"source": "toretsk", "target": "chasiv_yar", "edge_type": "SECONDARY_ROAD", "weight": 0.7, "capacity": 0.5, "distance_km": 22, "description": "Lateral connector"}, {"source": "bakhmut", "target": "horlivka", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.8, "distance_km": 35, "description": "RU-controlled road"}, {"source": "bakhmut", "target": "lysychansk", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 40, "description": "RU supply route north"}, {"source": "bakhmut", "target": "severodonetsk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.6, "distance_km": 50, "description": "RU lateral supply"}, {"source": "horlivka", "target": "donetsk_city", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 30, "description": "RU interior highway"}, {"source": "donetsk_city", "target": "makiivka", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 15, "description": "Twin cities (RU)"}, {"source": "donetsk_city", "target": "avdiivka", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 15, "description": "Donetsk-Avdiivka road"}, {"source": "donetsk_city", "target": "marinka", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 20, "description": "Donetsk-Marinka road"}, {"source": "avdiivka", "target": "ocheretyne", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 15, "description": "RU advance axis"}, {"source": "avdiivka", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "RU advance westward"}, {"source": "selydove", "target": "kurakhove", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 20, "description": "RU southern axis"}, {"source": "kurakhove", "target": "marinka", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "RU connector"}, {"source": "kurakhove", "target": "vuhledar", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.4, "distance_km": 30, "description": "Southern Donetsk road"}, {"source": "hryshyne", "target": "selydove", "edge_type": "SECONDARY_ROAD", "weight": 0.8, "capacity": 0.3, "distance_km": 12, "is_frontline": true, "description": "Contested zone"}, {"source": "izium", "target": "borova", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 30, "description": "Izium-Borova road"}, {"source": "izium", "target": "kupiansk", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.7, "distance_km": 60, "description": "Road to Kupiansk via P79"}, {"source": "kupiansk", "target": "oskil", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 25, "description": "Oskil river road"}, {"source": "kupiansk", "target": "svatove", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 30, "is_frontline": true, "description": "Kupiansk-Svatove frontline"}, {"source": "borova", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Borova-Kreminna frontline"}, {"source": "borova", "target": "svatove", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 40, "is_frontline": true, "description": "Northern Luhansk front"}, {"source": "kreminna", "target": "svatove", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 45, "description": "RU supply road"}, {"source": "kreminna", "target": "lysychansk", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 20, "description": "RU road"}, {"source": "lysychansk", "target": "severodonetsk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 8, "description": "Twin cities (RU)"}, {"source": "severodonetsk", "target": "luhansk_city", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.9, "distance_km": 90, "description": "RU interior road"}, {"source": "zaporizhzhia", "target": "orikhiv", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 40, "description": "Zap-Orikhiv highway"}, {"source": "zaporizhzhia", "target": "hulyaipole", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.6, "distance_km": 60, "description": "Road to Hulyaipole"}, {"source": "zaporizhzhia", "target": "nikopol", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 70, "description": "Dnipro river road"}, {"source": "zaporizhzhia", "target": "dnipro", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 1.0, "distance_km": 85, "description": "Zap-Dnipro highway"}, {"source": "orikhiv", "target": "polohy", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 15, "is_frontline": true, "description": "Southern frontline"}, {"source": "orikhiv", "target": "hulyaipole", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 25, "description": "Lateral road"}, {"source": "hulyaipole", "target": "polohy", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 20, "is_frontline": true, "description": "Southern frontline"}, {"source": "polohy", "target": "tokmak", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 30, "description": "RU supply route"}, {"source": "tokmak", "target": "melitopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 55, "description": "RU main supply road"}, {"source": "nikopol", "target": "enerhodar", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 10, "is_frontline": true, "description": "Across Dnipro river"}];
+        const UKRAINE_NODES = [{"id": "pokrovsk", "name": "Pokrovsk", "lat": 48.2833, "lng": 37.1833, "control": "UA", "population": 60000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-pokrovsk", "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "donbas", "tags": ["logistics_hub", "rail_junction"]}, {"id": "chasiv_yar", "name": "Chasiv Yar", "lat": 48.6, "lng": 37.85, "control": "UA", "population": 12000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-chasiv-yar", "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.7, "garrison_estimate": 3000, "region": "donbas", "tags": ["high_ground", "canal_defense"]}, {"id": "toretsk", "name": "Toretsk", "lat": 48.3956, "lng": 37.8464, "control": "UA", "population": 32000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-toretsk", "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.5, "garrison_estimate": 2500, "region": "donbas", "tags": ["urban"]}, {"id": "kupiansk", "name": "Kupiansk", "lat": 49.7133, "lng": 37.6167, "control": "UA", "population": 27000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-kupiansk", "oblast": "Kharkiv", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 3500, "region": "donbas", "tags": ["rail_junction", "oskil_river"]}, {"id": "zaporizhzhia", "name": "Zaporizhzhia", "lat": 47.8388, "lng": 35.1396, "control": "UA", "population": 710000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-zaporizhzhia", "oblast": "Zaporizhzhia", "fortification_level": 0.9, "terrain_difficulty": 0.5, "garrison_estimate": 15000, "region": "south", "tags": ["regional_capital", "dnipro_river"]}, {"id": "orikhiv", "name": "Orikhiv", "lat": 47.5667, "lng": 35.7833, "control": "UA", "population": 14000, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-orikhiv", "oblast": "Zaporizhzhia", "fortification_level": 0.6, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "region": "south", "tags": ["southern_front"]}, {"id": "hryshyne", "name": "Hryshyne", "lat": 48.15, "lng": 37.0333, "control": "CONTESTED", "population": 800, "is_polymarket_target": true, "polymarket_slug": "will-russia-capture-hryshyne", "oblast": "Donetsk", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 500, "region": "donbas", "tags": ["pokrovsk_approach"]}, {"id": "kramatorsk", "name": "Kramatorsk", "lat": 48.7356, "lng": 37.5856, "control": "UA", "population": 150000, "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.5, "garrison_estimate": 8000, "region": "donbas", "tags": ["ua_hq_donbas", "rail_hub"]}, {"id": "sloviansk", "name": "Sloviansk", "lat": 48.8511, "lng": 37.6167, "control": "UA", "population": 106000, "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.6, "garrison_estimate": 4000, "region": "donbas", "tags": ["hilltop_defense"]}, {"id": "kostiantynivka", "name": "Kostiantynivka", "lat": 48.5297, "lng": 37.7081, "control": "UA", "population": 68000, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "region": "donbas", "tags": ["supply_node"]}, {"id": "druzhkivka", "name": "Druzhkivka", "lat": 48.6181, "lng": 37.5286, "control": "UA", "population": 55000, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 1500, "region": "donbas", "tags": ["supply_node"]}, {"id": "bakhmut", "name": "Bakhmut", "lat": 48.5953, "lng": 38.0003, "control": "RU", "population": 73000, "oblast": "Donetsk", "fortification_level": 0.3, "terrain_difficulty": 0.5, "garrison_estimate": 4000, "region": "donbas", "tags": ["fallen_2023"]}, {"id": "siversk", "name": "Siversk", "lat": 48.8667, "lng": 38.1, "control": "UA", "population": 11000, "oblast": "Donetsk", "fortification_level": 0.7, "terrain_difficulty": 0.7, "garrison_estimate": 2000, "region": "donbas", "tags": ["donets_river_defense"]}, {"id": "lyman", "name": "Lyman", "lat": 48.9833, "lng": 37.8167, "control": "UA", "population": 20000, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.6, "garrison_estimate": 2500, "region": "donbas", "tags": ["recaptured_2022", "rail_junction"]}, {"id": "avdiivka", "name": "Avdiivka", "lat": 48.1397, "lng": 37.7472, "control": "RU", "population": 31000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.4, "garrison_estimate": 3000, "region": "donbas", "tags": ["fallen_feb_2024"]}, {"id": "marinka", "name": "Marinka", "lat": 47.9422, "lng": 37.5058, "control": "RU", "population": 9000, "oblast": "Donetsk", "fortification_level": 0.1, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "region": "donbas", "tags": ["fallen_2023"]}, {"id": "vuhledar", "name": "Vuhledar", "lat": 47.7833, "lng": 37.25, "control": "RU", "population": 14000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.5, "garrison_estimate": 2000, "region": "donbas", "tags": ["fallen_2024"]}, {"id": "kurakhove", "name": "Kurakhove", "lat": 47.9833, "lng": 37.3, "control": "RU", "population": 20000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 1500, "region": "donbas", "tags": ["fallen_2024"]}, {"id": "selydove", "name": "Selydove", "lat": 48.15, "lng": 37.3, "control": "RU", "population": 21000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "region": "donbas", "tags": ["fallen_2024"]}, {"id": "myrnohrad", "name": "Myrnohrad", "lat": 48.3, "lng": 37.2667, "control": "CONTESTED", "population": 50000, "oblast": "Donetsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "region": "donbas", "tags": ["pokrovsk_defense_line"]}, {"id": "ocheretyne", "name": "Ocheretyne", "lat": 48.2, "lng": 37.5333, "control": "RU", "population": 3000, "oblast": "Donetsk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 800, "region": "donbas", "tags": ["fallen_2024"]}, {"id": "pavlohrad", "name": "Pavlohrad", "lat": 48.5333, "lng": 35.8667, "control": "UA", "population": 104000, "oblast": "Dnipropetrovsk", "fortification_level": 0.6, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "region": "central", "tags": ["rear_logistics", "rail_hub"]}, {"id": "dnipro", "name": "Dnipro", "lat": 48.4647, "lng": 35.0462, "control": "UA", "population": 980000, "oblast": "Dnipropetrovsk", "fortification_level": 0.9, "terrain_difficulty": 0.5, "garrison_estimate": 20000, "region": "central", "tags": ["major_city", "supply_origin", "strike_target"]}, {"id": "nikopol", "name": "Nikopol", "lat": 47.5719, "lng": 34.3978, "control": "UA", "population": 108000, "oblast": "Dnipropetrovsk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "region": "central", "tags": ["dnipro_river", "shelling_target"]}, {"id": "izium", "name": "Izium", "lat": 49.2156, "lng": 37.2611, "control": "UA", "population": 46000, "oblast": "Kharkiv", "fortification_level": 0.6, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "region": "donbas", "tags": ["recaptured_2022"]}, {"id": "borova", "name": "Borova", "lat": 49.05, "lng": 37.6667, "control": "UA", "population": 5000, "oblast": "Kharkiv", "fortification_level": 0.4, "terrain_difficulty": 0.5, "garrison_estimate": 1000, "region": "donbas", "tags": ["oskil_river"]}, {"id": "oskil", "name": "Oskil", "lat": 49.5333, "lng": 37.3333, "control": "UA", "population": 3000, "oblast": "Kharkiv", "fortification_level": 0.5, "terrain_difficulty": 0.5, "garrison_estimate": 800, "region": "donbas", "tags": ["river_defense"]}, {"id": "donetsk_city", "name": "Donetsk", "lat": 48.0159, "lng": 37.8028, "control": "RU", "population": 905000, "oblast": "Donetsk", "fortification_level": 0.8, "terrain_difficulty": 0.5, "garrison_estimate": 25000, "region": "donbas", "tags": ["ru_regional_hq"]}, {"id": "horlivka", "name": "Horlivka", "lat": 48.3069, "lng": 38.0525, "control": "RU", "population": 240000, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "donbas", "tags": ["ru_held_since_2014"]}, {"id": "makiivka", "name": "Makiivka", "lat": 48.0453, "lng": 37.9653, "control": "RU", "population": 340000, "oblast": "Donetsk", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "donbas", "tags": ["ru_held_since_2014"]}, {"id": "luhansk_city", "name": "Luhansk", "lat": 48.574, "lng": 39.3078, "control": "RU", "population": 400000, "oblast": "Luhansk", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 10000, "region": "donbas", "tags": ["ru_regional_hq"]}, {"id": "severodonetsk", "name": "Severodonetsk", "lat": 48.9483, "lng": 38.4933, "control": "RU", "population": 100000, "oblast": "Luhansk", "fortification_level": 0.4, "terrain_difficulty": 0.5, "garrison_estimate": 4000, "region": "donbas", "tags": ["fallen_2022"]}, {"id": "lysychansk", "name": "Lysychansk", "lat": 48.9042, "lng": 38.4375, "control": "RU", "population": 95000, "oblast": "Luhansk", "fortification_level": 0.4, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "region": "donbas", "tags": ["fallen_2022"]}, {"id": "kreminna", "name": "Kreminna", "lat": 49.05, "lng": 38.2167, "control": "RU", "population": 18000, "oblast": "Luhansk", "fortification_level": 0.5, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "region": "donbas", "tags": ["forest_defense"]}, {"id": "svatove", "name": "Svatove", "lat": 49.4083, "lng": 38.1583, "control": "RU", "population": 16000, "oblast": "Luhansk", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 3000, "region": "donbas", "tags": ["supply_node"]}, {"id": "hulyaipole", "name": "Hulyaipole", "lat": 47.6667, "lng": 36.25, "control": "UA", "population": 13000, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 1500, "region": "south", "tags": ["southern_front"]}, {"id": "polohy", "name": "Polohy", "lat": 47.4833, "lng": 36.25, "control": "RU", "population": 18000, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "region": "south", "tags": ["ru_held"]}, {"id": "tokmak", "name": "Tokmak", "lat": 47.25, "lng": 35.7, "control": "RU", "population": 30000, "oblast": "Zaporizhzhia", "fortification_level": 0.7, "terrain_difficulty": 0.3, "garrison_estimate": 4000, "region": "south", "tags": ["ru_logistics_hub"]}, {"id": "melitopol", "name": "Melitopol", "lat": 46.8489, "lng": 35.3653, "control": "RU", "population": 150000, "oblast": "Zaporizhzhia", "fortification_level": 0.7, "terrain_difficulty": 0.3, "garrison_estimate": 8000, "region": "south", "tags": ["ru_admin_center"]}, {"id": "enerhodar", "name": "Enerhodar", "lat": 47.4989, "lng": 34.6536, "control": "RU", "population": 52000, "oblast": "Zaporizhzhia", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "region": "south", "tags": ["nuclear_plant"]}, {"id": "kyiv", "name": "Kyiv", "lat": 50.4501, "lng": 30.5234, "control": "UA", "population": 2962000, "oblast": "Kyiv", "fortification_level": 0.95, "terrain_difficulty": 0.6, "garrison_estimate": 50000, "region": "north", "tags": ["capital", "strike_target", "command_center"]}, {"id": "kharkiv", "name": "Kharkiv", "lat": 49.9935, "lng": 36.2304, "control": "UA", "population": 1430000, "oblast": "Kharkiv", "fortification_level": 0.8, "terrain_difficulty": 0.4, "garrison_estimate": 25000, "region": "northeast", "tags": ["major_city", "strike_target", "border_proximity"]}, {"id": "odesa", "name": "Odesa", "lat": 46.4825, "lng": 30.7233, "control": "UA", "population": 1010000, "oblast": "Odesa", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 15000, "region": "south", "tags": ["port_city", "strike_target", "grain_corridor"]}, {"id": "mykolaiv", "name": "Mykolaiv", "lat": 46.975, "lng": 32.0, "control": "UA", "population": 476000, "oblast": "Mykolaiv", "fortification_level": 0.7, "terrain_difficulty": 0.4, "garrison_estimate": 10000, "region": "south", "tags": ["port_city", "frontline_proximity"]}, {"id": "kherson_city", "name": "Kherson", "lat": 46.6354, "lng": 32.6169, "control": "UA", "population": 280000, "oblast": "Kherson", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "south", "tags": ["liberated_2022", "strike_target", "dnipro_river"]}, {"id": "sumy", "name": "Sumy", "lat": 50.9077, "lng": 34.7981, "control": "UA", "population": 259000, "oblast": "Sumy", "fortification_level": 0.6, "terrain_difficulty": 0.5, "garrison_estimate": 8000, "region": "north", "tags": ["border_proximity", "strike_target"]}, {"id": "poltava", "name": "Poltava", "lat": 49.5883, "lng": 34.5514, "control": "UA", "population": 284000, "oblast": "Poltava", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 5000, "region": "central", "tags": ["strike_target", "military_base"]}, {"id": "vinnytsia", "name": "Vinnytsia", "lat": 49.2331, "lng": 28.4682, "control": "UA", "population": 370000, "oblast": "Vinnytsia", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 5000, "region": "west", "tags": ["strike_target", "air_base"]}, {"id": "lviv", "name": "Lviv", "lat": 49.8397, "lng": 24.0297, "control": "UA", "population": 717000, "oblast": "Lviv", "fortification_level": 0.6, "terrain_difficulty": 0.5, "garrison_estimate": 10000, "region": "west", "tags": ["logistics_hub", "strike_target", "nato_border"]}, {"id": "ivano_frankivsk", "name": "Ivano-Frankivsk", "lat": 48.9226, "lng": 24.7111, "control": "UA", "population": 237000, "oblast": "Ivano-Frankivsk", "fortification_level": 0.4, "terrain_difficulty": 0.6, "garrison_estimate": 3000, "region": "west", "tags": ["strike_target"]}, {"id": "chernihiv", "name": "Chernihiv", "lat": 51.4982, "lng": 31.2893, "control": "UA", "population": 286000, "oblast": "Chernihiv", "fortification_level": 0.6, "terrain_difficulty": 0.5, "garrison_estimate": 5000, "region": "north", "tags": ["defended_2022", "strike_target"]}, {"id": "zhytomyr", "name": "Zhytomyr", "lat": 50.2547, "lng": 28.6587, "control": "UA", "population": 263000, "oblast": "Zhytomyr", "fortification_level": 0.4, "terrain_difficulty": 0.4, "garrison_estimate": 3000, "region": "west", "tags": ["strike_target"]}, {"id": "kryvyi_rih", "name": "Kryvyi Rih", "lat": 47.9085, "lng": 33.3431, "control": "UA", "population": 612000, "oblast": "Dnipropetrovsk", "fortification_level": 0.6, "terrain_difficulty": 0.4, "garrison_estimate": 8000, "region": "central", "tags": ["industrial", "strike_target"]}, {"id": "kropyvnytskyi", "name": "Kropyvnytskyi", "lat": 48.5079, "lng": 32.2623, "control": "UA", "population": 222000, "oblast": "Kirovohrad", "fortification_level": 0.4, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "region": "central", "tags": ["air_base"]}, {"id": "uman", "name": "Uman", "lat": 48.7475, "lng": 30.2218, "control": "UA", "population": 82000, "oblast": "Cherkasy", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "region": "central", "tags": ["strike_target"]}, {"id": "starokostiantyniv", "name": "Starokostiantyniv", "lat": 49.75, "lng": 27.2167, "control": "UA", "population": 34000, "oblast": "Khmelnytskyi", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "region": "west", "tags": ["air_base", "strike_target"]}, {"id": "belgorod", "name": "Belgorod", "lat": 50.5997, "lng": 36.5876, "control": "RU", "population": 391000, "oblast": "Belgorod", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 10000, "region": "russia", "tags": ["ru_staging", "logistics_hub", "border"]}, {"id": "kursk_city", "name": "Kursk", "lat": 51.7373, "lng": 36.1874, "control": "RU", "population": 449000, "oblast": "Kursk", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 15000, "region": "russia", "tags": ["ru_logistics", "incursion_target"]}, {"id": "rostov", "name": "Rostov-on-Don", "lat": 47.2357, "lng": 39.7015, "control": "RU", "population": 1130000, "oblast": "Rostov", "fortification_level": 0.6, "terrain_difficulty": 0.3, "garrison_estimate": 20000, "region": "russia", "tags": ["ru_southern_hq", "major_logistics"]}, {"id": "voronezh", "name": "Voronezh", "lat": 51.672, "lng": 39.1843, "control": "RU", "population": 1047000, "oblast": "Voronezh", "fortification_level": 0.5, "terrain_difficulty": 0.3, "garrison_estimate": 10000, "region": "russia", "tags": ["ru_logistics", "air_base"]}, {"id": "bryansk", "name": "Bryansk", "lat": 53.2521, "lng": 34.3717, "control": "RU", "population": 402000, "oblast": "Bryansk", "fortification_level": 0.4, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "russia", "tags": ["ru_logistics"]}, {"id": "crimea_simferopol", "name": "Simferopol", "lat": 44.9521, "lng": 34.1024, "control": "RU", "population": 340000, "oblast": "Crimea", "fortification_level": 0.7, "terrain_difficulty": 0.5, "garrison_estimate": 15000, "region": "crimea", "tags": ["ru_admin_crimea"]}, {"id": "crimea_sevastopol", "name": "Sevastopol", "lat": 44.6166, "lng": 33.5254, "control": "RU", "population": 393000, "oblast": "Crimea", "fortification_level": 0.8, "terrain_difficulty": 0.6, "garrison_estimate": 20000, "region": "crimea", "tags": ["ru_naval_base", "black_sea_fleet"]}, {"id": "crimea_kerch", "name": "Kerch", "lat": 45.3514, "lng": 36.4683, "control": "RU", "population": 149000, "oblast": "Crimea", "fortification_level": 0.5, "terrain_difficulty": 0.4, "garrison_estimate": 5000, "region": "crimea", "tags": ["kerch_bridge", "logistics_chokepoint"]}, {"id": "mariupol", "name": "Mariupol", "lat": 47.0958, "lng": 37.5483, "control": "RU", "population": 431000, "oblast": "Donetsk", "fortification_level": 0.4, "terrain_difficulty": 0.3, "garrison_estimate": 8000, "region": "south", "tags": ["fallen_2022", "port_city", "azovstal"]}, {"id": "berdyansk", "name": "Berdyansk", "lat": 46.75, "lng": 36.7833, "control": "RU", "population": 113000, "oblast": "Zaporizhzhia", "fortification_level": 0.4, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "region": "south", "tags": ["ru_held", "port"]}, {"id": "nova_kakhovka", "name": "Nova Kakhovka", "lat": 46.7553, "lng": 33.375, "control": "RU", "population": 45000, "oblast": "Kherson", "fortification_level": 0.3, "terrain_difficulty": 0.4, "garrison_estimate": 2000, "region": "south", "tags": ["dam_destroyed_2023"]}, {"id": "henichesk", "name": "Henichesk", "lat": 46.1756, "lng": 34.7981, "control": "RU", "population": 19000, "oblast": "Kherson", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 1000, "region": "crimea", "tags": ["crimea_gate"]}, {"id": "valuyki", "name": "Valuyki", "lat": 50.2094, "lng": 38.0972, "control": "RU", "population": 34000, "oblast": "Belgorod", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "region": "russia", "tags": ["ru_staging"]}, {"id": "shebekino", "name": "Shebekino", "lat": 50.4064, "lng": 36.8917, "control": "RU", "population": 42000, "oblast": "Belgorod", "fortification_level": 0.3, "terrain_difficulty": 0.3, "garrison_estimate": 3000, "region": "russia", "tags": ["ru_border", "cross_border_raids"]}, {"id": "sudzha", "name": "Sudzha", "lat": 51.1903, "lng": 35.2711, "control": "UA", "population": 5000, "oblast": "Kursk", "fortification_level": 0.2, "terrain_difficulty": 0.3, "garrison_estimate": 2000, "region": "russia", "tags": ["ua_incursion_2024", "gas_hub"]}];
+        const UKRAINE_EDGES = [{"source": "pokrovsk", "target": "dnipro", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.9, "distance_km": 180, "is_active": true, "is_frontline": false}, {"source": "pokrovsk", "target": "pavlohrad", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.8, "distance_km": 80, "is_active": true, "is_frontline": false}, {"source": "pokrovsk", "target": "kramatorsk", "edge_type": "RAIL", "weight": 0.5, "capacity": 0.7, "distance_km": 60, "is_active": true, "is_frontline": false}, {"source": "pokrovsk", "target": "myrnohrad", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 10, "is_active": true, "is_frontline": false}, {"source": "pokrovsk", "target": "selydove", "edge_type": "HIGHWAY", "weight": 0.6, "capacity": 0.5, "distance_km": 15, "is_active": true, "is_frontline": true}, {"source": "pokrovsk", "target": "hryshyne", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 12, "is_active": true, "is_frontline": true}, {"source": "kramatorsk", "target": "sloviansk", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 15, "is_active": true, "is_frontline": false}, {"source": "kramatorsk", "target": "druzhkivka", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "kramatorsk", "target": "kostiantynivka", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 25, "is_active": true, "is_frontline": false}, {"source": "kostiantynivka", "target": "chasiv_yar", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.6, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "kostiantynivka", "target": "toretsk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 18, "is_active": true, "is_frontline": false}, {"source": "chasiv_yar", "target": "bakhmut", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 8, "is_active": true, "is_frontline": true}, {"source": "toretsk", "target": "horlivka", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 12, "is_active": true, "is_frontline": true}, {"source": "sloviansk", "target": "lyman", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 25, "is_active": true, "is_frontline": false}, {"source": "lyman", "target": "siversk", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "siversk", "target": "severodonetsk", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 15, "is_active": true, "is_frontline": true}, {"source": "lyman", "target": "borova", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "borova", "target": "kreminna", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 30, "is_active": true, "is_frontline": true}, {"source": "borova", "target": "kupiansk", "edge_type": "SECONDARY_ROAD", "weight": 0.6, "capacity": 0.5, "distance_km": 50, "is_active": true, "is_frontline": false}, {"source": "kupiansk", "target": "oskil", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "kupiansk", "target": "izium", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 60, "is_active": true, "is_frontline": false}, {"source": "kupiansk", "target": "svatove", "edge_type": "FRONTLINE", "weight": 0.8, "capacity": 0.1, "distance_km": 40, "is_active": true, "is_frontline": true}, {"source": "donetsk_city", "target": "makiivka", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 15, "is_active": true, "is_frontline": false}, {"source": "donetsk_city", "target": "avdiivka", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 15, "is_active": true, "is_frontline": false}, {"source": "donetsk_city", "target": "marinka", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "avdiivka", "target": "ocheretyne", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.5, "distance_km": 10, "is_active": true, "is_frontline": false}, {"source": "selydove", "target": "kurakhove", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.5, "distance_km": 20, "is_active": true, "is_frontline": false}, {"source": "kurakhove", "target": "vuhledar", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.5, "distance_km": 25, "is_active": true, "is_frontline": false}, {"source": "severodonetsk", "target": "lysychansk", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.8, "distance_km": 5, "is_active": true, "is_frontline": false}, {"source": "kreminna", "target": "severodonetsk", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 30, "is_active": true, "is_frontline": false}, {"source": "svatove", "target": "kreminna", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 50, "is_active": true, "is_frontline": false}, {"source": "luhansk_city", "target": "severodonetsk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 70, "is_active": true, "is_frontline": false}, {"source": "zaporizhzhia", "target": "orikhiv", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 35, "is_active": true, "is_frontline": false}, {"source": "orikhiv", "target": "hulyaipole", "edge_type": "SECONDARY_ROAD", "weight": 0.5, "capacity": 0.5, "distance_km": 25, "is_active": true, "is_frontline": false}, {"source": "hulyaipole", "target": "polohy", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 20, "is_active": true, "is_frontline": true}, {"source": "polohy", "target": "tokmak", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 30, "is_active": true, "is_frontline": false}, {"source": "tokmak", "target": "melitopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 50, "is_active": true, "is_frontline": false}, {"source": "zaporizhzhia", "target": "enerhodar", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.3, "distance_km": 60, "is_active": true, "is_frontline": true}, {"source": "zaporizhzhia", "target": "nikopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 80, "is_active": true, "is_frontline": false}, {"source": "vuhledar", "target": "mariupol", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 70, "is_active": true, "is_frontline": false}, {"source": "mariupol", "target": "berdyansk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 80, "is_active": true, "is_frontline": false}, {"source": "berdyansk", "target": "melitopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 80, "is_active": true, "is_frontline": false}, {"source": "melitopol", "target": "nova_kakhovka", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 100, "is_active": true, "is_frontline": false}, {"source": "nova_kakhovka", "target": "kherson_city", "edge_type": "FRONTLINE", "weight": 0.9, "capacity": 0.1, "distance_km": 15, "is_active": true, "is_frontline": true}, {"source": "henichesk", "target": "crimea_simferopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 200, "is_active": true, "is_frontline": false}, {"source": "melitopol", "target": "henichesk", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 100, "is_active": true, "is_frontline": false}, {"source": "crimea_simferopol", "target": "crimea_sevastopol", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 70, "is_active": true, "is_frontline": false}, {"source": "crimea_simferopol", "target": "crimea_kerch", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 200, "is_active": true, "is_frontline": false}, {"source": "crimea_kerch", "target": "rostov", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 300, "is_active": true, "is_frontline": false, "description": "Kerch Bridge + land route"}, {"source": "kharkiv", "target": "kupiansk", "edge_type": "RAIL", "weight": 0.4, "capacity": 0.7, "distance_km": 120, "is_active": true, "is_frontline": false}, {"source": "kharkiv", "target": "izium", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 120, "is_active": true, "is_frontline": false}, {"source": "kharkiv", "target": "shebekino", "edge_type": "FRONTLINE", "weight": 0.8, "capacity": 0.1, "distance_km": 30, "is_active": true, "is_frontline": true}, {"source": "dnipro", "target": "zaporizhzhia", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 85, "is_active": true, "is_frontline": false}, {"source": "dnipro", "target": "kryvyi_rih", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 140, "is_active": true, "is_frontline": false}, {"source": "dnipro", "target": "poltava", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 180, "is_active": true, "is_frontline": false}, {"source": "dnipro", "target": "nikopol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 100, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "chernihiv", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 140, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "zhytomyr", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 140, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "vinnytsia", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 260, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "poltava", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 340, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "sumy", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 350, "is_active": true, "is_frontline": false}, {"source": "kyiv", "target": "uman", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 210, "is_active": true, "is_frontline": false}, {"source": "poltava", "target": "kharkiv", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 140, "is_active": true, "is_frontline": false}, {"source": "poltava", "target": "sumy", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 170, "is_active": true, "is_frontline": false}, {"source": "kherson_city", "target": "mykolaiv", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 65, "is_active": true, "is_frontline": false}, {"source": "mykolaiv", "target": "odesa", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 130, "is_active": true, "is_frontline": false}, {"source": "kryvyi_rih", "target": "mykolaiv", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 180, "is_active": true, "is_frontline": false}, {"source": "kryvyi_rih", "target": "kropyvnytskyi", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 120, "is_active": true, "is_frontline": false}, {"source": "vinnytsia", "target": "starokostiantyniv", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 130, "is_active": true, "is_frontline": false}, {"source": "lviv", "target": "ivano_frankivsk", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 130, "is_active": true, "is_frontline": false}, {"source": "lviv", "target": "starokostiantyniv", "edge_type": "RAIL", "weight": 0.4, "capacity": 0.7, "distance_km": 300, "is_active": true, "is_frontline": false}, {"source": "belgorod", "target": "shebekino", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 30, "is_active": true, "is_frontline": false}, {"source": "belgorod", "target": "valuyki", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 100, "is_active": true, "is_frontline": false}, {"source": "belgorod", "target": "voronezh", "edge_type": "RAIL", "weight": 0.2, "capacity": 0.9, "distance_km": 260, "is_active": true, "is_frontline": false}, {"source": "belgorod", "target": "kursk_city", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 140, "is_active": true, "is_frontline": false}, {"source": "kursk_city", "target": "sudzha", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.4, "distance_km": 80, "is_active": true, "is_frontline": true, "description": "UA incursion route"}, {"source": "kursk_city", "target": "bryansk", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.7, "distance_km": 280, "is_active": true, "is_frontline": false}, {"source": "voronezh", "target": "rostov", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.9, "distance_km": 560, "is_active": true, "is_frontline": false}, {"source": "rostov", "target": "mariupol", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 260, "is_active": true, "is_frontline": false}, {"source": "rostov", "target": "luhansk_city", "edge_type": "RAIL", "weight": 0.3, "capacity": 0.8, "distance_km": 400, "is_active": true, "is_frontline": false}, {"source": "valuyki", "target": "svatove", "edge_type": "SUPPLY_ROUTE", "weight": 0.5, "capacity": 0.5, "distance_km": 120, "is_active": true, "is_frontline": false}, {"source": "sumy", "target": "sudzha", "edge_type": "FRONTLINE", "weight": 0.8, "capacity": 0.1, "distance_km": 80, "is_active": true, "is_frontline": true}, {"source": "izium", "target": "sloviansk", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 40, "is_active": true, "is_frontline": false}, {"source": "horlivka", "target": "bakhmut", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 30, "is_active": true, "is_frontline": false}];
+        const MIDEAST_NODES = [{"id": "gaza_city", "name": "Gaza City", "lat": 31.5017, "lng": 34.4668, "control": "CONTESTED", "population": 590000, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.6, "terrain_difficulty": 0.7, "strategic_value": 0.9, "tags": ["urban_warfare", "hamas_stronghold", "tunnel_network"]}, {"id": "khan_younis", "name": "Khan Younis", "lat": 31.3462, "lng": 34.3065, "control": "CONTESTED", "population": 400000, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.5, "terrain_difficulty": 0.6, "strategic_value": 0.7, "tags": ["southern_gaza", "hamas_military"]}, {"id": "rafah", "name": "Rafah", "lat": 31.2969, "lng": 34.2505, "control": "CONTESTED", "population": 280000, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.4, "terrain_difficulty": 0.5, "strategic_value": 0.8, "tags": ["egypt_border", "philadelphi_corridor", "smuggling_tunnels"]}, {"id": "jabalia", "name": "Jabalia", "lat": 31.5333, "lng": 34.4833, "control": "CONTESTED", "population": 180000, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.5, "terrain_difficulty": 0.6, "strategic_value": 0.6, "tags": ["refugee_camp", "northern_gaza"]}, {"id": "deir_al_balah", "name": "Deir al-Balah", "lat": 31.4167, "lng": 34.35, "control": "CONTESTED", "population": 75000, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.3, "terrain_difficulty": 0.4, "strategic_value": 0.5, "tags": ["central_gaza", "aid_corridor"]}, {"id": "netzarim", "name": "Netzarim Corridor", "lat": 31.45, "lng": 34.4, "control": "IL", "population": 0, "is_polymarket_target": false, "region": "Gaza", "fortification_level": 0.7, "terrain_difficulty": 0.3, "strategic_value": 0.8, "tags": ["idf_corridor", "divides_gaza", "military_zone"]}, {"id": "tel_aviv", "name": "Tel Aviv", "lat": 32.0853, "lng": 34.7818, "control": "IL", "population": 460000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.9, "terrain_difficulty": 0.2, "strategic_value": 1.0, "tags": ["major_city", "economic_center", "iron_dome"]}, {"id": "jerusalem", "name": "Jerusalem", "lat": 31.7683, "lng": 35.2137, "control": "IL", "population": 936000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.9, "terrain_difficulty": 0.4, "strategic_value": 1.0, "tags": ["capital", "holy_city", "political_center"]}, {"id": "haifa", "name": "Haifa", "lat": 32.794, "lng": 34.9896, "control": "IL", "population": 285000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.8, "terrain_difficulty": 0.3, "strategic_value": 0.8, "tags": ["port_city", "hezbollah_range", "northern_front"]}, {"id": "sderot", "name": "Sderot", "lat": 31.525, "lng": 34.5972, "control": "IL", "population": 27000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.6, "terrain_difficulty": 0.3, "strategic_value": 0.5, "tags": ["gaza_border", "rocket_target", "oct7"]}, {"id": "kiryat_shmona", "name": "Kiryat Shmona", "lat": 33.2075, "lng": 35.5719, "control": "IL", "population": 24000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.6, "terrain_difficulty": 0.5, "strategic_value": 0.5, "tags": ["lebanon_border", "evacuated", "hezbollah_target"]}, {"id": "golan_heights", "name": "Golan Heights", "lat": 33.0, "lng": 35.75, "control": "IL", "population": 50000, "is_polymarket_target": false, "region": "Israel", "fortification_level": 0.8, "terrain_difficulty": 0.7, "strategic_value": 0.7, "tags": ["strategic_plateau", "syria_border", "buffer_zone"]}, {"id": "beirut", "name": "Beirut", "lat": 33.8938, "lng": 35.5018, "control": "LB", "population": 2400000, "is_polymarket_target": false, "region": "Lebanon", "fortification_level": 0.5, "terrain_difficulty": 0.4, "strategic_value": 0.9, "tags": ["capital", "hezbollah_political", "dahieh_suburb"]}, {"id": "south_lebanon", "name": "South Lebanon (Tyre)", "lat": 33.27, "lng": 35.2, "control": "CONTESTED", "population": 200000, "is_polymarket_target": false, "region": "Lebanon", "fortification_level": 0.6, "terrain_difficulty": 0.6, "strategic_value": 0.8, "tags": ["hezbollah_military", "litani_river", "unifil"]}, {"id": "baalbek", "name": "Baalbek", "lat": 34.0047, "lng": 36.2117, "control": "LB", "population": 82000, "is_polymarket_target": false, "region": "Lebanon", "fortification_level": 0.5, "terrain_difficulty": 0.5, "strategic_value": 0.6, "tags": ["hezbollah_stronghold", "bekaa_valley", "supply_route"]}, {"id": "nabatieh", "name": "Nabatieh", "lat": 33.3779, "lng": 35.4839, "control": "CONTESTED", "population": 120000, "is_polymarket_target": false, "region": "Lebanon", "fortification_level": 0.5, "terrain_difficulty": 0.5, "strategic_value": 0.6, "tags": ["hezbollah_territory", "idf_operations"]}, {"id": "damascus", "name": "Damascus", "lat": 33.5138, "lng": 36.2765, "control": "SY_REBEL", "population": 2100000, "is_polymarket_target": false, "region": "Syria", "fortification_level": 0.5, "terrain_difficulty": 0.4, "strategic_value": 0.8, "tags": ["capital", "post_assad", "hts_control"]}, {"id": "quneitra", "name": "Quneitra", "lat": 33.126, "lng": 35.8241, "control": "SY_REBEL", "population": 5000, "is_polymarket_target": false, "region": "Syria", "fortification_level": 0.3, "terrain_difficulty": 0.5, "strategic_value": 0.5, "tags": ["golan_border", "buffer_zone", "undof"]}, {"id": "daraa", "name": "Daraa", "lat": 32.6189, "lng": 36.1021, "control": "SY_REBEL", "population": 120000, "is_polymarket_target": false, "region": "Syria", "fortification_level": 0.3, "terrain_difficulty": 0.3, "strategic_value": 0.4, "tags": ["jordan_border", "southern_syria"]}, {"id": "tehran", "name": "Tehran", "lat": 35.6892, "lng": 51.389, "control": "IR", "population": 9000000, "is_polymarket_target": false, "region": "Iran", "fortification_level": 0.9, "terrain_difficulty": 0.3, "strategic_value": 1.0, "tags": ["capital", "irgc_hq", "nuclear_program", "proxy_command"]}, {"id": "isfahan", "name": "Isfahan", "lat": 32.6546, "lng": 51.668, "control": "IR", "population": 2100000, "is_polymarket_target": false, "region": "Iran", "fortification_level": 0.8, "terrain_difficulty": 0.3, "strategic_value": 0.8, "tags": ["nuclear_facility", "ucf", "military_base"]}, {"id": "natanz", "name": "Natanz", "lat": 33.5111, "lng": 51.7272, "control": "IR", "population": 13000, "is_polymarket_target": false, "region": "Iran", "fortification_level": 0.9, "terrain_difficulty": 0.3, "strategic_value": 0.9, "tags": ["uranium_enrichment", "underground_facility", "primary_target"]}, {"id": "bandar_abbas", "name": "Bandar Abbas", "lat": 27.1832, "lng": 56.2666, "control": "IR", "population": 530000, "is_polymarket_target": false, "region": "Iran", "fortification_level": 0.7, "terrain_difficulty": 0.3, "strategic_value": 0.7, "tags": ["strait_of_hormuz", "naval_base", "oil_shipping"]}, {"id": "sanaa", "name": "Sanaa", "lat": 15.3694, "lng": 44.191, "control": "HOUTHI", "population": 3900000, "is_polymarket_target": false, "region": "Yemen", "fortification_level": 0.5, "terrain_difficulty": 0.6, "strategic_value": 0.7, "tags": ["houthi_capital", "proxy_hub", "drone_missiles"]}, {"id": "hodeidah", "name": "Hodeidah", "lat": 14.798, "lng": 42.954, "control": "HOUTHI", "population": 600000, "is_polymarket_target": false, "region": "Yemen", "fortification_level": 0.4, "terrain_difficulty": 0.3, "strategic_value": 0.7, "tags": ["port_city", "red_sea_access", "shipping_attacks"]}, {"id": "bab_el_mandeb", "name": "Bab el-Mandeb Strait", "lat": 12.5833, "lng": 43.3333, "control": "INTL", "population": 0, "is_polymarket_target": false, "region": "Red Sea", "fortification_level": 0.2, "terrain_difficulty": 0.3, "strategic_value": 0.9, "tags": ["chokepoint", "shipping_lane", "houthi_attacks"]}, {"id": "strait_of_hormuz", "name": "Strait of Hormuz", "lat": 26.5667, "lng": 56.25, "control": "INTL", "population": 0, "is_polymarket_target": false, "region": "Persian Gulf", "fortification_level": 0.3, "terrain_difficulty": 0.3, "strategic_value": 1.0, "tags": ["oil_chokepoint", "iran_control", "global_trade"]}, {"id": "ramallah", "name": "Ramallah", "lat": 31.9038, "lng": 35.2034, "control": "PA", "population": 38000, "is_polymarket_target": false, "region": "West Bank", "fortification_level": 0.3, "terrain_difficulty": 0.4, "strategic_value": 0.5, "tags": ["pa_capital", "west_bank"]}, {"id": "jenin", "name": "Jenin", "lat": 32.4607, "lng": 35.3004, "control": "CONTESTED", "population": 40000, "is_polymarket_target": false, "region": "West Bank", "fortification_level": 0.4, "terrain_difficulty": 0.5, "strategic_value": 0.5, "tags": ["idf_raids", "militant_hub", "refugee_camp"]}, {"id": "nablus", "name": "Nablus", "lat": 32.2211, "lng": 35.2544, "control": "PA", "population": 160000, "is_polymarket_target": false, "region": "West Bank", "fortification_level": 0.3, "terrain_difficulty": 0.5, "strategic_value": 0.4, "tags": ["west_bank", "old_city"]}, {"id": "cairo", "name": "Cairo", "lat": 30.0444, "lng": 31.2357, "control": "EG", "population": 10000000, "is_polymarket_target": false, "region": "Egypt", "fortification_level": 0.8, "terrain_difficulty": 0.2, "strategic_value": 0.7, "tags": ["mediator", "rafah_crossing", "regional_power"]}, {"id": "amman", "name": "Amman", "lat": 31.9454, "lng": 35.9284, "control": "JO", "population": 4400000, "is_polymarket_target": false, "region": "Jordan", "fortification_level": 0.7, "terrain_difficulty": 0.3, "strategic_value": 0.5, "tags": ["mediator", "border_state", "refugee_host"]}, {"id": "doha", "name": "Doha", "lat": 25.2854, "lng": 51.531, "control": "QA", "population": 2400000, "is_polymarket_target": false, "region": "Qatar", "fortification_level": 0.7, "terrain_difficulty": 0.2, "strategic_value": 0.6, "tags": ["hamas_political_office", "mediator", "al_jazeera"]}];
+        const MIDEAST_EDGES = [{"source": "gaza_city", "target": "jabalia", "edge_type": "URBAN_ROAD", "weight": 0.7, "capacity": 0.3, "distance_km": 5, "is_frontline": true, "description": "Northern Gaza urban corridor, heavily contested"}, {"source": "gaza_city", "target": "deir_al_balah", "edge_type": "HIGHWAY", "weight": 0.8, "capacity": 0.2, "distance_km": 15, "is_frontline": true, "description": "Salah al-Din Road southward, damaged"}, {"source": "gaza_city", "target": "netzarim", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 8, "is_frontline": true, "description": "IDF Netzarim Corridor divides north-south Gaza"}, {"source": "deir_al_balah", "target": "khan_younis", "edge_type": "HIGHWAY", "weight": 0.7, "capacity": 0.3, "distance_km": 12, "is_frontline": true, "description": "Central to southern Gaza road"}, {"source": "deir_al_balah", "target": "netzarim", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 5, "is_frontline": true, "description": "Netzarim Corridor southern edge"}, {"source": "khan_younis", "target": "rafah", "edge_type": "HIGHWAY", "weight": 0.6, "capacity": 0.3, "distance_km": 10, "is_frontline": true, "description": "Southern Gaza road to Egyptian border"}, {"source": "rafah", "target": "cairo", "edge_type": "BORDER_CROSSING", "weight": 0.9, "capacity": 0.1, "distance_km": 350, "description": "Rafah crossing \u2192 Cairo, severely restricted"}, {"source": "gaza_city", "target": "sderot", "edge_type": "BORDER", "weight": 1.0, "capacity": 0.0, "distance_km": 5, "is_frontline": true, "description": "Gaza-Israel border fence, Oct 7 attack axis"}, {"source": "sderot", "target": "tel_aviv", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 85, "description": "Route 4 / Highway 232 to Tel Aviv"}, {"source": "tel_aviv", "target": "jerusalem", "edge_type": "HIGHWAY", "weight": 0.1, "capacity": 1.0, "distance_km": 65, "description": "Highway 1 \u2014 major Israeli artery"}, {"source": "tel_aviv", "target": "haifa", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 95, "description": "Coastal highway northward"}, {"source": "haifa", "target": "kiryat_shmona", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 100, "description": "Route 90 to Lebanese border"}, {"source": "jerusalem", "target": "ramallah", "edge_type": "CONTROLLED_CROSSING", "weight": 0.5, "capacity": 0.4, "distance_km": 15, "description": "Qalandiya checkpoint corridor"}, {"source": "jerusalem", "target": "golan_heights", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 180, "description": "Route 90 through Jordan Valley to Golan"}, {"source": "ramallah", "target": "nablus", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 50, "description": "West Bank Route 60, IDF checkpoints"}, {"source": "nablus", "target": "jenin", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.5, "distance_km": 45, "description": "Route 60 north, frequent IDF raids"}, {"source": "kiryat_shmona", "target": "south_lebanon", "edge_type": "BORDER", "weight": 1.0, "capacity": 0.0, "distance_km": 5, "is_frontline": true, "description": "Blue Line \u2014 Israel-Lebanon border, active conflict zone"}, {"source": "south_lebanon", "target": "nabatieh", "edge_type": "HIGHWAY", "weight": 0.6, "capacity": 0.4, "distance_km": 25, "is_frontline": true, "description": "Road through Hezbollah territory, IDF operations"}, {"source": "south_lebanon", "target": "beirut", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 85, "description": "Coastal road to Beirut"}, {"source": "nabatieh", "target": "beirut", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 70, "description": "Interior road to Beirut via Chouf"}, {"source": "beirut", "target": "baalbek", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 85, "description": "Beirut-Baalbek via Bekaa Valley"}, {"source": "baalbek", "target": "damascus", "edge_type": "SUPPLY_ROUTE", "weight": 0.5, "capacity": 0.5, "distance_km": 110, "description": "Iran-Hezbollah supply corridor via Syria"}, {"source": "golan_heights", "target": "quneitra", "edge_type": "BORDER", "weight": 0.8, "capacity": 0.1, "distance_km": 10, "description": "UNDOF buffer zone, Golan-Syria border"}, {"source": "quneitra", "target": "damascus", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 60, "description": "Road to Damascus through Golan foothills"}, {"source": "damascus", "target": "daraa", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 100, "description": "M5 highway south to Jordanian border"}, {"source": "daraa", "target": "amman", "edge_type": "BORDER_CROSSING", "weight": 0.4, "capacity": 0.6, "distance_km": 100, "description": "Nasib/Jaber crossing to Jordan"}, {"source": "amman", "target": "jerusalem", "edge_type": "BORDER_CROSSING", "weight": 0.3, "capacity": 0.7, "distance_km": 85, "description": "Allenby/King Hussein Bridge crossing"}, {"source": "tehran", "target": "isfahan", "edge_type": "HIGHWAY", "weight": 0.1, "capacity": 1.0, "distance_km": 340, "description": "Major Iranian highway south"}, {"source": "isfahan", "target": "natanz", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 140, "description": "Road to nuclear enrichment facility"}, {"source": "tehran", "target": "natanz", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 260, "description": "Direct route to Natanz facility"}, {"source": "isfahan", "target": "bandar_abbas", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 680, "description": "Interior route to Strait of Hormuz port"}, {"source": "bandar_abbas", "target": "strait_of_hormuz", "edge_type": "MARITIME", "weight": 0.3, "capacity": 0.8, "distance_km": 50, "description": "IRGC naval base controls strait approaches"}, {"source": "tehran", "target": "damascus", "edge_type": "AIR_CORRIDOR", "weight": 0.4, "capacity": 0.6, "distance_km": 1550, "description": "Iran-Syria air bridge \u2014 IRGC logistics flights"}, {"source": "tehran", "target": "baalbek", "edge_type": "PROXY_SUPPLY", "weight": 0.5, "capacity": 0.4, "distance_km": 1600, "description": "Iran \u2192 Syria \u2192 Bekaa Valley Hezbollah supply chain"}, {"source": "tehran", "target": "sanaa", "edge_type": "PROXY_SUPPLY", "weight": 0.6, "capacity": 0.3, "distance_km": 2500, "description": "Iran-Houthi weapons and drone supply route"}, {"source": "sanaa", "target": "hodeidah", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 226, "description": "Sanaa-Hodeidah road, Houthi-controlled"}, {"source": "hodeidah", "target": "bab_el_mandeb", "edge_type": "MARITIME", "weight": 0.5, "capacity": 0.5, "distance_km": 300, "description": "Houthi anti-ship missile/drone range to strait"}, {"source": "bab_el_mandeb", "target": "strait_of_hormuz", "edge_type": "SHIPPING_LANE", "weight": 0.3, "capacity": 0.9, "distance_km": 2400, "description": "Global shipping route \u2014 Red Sea to Persian Gulf"}, {"source": "cairo", "target": "amman", "edge_type": "DIPLOMATIC", "weight": 0.2, "capacity": 0.8, "distance_km": 450, "description": "Egypt-Jordan diplomatic axis, ceasefire mediators"}, {"source": "doha", "target": "tehran", "edge_type": "DIPLOMATIC", "weight": 0.3, "capacity": 0.7, "distance_km": 950, "description": "Qatar-Iran diplomatic channel"}, {"source": "doha", "target": "cairo", "edge_type": "DIPLOMATIC", "weight": 0.2, "capacity": 0.8, "distance_km": 2100, "description": "Qatar-Egypt mediation coordination"}, {"source": "doha", "target": "tel_aviv", "edge_type": "DIPLOMATIC", "weight": 0.3, "capacity": 0.6, "distance_km": 1700, "description": "Qatar-Israel back-channel via Hamas political bureau"}];
+
+        // Load all datasets
+        function loadDatasets() {
+            document.getElementById('spinner').classList.add('active');
+            try {
+                const datasets = {
+                    donbas: { nodes: DONBAS_NODES, edges: DONBAS_EDGES },
+                    ukraine: { nodes: UKRAINE_NODES, edges: UKRAINE_EDGES },
+                    mideast: { nodes: MIDEAST_NODES, edges: MIDEAST_EDGES }
+                };
+                state.allData = datasets;
+                switchTheater('donbas');
+                setupEventListeners();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('spinner').classList.remove('active');
+                alert('Error loading conflict network data: ' + error.message);
+            }
+        }
+
+                function switchTheater(theater) {
+            if (!state.allData[theater]) return;
+
+            state.currentTheater = theater;
+            let nodes, edges;
+
+            if (theater === 'combined') {
+                // Merge all datasets
+                nodes = [
+                    ...state.allData.donbas.nodes,
+                    ...state.allData.ukraine.nodes,
+                    ...state.allData.mideast.nodes
+                ];
+                // Deduplicate by id
+                const seen = new Set();
+                nodes = nodes.filter(n => !seen.has(n.id) && !seen.add(n.id));
+                edges = [
+                    ...state.allData.donbas.edges,
+                    ...state.allData.ukraine.edges,
+                    ...state.allData.mideast.edges
+                ];
+            } else {
+                nodes = state.allData[theater].nodes;
+                edges = state.allData[theater].edges;
+            }
+
+            buildGraph(nodes, edges);
+            updateUI(nodes, edges);
+            updateTheaterLabel();
+        }
+
+        function updateTheaterLabel() {
+            document.getElementById('theater-info').textContent = state.currentTheater.charAt(0).toUpperCase() + state.currentTheater.slice(1) + ' Theater';
+        }
+
+        function buildGraph(nodes, edges) {
+            state.nodes = nodes.map(n => ({
+                ...n,
+                x: Math.random() * 1000,
+                y: Math.random() * 800
+            }));
+
+            state.edges = edges.map(e => {
+                const source = state.nodes.find(n => n.id === e.source);
+                const target = state.nodes.find(n => n.id === e.target);
+                return { ...e, source, target };
+            }).filter(e => e.source && e.target);
+
+            state.data = { nodes: state.nodes, links: state.edges };
+            computeMetrics();
+            renderGraph();
+        }
+
+        function computeMetrics() {
+            const nodes = state.data.nodes;
+            const edges = state.data.links;
+            const n = nodes.length;
+            const e = edges.length;
+
+            // Build adjacency list
+            const adjList = new Map();
+            nodes.forEach(node => adjList.set(node.id, []));
+            edges.forEach(edge => {
+                adjList.get(edge.source.id).push(edge.target.id);
+                adjList.get(edge.target.id).push(edge.source.id);
+            });
+
+            // Betweenness Centrality (BFS-based)
+            const betweenness = {};
+            for (const node of nodes) {
+                betweenness[node.id] = 0;
+            }
+
+            for (const source of nodes) {
+                const queue = [source.id];
+                const visited = new Set([source.id]);
+                const paths = { [source.id]: 1 };
+                const dist = { [source.id]: 0 };
+                const predecessors = {};
+
+                while (queue.length > 0) {
+                    const v = queue.shift();
+                    for (const w of (adjList.get(v) || [])) {
+                        if (!visited.has(w)) {
+                            visited.add(w);
+                            dist[w] = dist[v] + 1;
+                            paths[w] = 0;
+                            queue.push(w);
+                        }
+                        if (dist[w] === dist[v] + 1) {
+                            paths[w] += paths[v];
+                            if (!predecessors[w]) predecessors[w] = [];
+                            predecessors[w].push(v);
+                        }
+                    }
+                }
+
+                // Accumulation phase
+                const delta = {};
+                for (const node of nodes) {
+                    delta[node.id] = 0;
+                }
+
+                const sorted = Object.keys(dist).sort((a, b) => dist[b] - dist[a]);
+                for (const w of sorted) {
+                    if (w !== source.id) {
+                        for (const p of (predecessors[w] || [])) {
+                            delta[p] = (delta[p] || 0) + (paths[p] / paths[w]) * (1 + delta[w]);
+                        }
+                        if (w !== source.id) {
+                            betweenness[w] = (betweenness[w] || 0) + delta[w];
+                        }
+                    }
+                }
+            }
+
+            state.betweennessCentrality = betweenness;
+
+            // Tarjan's algorithm for bridges and articulation points
+            const { bridgeCount, artPoints } = tarjanBridges(adjList, nodes.map(n => n.id));
+
+            // Metrics
+            const avgDegree = n > 0 ? (2 * e) / n : 0;
+
+            // Connected components
+            const visited = new Set();
+            let components = 0;
+            for (const node of nodes) {
+                if (!visited.has(node.id)) {
+                    const queue = [node.id];
+                    visited.add(node.id);
+                    while (queue.length > 0) {
+                        const current = queue.shift();
+                        for (const neighbor of (adjList.get(current) || [])) {
+                            if (!visited.has(neighbor)) {
+                                visited.add(neighbor);
+                                queue.push(neighbor);
+                            }
+                        }
+                    }
+                    components++;
+                }
+            }
+
+            const density = n > 1 ? (2 * e) / (n * (n - 1)) : 0;
+
+            // Update UI
+            document.getElementById('stat-nodes').textContent = n;
+            document.getElementById('stat-edges').textContent = e;
+            document.getElementById('stat-density').textContent = density.toFixed(2);
+            document.getElementById('stat-avg-degree').textContent = avgDegree.toFixed(2);
+            document.getElementById('stat-components').textContent = components;
+            document.getElementById('stat-bridges').textContent = bridgeCount;
+            document.getElementById('stat-art-points').textContent = artPoints.size;
+        }
+
+        function tarjanBridges(adjList, nodeIds) {
+            let bridgeCount = 0;
+            const artPoints = new Set();
+            const disc = {}, low = {}, parent = {};
+            const visited = new Set();
+            let time = 0;
+
+            function dfs(u) {
+                visited.add(u);
+                disc[u] = low[u] = time++;
+                let children = 0;
+
+                for (const v of (adjList.get(u) || [])) {
+                    if (!visited.has(v)) {
+                        children++;
+                        parent[v] = u;
+                        dfs(v);
+                        low[u] = Math.min(low[u], low[v]);
+                        if (low[v] > disc[u]) bridgeCount++;
+                        if (parent[u] === undefined && children > 1) artPoints.add(u);
+                        if (parent[u] !== undefined && low[v] >= disc[u]) artPoints.add(u);
+                    } else if (v !== parent[u]) {
+                        low[u] = Math.min(low[u], disc[v]);
+                    }
+                }
+            }
+
+            for (const id of nodeIds) {
+                if (!visited.has(id)) {
+                    parent[id] = undefined;
+                    dfs(id);
+                }
+            }
+
+            return { bridgeCount, artPoints };
+        }
+
+        function getNodeRadius(node) {
+            const maxRadius = 30;
+            const minRadius = 6;
+
+            if (state.sizingMode === 'population') {
+                const max = Math.max(...state.nodes.map(n => n.population || 1));
+                return minRadius + (maxRadius - minRadius) * Math.sqrt((node.population || 1) / max);
+            } else if (state.sizingMode === 'garrison') {
+                const max = Math.max(...state.nodes.map(n => n.garrison_estimate || 1));
+                return minRadius + (maxRadius - minRadius) * Math.sqrt((node.garrison_estimate || 1) / max);
+            } else if (state.sizingMode === 'fortification') {
+                return minRadius + (maxRadius - minRadius) * (node.fortification_level || 0);
+            } else if (state.sizingMode === 'betweenness') {
+                const max = Math.max(...Object.values(state.betweennessCentrality));
+                return minRadius + (maxRadius - minRadius) * Math.sqrt((state.betweennessCentrality[node.id] || 0) / max);
+            }
+            return minRadius;
+        }
+
+        function renderGraph() {
+            const svg = d3.select('#graph');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            svg.attr('width', width).attr('height', height);
+
+            let g = svg.select('g');
+            if (g.empty()) {
+                g = svg.append('g');
+            }
+
+            // Clear previous content
+            g.selectAll('*').remove();
+
+            // Simulation
+            if (state.simulation) state.simulation.stop();
+
+            state.simulation = d3.forceSimulation(state.data.nodes)
+                .force('link', d3.forceLink(state.data.links)
+                    .id(d => d.id)
+                    .distance(CONFIG.forceConfig.linkDistance)
+                    .strength(0.4)
+                )
+                .force('charge', d3.forceManyBody()
+                    .strength(CONFIG.forceConfig.charge)
+                    .distanceMax(400)
+                )
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+                .force('collision', d3.forceCollide()
+                    .radius(d => getNodeRadius(d) + CONFIG.forceConfig.collisionRadius)
+                    .strength(0.7)
+                )
+                .on('tick', updatePositions);
+
+            // Links
+            const links = g.selectAll('.link').data(state.data.links, d => `${d.source.id}-${d.target.id}`)
+                .enter().append('line')
+                .attr('class', d => 'link' + (d.is_frontline ? ' frontline' : ''))
+                .attr('stroke', d => CONFIG.edgeColors[d.edge_type] || '#4da6ff')
+                .attr('stroke-width', d => Math.max(0.5, (d.capacity || 0.5) * 4));
+
+            // Nodes
+            const nodes = g.selectAll('.node').data(state.data.nodes, d => d.id)
+                .enter().append('circle')
+                .attr('class', 'node')
+                .attr('r', d => getNodeRadius(d))
+                .attr('fill', d => CONFIG.controlColors[d.control] || '#888')
+                .on('click', onNodeClick)
+                .on('mouseenter', onNodeHover)
+                .on('mouseleave', onNodeLeave)
+                .call(drag(state.simulation));
+
+            // Polymarket target rings
+            nodes.filter(d => d.is_polymarket_target)
+                .attr('stroke', '#ffd93d')
+                .attr('stroke-width', 3);
+
+            // Labels for large nodes
+            g.selectAll('.node-label').data(state.data.nodes.filter(d => (d.population || 0) > 100000), d => d.id)
+                .enter().append('text')
+                .attr('class', 'node-label')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.3em')
+                .attr('fill', '#e0e0e0')
+                .text(d => d.name);
+
+            // Zoom
+            const zoom = d3.zoom().on('zoom', (event) => {
+                g.attr('transform', event.transform);
+                svg.classed('dragging', event.sourceEvent?.type === 'mousemove');
+            });
+            svg.call(zoom);
+
+            function updatePositions() {
+                links
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                nodes
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+
+                g.selectAll('.node-label')
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            }
+
+            function drag(simulation) {
+                function dragstarted(event) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    event.subject.fx = event.subject.x;
+                    event.subject.fy = event.subject.y;
+                }
+
+                function dragged(event) {
+                    event.subject.fx = event.x;
+                    event.subject.fy = event.y;
+                }
+
+                function dragended(event) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    event.subject.fx = null;
+                    event.subject.fy = null;
+                }
+
+                return d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended);
+            }
+
+            document.getElementById('spinner').classList.remove('active');
+        }
+
+        function onNodeClick(event, d) {
+            event.stopPropagation();
+            state.selectedNode = state.selectedNode?.id === d.id ? null : d;
+            highlightConnected();
+            updateDetailsPanel();
+        }
+
+        function onNodeHover(event, d) {
+            state.hoveredNode = d;
+            showTooltip(event, d);
+        }
+
+        function onNodeLeave() {
+            state.hoveredNode = null;
+            hideTooltip();
+        }
+
+        function highlightConnected() {
+            const svg = d3.select('#graph');
+
+            if (!state.selectedNode) {
+                svg.selectAll('.node').classed('dimmed', false).classed('selected', false);
+                svg.selectAll('.link').classed('dimmed', false);
+                return;
+            }
+
+            const connected = new Set([state.selectedNode.id]);
+            state.edges.forEach(edge => {
+                if (edge.source.id === state.selectedNode.id) connected.add(edge.target.id);
+                if (edge.target.id === state.selectedNode.id) connected.add(edge.source.id);
+            });
+
+            svg.selectAll('.node')
+                .classed('dimmed', d => !connected.has(d.id))
+                .classed('selected', d => d.id === state.selectedNode.id);
+            svg.selectAll('.link')
+                .classed('dimmed', d => !connected.has(d.source.id) || !connected.has(d.target.id));
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${d.name}</div>
+                <div class="tooltip-item">Control: ${d.control}</div>
+                <div class="tooltip-item">Population: ${(d.population || 0).toLocaleString()}</div>
+                <div class="tooltip-item">Garrison: ${(d.garrison_estimate || 0).toLocaleString()}</div>
+                <div class="tooltip-item">Fortification: ${(d.fortification_level || 0).toFixed(1)}</div>
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY + 10) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        function updateDetailsPanel() {
+            const panel = document.getElementById('details-panel');
+            const title = document.getElementById('details-settlement');
+            const content = document.getElementById('details-content');
+
+            if (!state.selectedNode) {
+                panel.classList.add('hidden');
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            const node = state.selectedNode;
+
+            title.textContent = node.name;
+
+            // Compute vulnerability score
+            const adjList = new Map();
+            state.nodes.forEach(n => adjList.set(n.id, []));
+            state.edges.forEach(e => {
+                adjList.get(e.source.id).push(e.target.id);
+                adjList.get(e.target.id).push(e.source.id);
+            });
+
+            const frontlineEdges = state.edges.filter(e => (e.source.id === node.id || e.target.id === node.id) && e.is_frontline).length;
+            const supplyCapacity = state.edges
+                .filter(e => e.source.id === node.id || e.target.id === node.id)
+                .map(e => e.capacity || 0.5)
+                .reduce((a, b) => a + b, 0) / Math.max(1, adjList.get(node.id).length);
+
+            const vulnComponents = {
+                'Betweenness': state.betweennessCentrality[node.id] || 0,
+                'Frontline': Math.min(100, frontlineEdges * 20),
+                'Fortification': Math.max(0, 100 - (node.fortification_level || 0) * 100),
+                'Supply': supplyCapacity * 100
+            };
+
+            const avgVuln = Object.values(vulnComponents).reduce((a, b) => a + b) / Object.keys(vulnComponents).length;
+
+            const connected = state.edges.filter(e =>
+                e.source.id === node.id || e.target.id === node.id
+            ).map(e => e.source.id === node.id ? e.target : e.source);
+
+            const polymarketUrl = node.polymarket_slug ? `https://polymarket.com/event/${node.polymarket_slug}` : null;
+
+            content.innerHTML = `
+                <div class="details-item">
+                    <div class="details-label">Control Status</div>
+                    <div class="badge" style="background-color: ${CONFIG.controlColors[node.control]}80; border-color: ${CONFIG.controlColors[node.control]};">
+                        ${node.control}
+                    </div>
+                </div>
+
+                ${node.is_polymarket_target ? `<div class="badge target">Polymarket Target</div>` : ''}
+
+                <div class="details-item">
+                    <div class="details-label">Population</div>
+                    <div class="details-value">${(node.population || 0).toLocaleString()}</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">Garrison Estimate</div>
+                    <div class="details-value">${(node.garrison_estimate || 0).toLocaleString()} troops</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">Fortification Level</div>
+                    <div class="details-value">${(node.fortification_level || 0).toFixed(1)}/1.0</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">Terrain Difficulty</div>
+                    <div class="details-value">${(node.terrain_difficulty || 0).toFixed(1)}/1.0</div>
+                </div>
+
+                ${node.oblast ? `<div class="details-item"><div class="details-label">Oblast</div><div class="details-value">${node.oblast}</div></div>` : ''}
+                ${node.region ? `<div class="details-item"><div class="details-label">Region</div><div class="details-value">${node.region}</div></div>` : ''}
+
+                ${node.tags && node.tags.length > 0 ? `
+                <div class="details-item">
+                    <div class="details-label">Tags</div>
+                    <div>${node.tags.map(t => `<span class="badge">${t}</span>`).join('')}</div>
+                </div>
+                ` : ''}
+
+                <div class="details-item">
+                    <div class="details-label">Vulnerability Score</div>
+                    <div class="details-value">${avgVuln.toFixed(0)}/100</div>
+                    <div class="vulnerability-bar">
+                        <div class="vulnerability-segment" style="flex: ${vulnComponents['Betweenness'] || 0}; background: #4da6ff;" title="Betweenness"></div>
+                        <div class="vulnerability-segment" style="flex: ${vulnComponents['Frontline'] || 0}; background: #ff6b6b;" title="Frontline"></div>
+                        <div class="vulnerability-segment" style="flex: ${vulnComponents['Fortification'] || 0}; background: #ffd93d;" title="Fortification"></div>
+                        <div class="vulnerability-segment" style="flex: ${vulnComponents['Supply'] || 0}; background: #50C878;" title="Supply"></div>
+                    </div>
+                    <div class="component-breakdown">
+                        ${Object.entries(vulnComponents).map(([label, value]) => `
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">${label}</span>
+                                <span class="breakdown-value">${Math.round(value)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                ${polymarketUrl ? `<a href="${polymarketUrl}" target="_blank" class="external-link">Polymarket Event →</a>` : ''}
+
+                ${connected.length > 0 ? `
+                <div class="connected-settlements">
+                    <div class="sidebar-section-title">Connected Settlements (${connected.length})</div>
+                    ${connected.slice(0, 8).map(s => `
+                        <div class="connected-item" onclick="selectNodeById('${s.id}')">
+                            ${s.name} (${s.control})
+                        </div>
+                    `).join('')}
+                    ${connected.length > 8 ? `<div class="connected-item">+${connected.length - 8} more</div>` : ''}
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function selectNodeById(id) {
+            const node = state.nodes.find(n => n.id === id);
+            if (node) {
+                state.selectedNode = node;
+                highlightConnected();
+                updateDetailsPanel();
+            }
+        }
+
+        window.selectNodeById = selectNodeById;
+
+        function updateUI(nodes, edges) {
+            // Control legend
+            const controlCounts = {};
+            nodes.forEach(n => {
+                controlCounts[n.control] = (controlCounts[n.control] || 0) + 1;
+            });
+
+            const controlLegend = Object.entries(controlCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([control, count]) => `
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: ${CONFIG.controlColors[control] || '#888'}"></div>
+                        <span class="legend-label">${control}</span>
+                        <span class="legend-count">(${count})</span>
+                    </div>
+                `)
+                .join('');
+
+            document.getElementById('control-legend').innerHTML = controlLegend;
+
+            // Edge type legend
+            const edgeTypes = [...new Set(edges.map(e => e.edge_type))].sort();
+            const edgeLegend = edgeTypes.map(type => `
+                <div class="legend-item">
+                    <div style="width: 20px; height: 2px; background: ${CONFIG.edgeColors[type] || '#888'}; margin-right: 8px;"></div>
+                    <span class="legend-label">${type}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('edge-legend').innerHTML = edgeLegend;
+        }
+
+        function setupEventListeners() {
+            // Theater tabs
+            document.querySelectorAll('.theater-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.theater-tab').forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                    switchTheater(e.target.dataset.theater);
+                });
+            });
+
+            // Force sliders
+            document.getElementById('charge-slider').addEventListener('input', (e) => {
+                CONFIG.forceConfig.charge = parseInt(e.target.value);
+                document.getElementById('charge-value').textContent = e.target.value;
+                if (state.simulation) {
+                    state.simulation.force('charge', d3.forceManyBody().strength(CONFIG.forceConfig.charge));
+                    state.simulation.alpha(1).restart();
+                }
+            });
+
+            document.getElementById('distance-slider').addEventListener('input', (e) => {
+                CONFIG.forceConfig.linkDistance = parseInt(e.target.value);
+                document.getElementById('distance-value').textContent = e.target.value;
+                if (state.simulation) {
+                    state.simulation.force('link', d3.forceLink(state.data.links)
+                        .id(d => d.id)
+                        .distance(CONFIG.forceConfig.linkDistance)
+                        .strength(0.4)
+                    );
+                    state.simulation.alpha(1).restart();
+                }
+            });
+
+            // Node sizing
+            document.querySelectorAll('input[name="sizing"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    state.sizingMode = e.target.value;
+                    d3.selectAll('.node').attr('r', d => getNodeRadius(d));
+                    if (state.simulation) {
+                        state.simulation.force('collision', d3.forceCollide()
+                            .radius(d => getNodeRadius(d) + CONFIG.forceConfig.collisionRadius)
+                            .strength(0.7)
+                        );
+                        state.simulation.alpha(1).restart();
+                    }
+                });
+            });
+
+            // Sidebar toggle
+            document.querySelector('.sidebar-toggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('collapsed');
+            });
+
+            // Panel toggle
+            document.querySelector('.panel-toggle').addEventListener('click', () => {
+                document.getElementById('details-panel').classList.toggle('hidden');
+            });
+
+            // Reset zoom
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                const svg = d3.select('#graph');
+                svg.transition().duration(750).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+            });
+
+            // Search
+            document.getElementById('search-box').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                d3.selectAll('.node').classed('dimmed', d => !d.name.toLowerCase().includes(query) && query.length > 0);
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDatasets();
+        });
+
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            d3.select('#graph').attr('width', width).attr('height', height);
+            if (state.simulation) {
+                state.simulation.force('center', d3.forceCenter(width / 2, height / 2).strength(0.05));
+                state.simulation.alpha(1).restart();
+            }
+        });
+    </script>
+</body>
+</html>

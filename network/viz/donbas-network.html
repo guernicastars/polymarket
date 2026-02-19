@@ -88,7 +88,7 @@
     background: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(99, 102, 241, 0.4);
     border-radius: 10px; padding: 14px 18px; font-size: 13px;
-    max-width: 280px; backdrop-filter: blur(20px); z-index: 2000;
+    max-width: 340px; backdrop-filter: blur(20px); z-index: 2000;
     box-shadow: 0 0 30px rgba(99, 102, 241, 0.15); pointer-events: none;
   }
   #tooltip .tt-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
@@ -98,6 +98,41 @@
     display: inline-block; padding: 2px 8px; border-radius: 4px;
     font-size: 11px; font-weight: 600; margin-top: 6px;
   }
+
+  .vuln-section { margin: 8px 0 6px 0; padding-top: 6px; border-top: 1px solid rgba(51,65,85,0.5); }
+  .vuln-title { font-size: 12px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px; }
+  .vuln-bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }
+  .vuln-bar-label { width: 90px; color: #94a3b8; }
+  .vuln-bar-container { flex: 1; }
+  .vuln-bar { height: 6px; border-radius: 3px; background: #1e293b; position: relative; overflow: hidden; }
+  .vuln-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .vuln-bar-percent { width: 35px; text-align: right; color: #cbd5e1; }
+  .vuln-bar-weight { width: 35px; text-align: right; color: #64748b; font-size: 10px; }
+
+  #graph-metrics {
+    position: fixed; bottom: 130px; left: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px; padding: 12px 14px;
+    backdrop-filter: blur(20px); z-index: 1000;
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.1);
+    max-width: 300px;
+  }
+  #graph-metrics h3 {
+    font-size: 12px; font-weight: 600; color: #94a3b8;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
+    cursor: pointer; user-select: none;
+  }
+  #graph-metrics h3:hover { color: #cbd5e1; }
+  #graph-metrics h3::before {
+    content: '▼'; display: inline-block; margin-right: 6px; transition: transform 0.2s;
+  }
+  #graph-metrics.collapsed h3::before { transform: rotate(-90deg); }
+  #graph-metrics-content { display: block; }
+  #graph-metrics.collapsed #graph-metrics-content { display: none; }
+  .metric-item { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+  .metric-label { color: #94a3b8; }
+  .metric-value { font-weight: 600; color: #cbd5e1; }
 </style>
 </head>
 <body>
@@ -112,7 +147,7 @@
   <div class="stat-row"><span class="stat-label">UA-held</span><span class="stat-value" style="color:#3b82f6">19</span></div>
   <div class="stat-row"><span class="stat-label">RU-held</span><span class="stat-value" style="color:#ef4444">19</span></div>
   <div class="stat-row"><span class="stat-label">Contested</span><span class="stat-value" style="color:#f59e0b">2</span></div>
-  <div class="stat-row"><span class="stat-label">PM Targets</span><span class="stat-value" style="color:#a78bfa">7</span></div>
+  <div class="stat-row"><span class="stat-label">PM Targets</span><span class="stat-value" style="color:#a78bfa">12</span></div>
 </div>
 
 <div id="legend">
@@ -132,6 +167,20 @@
   <div id="signals-list"></div>
 </div>
 
+<div id="graph-metrics">
+  <h3>Graph Metrics</h3>
+  <div id="graph-metrics-content">
+    <div class="metric-item"><span class="metric-label">Nodes</span><span class="metric-value" id="metric-nodes">40</span></div>
+    <div class="metric-item"><span class="metric-label">Edges</span><span class="metric-value" id="metric-edges">60</span></div>
+    <div class="metric-item"><span class="metric-label">Density</span><span class="metric-value" id="metric-density">0.077</span></div>
+    <div class="metric-item"><span class="metric-label">Avg Degree</span><span class="metric-value" id="metric-avgdeg">3.0</span></div>
+    <div class="metric-item"><span class="metric-label">Clustering</span><span class="metric-value" id="metric-clustering">0.124</span></div>
+    <div class="metric-item"><span class="metric-label">Components</span><span class="metric-value" id="metric-components">1</span></div>
+    <div class="metric-item"><span class="metric-label">Bridges</span><span class="metric-value" id="metric-bridges">8</span></div>
+    <div class="metric-item"><span class="metric-label">Art. Points</span><span class="metric-value" id="metric-artpoints">12</span></div>
+  </div>
+</div>
+
 <div id="tooltip"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -143,46 +192,46 @@ const COLORS = { UA: '#3b82f6', RU: '#ef4444', CONTESTED: '#f59e0b' };
 const PM_COLOR = '#a78bfa';
 
 const settlements = [
-  {id:"pokrovsk",name:"Pokrovsk",lat:48.2833,lng:37.1833,control:"UA",pop:60000,pm:true,fort:0.7,assault:0.7,frontDist:8,vuln:0.64},
-  {id:"chasiv_yar",name:"Chasiv Yar",lat:48.6,lng:37.85,control:"UA",pop:12000,pm:true,fort:0.8,assault:0.8,frontDist:2,vuln:0.58},
-  {id:"toretsk",name:"Toretsk",lat:48.3956,lng:37.8464,control:"UA",pop:32000,pm:true,fort:0.6,assault:0.7,frontDist:3,vuln:0.62},
-  {id:"kupiansk",name:"Kupiansk",lat:49.7133,lng:37.6167,control:"UA",pop:27000,pm:true,fort:0.6,assault:0.5,frontDist:15,vuln:0.38},
-  {id:"zaporizhzhia",name:"Zaporizhzhia",lat:47.8388,lng:35.1396,control:"UA",pop:710000,pm:true,fort:0.9,assault:0.0,frontDist:40,vuln:0.08},
-  {id:"orikhiv",name:"Orikhiv",lat:47.5667,lng:35.7833,control:"UA",pop:14000,pm:true,fort:0.6,assault:0.3,frontDist:5,vuln:0.35},
-  {id:"hryshyne",name:"Hryshyne",lat:48.15,lng:37.0333,control:"CONTESTED",pop:800,pm:true,fort:0.3,assault:0.9,frontDist:0,vuln:0.64},
-  {id:"kramatorsk",name:"Kramatorsk",lat:48.7356,lng:37.5856,control:"UA",pop:150000,pm:false,fort:0.8,assault:0.1,frontDist:30},
-  {id:"sloviansk",name:"Sloviansk",lat:48.8511,lng:37.6167,control:"UA",pop:106000,pm:false,fort:0.7,assault:0.1,frontDist:35},
-  {id:"kostiantynivka",name:"Kostiantynivka",lat:48.5297,lng:37.7081,control:"UA",pop:68000,pm:false,fort:0.5,assault:0.2,frontDist:15},
-  {id:"druzhkivka",name:"Druzhkivka",lat:48.6181,lng:37.5286,control:"UA",pop:55000,pm:false,fort:0.5,assault:0.1,frontDist:25},
-  {id:"bakhmut",name:"Bakhmut",lat:48.5953,lng:38.0003,control:"RU",pop:73000,pm:false,fort:0.3},
-  {id:"siversk",name:"Siversk",lat:48.8667,lng:38.1,control:"UA",pop:11000,pm:false,fort:0.7,assault:0.4,frontDist:5},
-  {id:"lyman",name:"Lyman",lat:48.9833,lng:37.8167,control:"UA",pop:20000,pm:false,fort:0.6,assault:0.3,frontDist:10},
-  {id:"avdiivka",name:"Avdiivka",lat:48.1397,lng:37.7472,control:"RU",pop:31000,pm:false,fort:0.2},
-  {id:"marinka",name:"Marinka",lat:47.9422,lng:37.5058,control:"RU",pop:9000,pm:false,fort:0.1},
-  {id:"vuhledar",name:"Vuhledar",lat:47.7833,lng:37.25,control:"RU",pop:14000,pm:false,fort:0.2},
-  {id:"kurakhove",name:"Kurakhove",lat:47.9833,lng:37.3,control:"RU",pop:20000,pm:false,fort:0.2},
-  {id:"selydove",name:"Selydove",lat:48.15,lng:37.3,control:"RU",pop:21000,pm:false,fort:0.2},
-  {id:"pavlohrad",name:"Pavlohrad",lat:48.5333,lng:35.8667,control:"UA",pop:104000,pm:false,fort:0.6,assault:0.0,frontDist:100},
-  {id:"dnipro",name:"Dnipro",lat:48.4647,lng:35.0462,control:"UA",pop:980000,pm:false,fort:0.9,assault:0.0,frontDist:150},
-  {id:"nikopol",name:"Nikopol",lat:47.5719,lng:34.3978,control:"UA",pop:108000,pm:false,fort:0.5},
-  {id:"izium",name:"Izium",lat:49.2156,lng:37.2611,control:"UA",pop:46000,pm:false,fort:0.6,assault:0.1,frontDist:40},
-  {id:"borova",name:"Borova",lat:49.05,lng:37.6667,control:"UA",pop:5000,pm:false,fort:0.4,assault:0.2,frontDist:10},
-  {id:"oskil",name:"Oskil",lat:49.5333,lng:37.3333,control:"UA",pop:3000,pm:false,fort:0.5},
-  {id:"donetsk_city",name:"Donetsk",lat:48.0159,lng:37.8028,control:"RU",pop:905000,pm:false,fort:0.8},
-  {id:"horlivka",name:"Horlivka",lat:48.3069,lng:38.0525,control:"RU",pop:240000,pm:false,fort:0.6},
-  {id:"makiivka",name:"Makiivka",lat:48.0453,lng:37.9653,control:"RU",pop:340000,pm:false,fort:0.6},
-  {id:"luhansk_city",name:"Luhansk",lat:48.574,lng:39.3078,control:"RU",pop:400000,pm:false,fort:0.7},
-  {id:"severodonetsk",name:"Severodonetsk",lat:48.9483,lng:38.4933,control:"RU",pop:100000,pm:false,fort:0.4},
-  {id:"lysychansk",name:"Lysychansk",lat:48.9042,lng:38.4375,control:"RU",pop:95000,pm:false,fort:0.4},
-  {id:"kreminna",name:"Kreminna",lat:49.05,lng:38.2167,control:"RU",pop:18000,pm:false,fort:0.5},
-  {id:"svatove",name:"Svatove",lat:49.4083,lng:38.1583,control:"RU",pop:16000,pm:false,fort:0.5},
-  {id:"hulyaipole",name:"Hulyaipole",lat:47.6667,lng:36.25,control:"UA",pop:13000,pm:false,fort:0.5},
-  {id:"polohy",name:"Polohy",lat:47.4833,lng:36.25,control:"RU",pop:18000,pm:false,fort:0.5},
-  {id:"tokmak",name:"Tokmak",lat:47.25,lng:35.7,control:"RU",pop:30000,pm:false,fort:0.7},
-  {id:"melitopol",name:"Melitopol",lat:46.8489,lng:35.3653,control:"RU",pop:150000,pm:false,fort:0.7},
-  {id:"enerhodar",name:"Enerhodar",lat:47.4989,lng:34.6536,control:"RU",pop:52000,pm:false,fort:0.5},
-  {id:"myrnohrad",name:"Myrnohrad",lat:48.3,lng:37.2667,control:"CONTESTED",pop:50000,pm:false,fort:0.5,assault:0.6,frontDist:5,vuln:0.52},
-  {id:"ocheretyne",name:"Ocheretyne",lat:48.2,lng:37.5333,control:"RU",pop:3000,pm:false,fort:0.2},
+  {id:"pokrovsk",name:"Pokrovsk",lat:48.2833,lng:37.1833,control:"UA",pop:60000,pm:true,fort:0.7,assault:0.7,frontDist:8,supply:0.5,terrain:0.5,vuln:0.64},
+  {id:"chasiv_yar",name:"Chasiv Yar",lat:48.6,lng:37.85,control:"UA",pop:12000,pm:true,fort:0.8,assault:0.8,frontDist:2,supply:0.65,terrain:0.5,vuln:0.58},
+  {id:"toretsk",name:"Toretsk",lat:48.3956,lng:37.8464,control:"UA",pop:32000,pm:true,fort:0.6,assault:0.7,frontDist:3,supply:0.6,terrain:0.5,vuln:0.62},
+  {id:"kupiansk",name:"Kupiansk",lat:49.7133,lng:37.6167,control:"UA",pop:27000,pm:true,fort:0.6,assault:0.5,frontDist:15,supply:0.3,terrain:0.5,vuln:0.38},
+  {id:"zaporizhzhia",name:"Zaporizhzhia",lat:47.8388,lng:35.1396,control:"UA",pop:710000,pm:true,fort:0.9,assault:0.0,frontDist:40,supply:0.05,terrain:0.5,vuln:0.08},
+  {id:"orikhiv",name:"Orikhiv",lat:47.5667,lng:35.7833,control:"UA",pop:14000,pm:true,fort:0.6,assault:0.3,frontDist:5,supply:0.45,terrain:0.5,vuln:0.35},
+  {id:"hryshyne",name:"Hryshyne",lat:48.15,lng:37.0333,control:"CONTESTED",pop:800,pm:true,fort:0.3,assault:0.9,frontDist:0,supply:0.7,terrain:0.5,vuln:0.64},
+  {id:"kramatorsk",name:"Kramatorsk",lat:48.7356,lng:37.5856,control:"UA",pop:150000,pm:false,fort:0.8,assault:0.1,frontDist:30,supply:0.15,terrain:0.5},
+  {id:"sloviansk",name:"Sloviansk",lat:48.8511,lng:37.6167,control:"UA",pop:106000,pm:true,fort:0.7,assault:0.1,frontDist:35,supply:0.1,terrain:0.5},
+  {id:"kostiantynivka",name:"Kostiantynivka",lat:48.5297,lng:37.7081,control:"UA",pop:68000,pm:true,fort:0.5,assault:0.35,frontDist:12,supply:0.30,terrain:0.4},
+  {id:"druzhkivka",name:"Druzhkivka",lat:48.6181,lng:37.5286,control:"UA",pop:55000,pm:false,fort:0.5,assault:0.1,frontDist:25,supply:0.2,terrain:0.5},
+  {id:"bakhmut",name:"Bakhmut",lat:48.5953,lng:38.0003,control:"RU",pop:73000,pm:false,fort:0.3,supply:0.5,terrain:0.5},
+  {id:"siversk",name:"Siversk",lat:48.8667,lng:38.1,control:"UA",pop:11000,pm:false,fort:0.7,assault:0.4,frontDist:5,supply:0.4,terrain:0.5},
+  {id:"lyman",name:"Lyman",lat:48.9833,lng:37.8167,control:"UA",pop:20000,pm:true,fort:0.6,assault:0.3,frontDist:10,supply:0.35,terrain:0.5},
+  {id:"avdiivka",name:"Avdiivka",lat:48.1397,lng:37.7472,control:"RU",pop:31000,pm:false,fort:0.2,supply:0.5,terrain:0.5},
+  {id:"marinka",name:"Marinka",lat:47.9422,lng:37.5058,control:"RU",pop:9000,pm:false,fort:0.1,supply:0.5,terrain:0.5},
+  {id:"vuhledar",name:"Vuhledar",lat:47.7833,lng:37.25,control:"RU",pop:14000,pm:false,fort:0.2,supply:0.5,terrain:0.5},
+  {id:"kurakhove",name:"Kurakhove",lat:47.9833,lng:37.3,control:"RU",pop:20000,pm:false,fort:0.2,supply:0.5,terrain:0.5},
+  {id:"selydove",name:"Selydove",lat:48.15,lng:37.3,control:"RU",pop:21000,pm:false,fort:0.2,supply:0.5,terrain:0.5},
+  {id:"pavlohrad",name:"Pavlohrad",lat:48.5333,lng:35.8667,control:"UA",pop:104000,pm:false,fort:0.6,assault:0.0,frontDist:100,supply:0.05,terrain:0.5},
+  {id:"dnipro",name:"Dnipro",lat:48.4647,lng:35.0462,control:"UA",pop:980000,pm:false,fort:0.9,assault:0.0,frontDist:150,supply:0.02,terrain:0.5},
+  {id:"nikopol",name:"Nikopol",lat:47.5719,lng:34.3978,control:"UA",pop:108000,pm:false,fort:0.5,supply:0.15,terrain:0.5},
+  {id:"izium",name:"Izium",lat:49.2156,lng:37.2611,control:"UA",pop:46000,pm:false,fort:0.6,assault:0.1,frontDist:40,supply:0.15,terrain:0.5},
+  {id:"borova",name:"Borova",lat:49.05,lng:37.6667,control:"UA",pop:5000,pm:true,fort:0.4,assault:0.2,frontDist:10,supply:0.35,terrain:0.5},
+  {id:"oskil",name:"Oskil",lat:49.5333,lng:37.3333,control:"UA",pop:3000,pm:false,fort:0.5,supply:0.2,terrain:0.5},
+  {id:"donetsk_city",name:"Donetsk",lat:48.0159,lng:37.8028,control:"RU",pop:905000,pm:false,fort:0.8,supply:0.5,terrain:0.5},
+  {id:"horlivka",name:"Horlivka",lat:48.3069,lng:38.0525,control:"RU",pop:240000,pm:false,fort:0.6,supply:0.5,terrain:0.5},
+  {id:"makiivka",name:"Makiivka",lat:48.0453,lng:37.9653,control:"RU",pop:340000,pm:false,fort:0.6,supply:0.5,terrain:0.5},
+  {id:"luhansk_city",name:"Luhansk",lat:48.574,lng:39.3078,control:"RU",pop:400000,pm:false,fort:0.7,supply:0.5,terrain:0.5},
+  {id:"severodonetsk",name:"Severodonetsk",lat:48.9483,lng:38.4933,control:"RU",pop:100000,pm:false,fort:0.4,supply:0.5,terrain:0.5},
+  {id:"lysychansk",name:"Lysychansk",lat:48.9042,lng:38.4375,control:"RU",pop:95000,pm:false,fort:0.4,supply:0.5,terrain:0.5},
+  {id:"kreminna",name:"Kreminna",lat:49.05,lng:38.2167,control:"RU",pop:18000,pm:false,fort:0.5,supply:0.5,terrain:0.5},
+  {id:"svatove",name:"Svatove",lat:49.4083,lng:38.1583,control:"RU",pop:16000,pm:false,fort:0.5,supply:0.5,terrain:0.5},
+  {id:"hulyaipole",name:"Hulyaipole",lat:47.6667,lng:36.25,control:"UA",pop:13000,pm:true,fort:0.5,supply:0.4,terrain:0.5},
+  {id:"polohy",name:"Polohy",lat:47.4833,lng:36.25,control:"RU",pop:18000,pm:false,fort:0.5,supply:0.5,terrain:0.5},
+  {id:"tokmak",name:"Tokmak",lat:47.25,lng:35.7,control:"RU",pop:30000,pm:false,fort:0.7,supply:0.5,terrain:0.5},
+  {id:"melitopol",name:"Melitopol",lat:46.8489,lng:35.3653,control:"RU",pop:150000,pm:false,fort:0.7,supply:0.5,terrain:0.5},
+  {id:"enerhodar",name:"Enerhodar",lat:47.4989,lng:34.6536,control:"RU",pop:52000,pm:false,fort:0.5,supply:0.5,terrain:0.5},
+  {id:"myrnohrad",name:"Myrnohrad",lat:48.3,lng:37.2667,control:"CONTESTED",pop:50000,pm:false,fort:0.5,assault:0.6,frontDist:5,supply:0.55,terrain:0.5,vuln:0.52},
+  {id:"ocheretyne",name:"Ocheretyne",lat:48.2,lng:37.5333,control:"RU",pop:3000,pm:false,fort:0.2,supply:0.5,terrain:0.5},
 ];
 
 const edges = [
@@ -233,15 +282,239 @@ const edges = [
   {s:"nikopol",t:"enerhodar",type:"FRONTLINE",front:true},
 ];
 
+// Prices updated 2026-02-17 from Polymarket live data + web search
 const signals = [
-  {id:"hryshyne",name:"Hryshyne",model:0.72,market:0.75,edge:-0.03,dir:"HOLD",kelly:0},
-  {id:"chasiv_yar",name:"Chasiv Yar",model:0.41,market:0.55,edge:-0.14,dir:"SELL",kelly:0.18},
-  {id:"toretsk",name:"Toretsk",model:0.38,market:0.50,edge:-0.12,dir:"SELL",kelly:0.15},
-  {id:"pokrovsk",name:"Pokrovsk",model:0.30,market:0.35,edge:-0.05,dir:"HOLD",kelly:0},
-  {id:"kupiansk",name:"Kupiansk",model:0.18,market:0.20,edge:-0.02,dir:"HOLD",kelly:0},
-  {id:"orikhiv",name:"Orikhiv",model:0.19,market:0.15,edge:0.04,dir:"HOLD",kelly:0},
-  {id:"zaporizhzhia",name:"Zaporizhzhia",model:0.04,market:0.03,edge:0.01,dir:"HOLD",kelly:0},
+  // --- Highest vulnerability / most active frontline ---
+  {id:"hryshyne",name:"Hryshyne",model:0.72,market:0.30,edge:0.42,dir:"BUY",kelly:0.25,deadline:"Mar 31"},
+  {id:"chasiv_yar",name:"Chasiv Yar",model:0.41,market:0.40,edge:0.01,dir:"HOLD",kelly:0,deadline:"Mar 31"},
+  {id:"toretsk",name:"Toretsk",model:0.38,market:0.50,edge:-0.12,dir:"SELL",kelly:0.24,deadline:"Mar 31"},
+  {id:"kostiantynivka",name:"Kostiantynivka",model:0.22,market:0.05,edge:0.17,dir:"BUY",kelly:0.18,deadline:"Feb 28"},
+  {id:"pokrovsk",name:"Pokrovsk",model:0.30,market:0.71,edge:-0.41,dir:"SELL",kelly:0.25,deadline:"Mar 31"},
+  {id:"kupiansk",name:"Kupiansk",model:0.18,market:0.08,edge:0.10,dir:"BUY",kelly:0.11,deadline:"Mar 31"},
+  {id:"lyman",name:"Lyman",model:0.15,market:0.10,edge:0.05,dir:"HOLD",kelly:0,deadline:"Mar 31"},
+  {id:"borova",name:"Borova",model:0.25,market:0.18,edge:0.07,dir:"BUY",kelly:0.09,deadline:"Mar 31"},
+  {id:"orikhiv",name:"Orikhiv",model:0.19,market:0.45,edge:-0.26,dir:"SELL",kelly:0.25,deadline:"Mar 31"},
+  {id:"hulyaipole",name:"Hulyaipole",model:0.12,market:0.08,edge:0.04,dir:"HOLD",kelly:0,deadline:"Feb 28"},
+  {id:"sloviansk",name:"Sloviansk",model:0.05,market:0.04,edge:0.01,dir:"HOLD",kelly:0,deadline:"Jun 30"},
+  {id:"zaporizhzhia",name:"Zaporizhzhia",model:0.04,market:0.03,edge:0.01,dir:"HOLD",kelly:0,deadline:"Mar 31"},
 ];
+
+// ============================================================
+// GRAPH ANALYSIS: Betweenness Centrality & Metrics
+// ============================================================
+
+// BFS shortest paths (for betweenness)
+function bfsShortestPaths(start, adjList, nodeIds) {
+  const dist = {};
+  const pred = {};
+  const queue = [start];
+  const visited = new Set([start]);
+
+  for (let id of nodeIds) {
+    dist[id] = id === start ? 0 : Infinity;
+    pred[id] = [];
+  }
+
+  while (queue.length > 0) {
+    const u = queue.shift();
+    const neighbors = adjList[u] || [];
+    for (let v of neighbors) {
+      if (dist[u] + 1 < dist[v]) {
+        dist[v] = dist[u] + 1;
+        pred[v] = [u];
+        if (!visited.has(v)) {
+          visited.add(v);
+          queue.push(v);
+        }
+      } else if (dist[u] + 1 === dist[v]) {
+        pred[v].push(u);
+      }
+    }
+  }
+  return { dist, pred };
+}
+
+// Betweenness centrality (standard algorithm)
+function computeBetweenness(settlements, edges) {
+  const nodeIds = settlements.map(s => s.id);
+  const adjList = {};
+
+  // Build adjacency list (undirected)
+  nodeIds.forEach(id => { adjList[id] = []; });
+  edges.forEach(e => {
+    if (!adjList[e.s].includes(e.t)) adjList[e.s].push(e.t);
+    if (!adjList[e.t].includes(e.s)) adjList[e.t].push(e.s);
+  });
+
+  const betweenness = {};
+  nodeIds.forEach(id => { betweenness[id] = 0; });
+
+  // For each source node, compute shortest paths
+  for (let s of nodeIds) {
+    const { dist, pred } = bfsShortestPaths(s, adjList, nodeIds);
+    const depend = {};
+    nodeIds.forEach(v => { depend[v] = 0; });
+
+    // Accumulation phase (reverse topological order)
+    const nodes = nodeIds.filter(v => v !== s).sort((a, b) => dist[b] - dist[a]);
+    for (let v of nodes) {
+      for (let u of pred[v]) {
+        depend[u] += (1 + depend[v]) * (dist[u] < Infinity ? 1 : 0);
+      }
+      if (v !== s) betweenness[v] += depend[v];
+    }
+  }
+
+  return betweenness;
+}
+
+// Vulnerability decomposition (matching Python logic)
+function computeVulnerability(settlement, betweenness, maxBetweenness) {
+  const weights = {
+    connectivity: 0.20,
+    supply: 0.20,
+    force_balance: 0.15,
+    terrain: 0.10,
+    fortification: 0.10,
+    assault: 0.15,
+    frontline: 0.10,
+  };
+
+  const components = {
+    connectivity: betweenness[settlement.id] / maxBetweenness,
+    supply: settlement.supply || 0,
+    force_balance: settlement.assault || 0,
+    terrain: 1 - (settlement.terrain || 0.5),
+    fortification: 1 - (settlement.fort || 0.5),
+    assault: settlement.assault || 0,
+    frontline: Math.max(0, 1 - (settlement.frontDist || 50) / 50),
+  };
+
+  let composite = 0;
+  for (let key in weights) {
+    composite += (components[key] || 0) * weights[key];
+  }
+
+  return {
+    components,
+    composite: Math.min(1, Math.max(0, composite)),
+    weights,
+  };
+}
+
+// Graph metrics computation
+function computeGraphMetrics(settlements, edges) {
+  const n = settlements.length;
+  const m = edges.length;
+  const nodeIds = settlements.map(s => s.id);
+
+  // Build adjacency list (undirected, unique edges)
+  const adjList = {};
+  const edgeSet = new Set();
+  nodeIds.forEach(id => { adjList[id] = []; });
+
+  edges.forEach(e => {
+    const key = [e.s, e.t].sort().join('|');
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      if (!adjList[e.s].includes(e.t)) adjList[e.s].push(e.t);
+      if (!adjList[e.t].includes(e.s)) adjList[e.t].push(e.s);
+    }
+  });
+
+  const edgeCount = edgeSet.size;
+
+  // Density
+  const density = (2 * edgeCount) / (n * (n - 1));
+
+  // Average degree
+  const avgDegree = (2 * edgeCount) / n;
+
+  // Clustering coefficient (average local)
+  let totalClustering = 0;
+  for (let v of nodeIds) {
+    const neighbors = adjList[v];
+    const k = neighbors.length;
+    if (k < 2) continue;
+
+    let edges_in_neighborhood = 0;
+    for (let i = 0; i < neighbors.length; i++) {
+      for (let j = i + 1; j < neighbors.length; j++) {
+        if (adjList[neighbors[i]].includes(neighbors[j])) {
+          edges_in_neighborhood++;
+        }
+      }
+    }
+    const localCC = (2 * edges_in_neighborhood) / (k * (k - 1));
+    totalClustering += localCC;
+  }
+  const avgClustering = totalClustering / n;
+
+  // Connected components (BFS from unvisited)
+  const visited = new Set();
+  let components = 0;
+  for (let start of nodeIds) {
+    if (visited.has(start)) continue;
+    components++;
+    const queue = [start];
+    visited.add(start);
+    while (queue.length > 0) {
+      const u = queue.shift();
+      for (let v of adjList[u]) {
+        if (!visited.has(v)) {
+          visited.add(v);
+          queue.push(v);
+        }
+      }
+    }
+  }
+
+  // Bridges and articulation points via Tarjan's algorithm (non-destructive)
+  let bridgeCount = 0;
+  const artPointSet = new Set();
+  {
+    const disc2 = {}, low2 = {}, parent2 = {};
+    const vis2 = new Set();
+    let t2 = 0;
+
+    function tarjan(u) {
+      vis2.add(u);
+      disc2[u] = low2[u] = t2++;
+      let childCount = 0;
+      for (const v of (adjList[u] || [])) {
+        if (!vis2.has(v)) {
+          childCount++;
+          parent2[v] = u;
+          tarjan(v);
+          low2[u] = Math.min(low2[u], low2[v]);
+          if (low2[v] > disc2[u]) bridgeCount++;
+          if (parent2[u] === undefined && childCount > 1) artPointSet.add(u);
+          if (parent2[u] !== undefined && low2[v] >= disc2[u]) artPointSet.add(u);
+        } else if (v !== parent2[u]) {
+          low2[u] = Math.min(low2[u], disc2[v]);
+        }
+      }
+    }
+
+    for (const id of nodeIds) {
+      if (!vis2.has(id)) {
+        parent2[id] = undefined;
+        tarjan(id);
+      }
+    }
+  }
+
+  return {
+    nodes: n,
+    edges: edgeCount,
+    density: density.toFixed(3),
+    avgDegree: avgDegree.toFixed(1),
+    clustering: avgClustering.toFixed(3),
+    components,
+    bridges: bridgeCount,
+    artPoints: artPointSet.size,
+  };
+}
 
 // ============================================================
 // MAP SETUP
@@ -265,6 +538,26 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 // Build lookup
 const nodeMap = {};
 settlements.forEach(s => { nodeMap[s.id] = s; });
+
+// Compute betweenness and graph metrics
+const betweenness = computeBetweenness(settlements, edges);
+const maxBetweenness = Math.max(...Object.values(betweenness)) || 1;
+
+const metrics = computeGraphMetrics(settlements, edges);
+document.getElementById('metric-nodes').textContent = metrics.nodes;
+document.getElementById('metric-edges').textContent = metrics.edges;
+document.getElementById('metric-density').textContent = metrics.density;
+document.getElementById('metric-avgdeg').textContent = metrics.avgDegree;
+document.getElementById('metric-clustering').textContent = metrics.clustering;
+document.getElementById('metric-components').textContent = metrics.components;
+document.getElementById('metric-bridges').textContent = metrics.bridges;
+document.getElementById('metric-artpoints').textContent = metrics.artPoints;
+
+// Graph metrics panel toggle
+const graphMetricsPanel = document.getElementById('graph-metrics');
+graphMetricsPanel.querySelector('h3').addEventListener('click', () => {
+  graphMetricsPanel.classList.toggle('collapsed');
+});
 
 // ============================================================
 // DRAW EDGES
@@ -357,9 +650,51 @@ settlements.forEach(s => {
     html += `<div class="tt-row"><span class="tt-label">Control</span><span style="color:${baseColor}">${s.control}</span></div>`;
     html += `<div class="tt-row"><span class="tt-label">Population</span><span>${s.pop.toLocaleString()}</span></div>`;
     if (s.assault) html += `<div class="tt-row"><span class="tt-label">Assault</span><span style="color:#f87171">${(s.assault*100).toFixed(0)}%</span></div>`;
-    if (s.vuln) html += `<div class="tt-row"><span class="tt-label">Vulnerability</span><span style="color:${s.vuln>0.5?'#f87171':'#facc15'}">${(s.vuln*100).toFixed(0)}%</span></div>`;
     if (s.frontDist !== undefined) html += `<div class="tt-row"><span class="tt-label">Front dist</span><span>${s.frontDist} km</span></div>`;
     if (s.pm) html += `<div class="tt-badge" style="background:rgba(167,139,250,0.2);color:#a78bfa">Polymarket Target</div>`;
+
+    // Vulnerability decomposition (only for UA and CONTESTED, not RU)
+    if (s.vuln && (s.control === 'UA' || s.control === 'CONTESTED')) {
+      const vulnData = computeVulnerability(s, betweenness, maxBetweenness);
+      const comp = vulnData.components;
+      const weights = vulnData.weights;
+      const compScore = vulnData.composite;
+
+      html += `<div class="vuln-section">`;
+      html += `<div class="vuln-title">Vulnerability: ${(compScore*100).toFixed(0)}%</div>`;
+
+      // Helper to get color gradient
+      function getBarColor(score) {
+        if (score < 0.33) return '#22c55e';
+        if (score < 0.66) return '#eab308';
+        return '#ef4444';
+      }
+
+      const components = [
+        { label: 'Connectivity', value: comp.connectivity, weight: weights.connectivity },
+        { label: 'Supply', value: comp.supply, weight: weights.supply },
+        { label: 'Force Balance', value: comp.force_balance, weight: weights.force_balance },
+        { label: 'Terrain', value: comp.terrain, weight: weights.terrain },
+        { label: 'Fortification', value: comp.fortification, weight: weights.fortification },
+        { label: 'Assault', value: comp.assault, weight: weights.assault },
+        { label: 'Frontline', value: comp.frontline, weight: weights.frontline },
+      ];
+
+      for (let c of components) {
+        const pct = (c.value * 100).toFixed(0);
+        const wt = (c.weight * 100).toFixed(0);
+        const color = getBarColor(c.value);
+        html += `<div class="vuln-bar-row">`;
+        html += `<div class="vuln-bar-label">${c.label}</div>`;
+        html += `<div class="vuln-bar-container"><div class="vuln-bar"><div class="vuln-bar-fill" style="width:${c.value*100}%;background:${color}"></div></div></div>`;
+        html += `<div class="vuln-bar-percent">${pct}%</div>`;
+        html += `<div class="vuln-bar-weight">(${wt}%)</div>`;
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    }
+
     if (sig) {
       const dc = sig.dir === 'BUY' ? 'buy' : sig.dir === 'SELL' ? 'sell' : 'hold';
       html += `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(51,65,85,0.5)">`;
@@ -382,26 +717,105 @@ settlements.forEach(s => {
 });
 
 // ============================================================
-// SIGNAL CARDS
+// LIVE PRICE FETCHING FROM POLYMARKET API
 // ============================================================
-const sigList = document.getElementById('signals-list');
-signals.forEach(sig => {
-  const dc = sig.dir === 'BUY' ? 'buy' : sig.dir === 'SELL' ? 'sell' : 'hold';
-  const card = document.createElement('div');
-  card.className = 'signal-card';
-  card.innerHTML = `
-    <div class="sc-name">${sig.name} <span class="sc-dir ${dc}">${sig.dir}</span></div>
-    <div class="sc-row"><span>Model P(fall)</span><span>${(sig.model*100).toFixed(0)}%</span></div>
-    <div class="sc-row"><span>Market Price</span><span>${(sig.market*100).toFixed(0)}%</span></div>
-    <div class="sc-row"><span>Edge</span><span style="color:${sig.edge>0?'#4ade80':sig.edge<-0.05?'#f87171':'#94a3b8'}">${sig.edge>0?'+':''}${(sig.edge*100).toFixed(1)}%</span></div>
-    ${sig.kelly > 0 ? `<div class="sc-row"><span>Kelly Size</span><span>${(sig.kelly*100).toFixed(1)}%</span></div>` : ''}
-  `;
-  card.addEventListener('click', () => {
-    const node = nodeMap[sig.id];
-    if (node) map.flyTo([node.lat, node.lng], 11, { duration: 0.8 });
+const GAMMA_API = 'https://gamma-api.polymarket.com';
+const CORS_PROXIES = ['', 'https://corsproxy.io/?url=', 'https://api.allorigins.win/raw?url='];
+
+async function fetchWithProxy(url) {
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = proxy ? proxy + encodeURIComponent(url) : url;
+      const resp = await fetch(proxyUrl, {signal: AbortSignal.timeout(8000)});
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return await resp.json();
+    } catch (e) { continue; }
+  }
+  return null;
+}
+
+// Map signal IDs → Polymarket slugs for live price lookup
+const slugMap = {
+  kostiantynivka: 'will-russia-capture-kostyantynivka-by-february-28',
+  pokrovsk: 'will-russia-capture-all-of-pokrovsk-by-march-31',
+  toretsk: 'will-russia-capture-toretske-by-march-31-2026',
+  kupiansk: 'will-russia-capture-all-of-kupiansk-by-march-31',
+  lyman: 'will-russia-capture-lyman-by-march-31-2026-494',
+  orikhiv: 'will-russia-enter-orikhiv-by-march-31',
+  hryshyne: 'will-russia-capture-hryshyne-by-march-31-2026',
+  hulyaipole: 'will-russia-capture-all-of-huliaipole-by-february-28',
+  sloviansk: 'will-russia-capture-slovainsk-by-2027',
+  borova: 'will-russia-enter-borova-by-march-31',
+};
+
+async function refreshLivePrices() {
+  let updated = 0;
+  for (const sig of signals) {
+    const slug = slugMap[sig.id];
+    if (!slug) continue;
+    try {
+      const data = await fetchWithProxy(`${GAMMA_API}/markets?slug=${encodeURIComponent(slug)}`);
+      if (data && data.length > 0) {
+        const prices = JSON.parse(data[0].outcomePrices || '[]');
+        const yesPrice = parseFloat(prices[0] || 0);
+        if (yesPrice > 0 && yesPrice < 1) {
+          sig.market = yesPrice;
+          sig.edge = +(sig.model - sig.market).toFixed(4);
+          if (sig.edge > 0.05) {
+            sig.dir = 'BUY';
+            sig.kelly = Math.min(sig.edge / (1 - sig.market), 0.25);
+          } else if (sig.edge < -0.05) {
+            sig.dir = 'SELL';
+            sig.kelly = Math.min(Math.abs(sig.edge) / sig.market, 0.25);
+          } else {
+            sig.dir = 'HOLD';
+            sig.kelly = 0;
+          }
+          updated++;
+        }
+      }
+    } catch(e) { console.warn('Price fetch failed for', sig.id, e); }
+  }
+  return updated;
+}
+
+function renderSignalCards() {
+  const sigList = document.getElementById('signals-list');
+  sigList.innerHTML = '';
+  signals.forEach(sig => {
+    const dc = sig.dir === 'BUY' ? 'buy' : sig.dir === 'SELL' ? 'sell' : 'hold';
+    const card = document.createElement('div');
+    card.className = 'signal-card';
+    card.innerHTML = `
+      <div class="sc-name">${sig.name} <span class="sc-dir ${dc}">${sig.dir}</span></div>
+      <div class="sc-row"><span>Deadline</span><span style="color:#94a3b8">${sig.deadline || 'TBD'}</span></div>
+      <div class="sc-row"><span>Model P(fall)</span><span>${(sig.model*100).toFixed(0)}%</span></div>
+      <div class="sc-row"><span>Market Price</span><span>${(sig.market*100).toFixed(0)}%</span></div>
+      <div class="sc-row"><span>Edge</span><span style="color:${sig.edge>0?'#4ade80':sig.edge<-0.05?'#f87171':'#94a3b8'}">${sig.edge>0?'+':''}${(sig.edge*100).toFixed(1)}%</span></div>
+      ${sig.kelly > 0 ? `<div class="sc-row"><span>Kelly Size</span><span>${(sig.kelly*100).toFixed(1)}%</span></div>` : ''}
+    `;
+    card.addEventListener('click', () => {
+      const node = nodeMap[sig.id];
+      if (node) map.flyTo([node.lat, node.lng], 11, { duration: 0.8 });
+    });
+    sigList.appendChild(card);
   });
-  sigList.appendChild(card);
-});
+}
+
+// ============================================================
+// SIGNAL CARDS — render with fallback prices, then fetch live
+// ============================================================
+renderSignalCards();
+
+// Try to fetch live prices on page load (non-blocking)
+refreshLivePrices().then(count => {
+  if (count > 0) {
+    console.log(`Updated ${count} market prices from Polymarket API`);
+    renderSignalCards(); // Re-render with live data
+  } else {
+    console.log('Using cached prices (API unavailable)');
+  }
+}).catch(e => console.warn('Live price refresh failed:', e));
 
 // Mouse tracking for tooltip
 document.addEventListener('mousemove', e => {

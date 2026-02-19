@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Network Graph</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #graph-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            position: relative;
+        }
+
+        svg {
+            background: #0a0e27;
+            cursor: grab;
+        }
+
+        svg.dragging {
+            cursor: grabbing;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100%;
+            background: #0f1535;
+            border-right: 1px solid #2a3a5a;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            left: 280px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            color: #4da6ff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+
+        #sidebar.collapsed ~ .sidebar-toggle {
+            display: flex;
+            left: 0;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+        }
+
+        .stat-value {
+            color: #4da6ff;
+            font-weight: 600;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .legend-item:hover {
+            background: rgba(77, 166, 255, 0.1);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            flex: 1;
+        }
+
+        .legend-count {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .checkbox {
+            width: 14px;
+            height: 14px;
+            margin-right: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .slider-container {
+            margin-top: 10px;
+        }
+
+        .slider-label {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #2a3a5a;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4da6ff;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4da6ff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.5);
+        }
+
+        .slider-value {
+            font-size: 12px;
+            color: #4da6ff;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        /* Right Panel */
+        #details-panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 320px;
+            height: 100%;
+            background: #0f1535;
+            border-left: 1px solid #2a3a5a;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        #details-panel.hidden {
+            transform: translateX(100%);
+        }
+
+        .panel-toggle {
+            position: absolute;
+            right: 320px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            color: #4da6ff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+
+        #details-panel.hidden ~ .panel-toggle {
+            display: flex;
+            right: 0;
+        }
+
+        .details-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 16px;
+            word-break: break-word;
+        }
+
+        .details-item {
+            margin-bottom: 16px;
+        }
+
+        .details-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .details-value {
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        .price-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .price-item {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .price-yes {
+            background: rgba(107, 203, 119, 0.2);
+            border: 1px solid #6bcb77;
+        }
+
+        .price-no {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+        }
+
+        .price-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .price-value {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .price-yes .price-value {
+            color: #6bcb77;
+        }
+
+        .price-no .price-value {
+            color: #ff6b6b;
+        }
+
+        .external-link {
+            display: inline-block;
+            color: #4da6ff;
+            text-decoration: none;
+            font-size: 12px;
+            padding: 8px 12px;
+            border: 1px solid #4da6ff;
+            border-radius: 4px;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+
+        .external-link:hover {
+            background: rgba(77, 166, 255, 0.1);
+        }
+
+        .connected-markets {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2a3a5a;
+        }
+
+        .connected-item {
+            font-size: 11px;
+            padding: 6px;
+            margin-bottom: 4px;
+            background: rgba(77, 166, 255, 0.1);
+            border-radius: 3px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .connected-item:hover {
+            background: rgba(77, 166, 255, 0.2);
+            color: #4da6ff;
+        }
+
+        /* Bottom Bar */
+        #bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #0f1535;
+            border-top: 1px solid #2a3a5a;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .bottom-left {
+            flex: 1;
+        }
+
+        .bottom-info {
+            color: #888;
+            margin-right: 20px;
+            display: inline-block;
+        }
+
+        .bottom-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: #4da6ff;
+            color: #0a0e27;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #6bb8ff;
+            box-shadow: 0 0 12px rgba(77, 166, 255, 0.4);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Search Box */
+        #search-box {
+            position: absolute;
+            top: 20px;
+            left: 300px;
+            width: 250px;
+            padding: 8px 12px;
+            background: #1a2a4a;
+            border: 1px solid #2a3a5a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 12px;
+            z-index: 50;
+        }
+
+        #search-box::placeholder {
+            color: #666;
+        }
+
+        #search-box:focus {
+            outline: none;
+            border-color: #4da6ff;
+            box-shadow: 0 0 8px rgba(77, 166, 255, 0.3);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            display: none;
+        }
+
+        .spinner.active {
+            display: block;
+        }
+
+        .spinner-circle {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #2a3a5a;
+            border-top: 3px solid #4da6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #1a2a4a;
+            color: #e0e0e0;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #2a3a5a;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 150;
+            max-width: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #4da6ff;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-item {
+            margin-bottom: 4px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a3a5a;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a4a6a;
+        }
+
+        /* Node styling */
+        .node {
+            cursor: pointer;
+            stroke: #2a3a5a;
+            stroke-width: 2px;
+            transition: all 0.2s;
+        }
+
+        .node:hover {
+            stroke: #4da6ff;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px rgba(77, 166, 255, 0.5));
+        }
+
+        .node.selected {
+            stroke: #ffd93d;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 12px rgba(255, 217, 61, 0.6));
+        }
+
+        .node.dimmed {
+            opacity: 0.2;
+        }
+
+        /* Link styling */
+        .link {
+            stroke: rgba(77, 166, 255, 0.3);
+            stroke-linecap: round;
+            pointer-events: none;
+        }
+
+        .link.dimmed {
+            opacity: 0.1;
+        }
+
+        /* Disclaimer */
+        .disclaimer {
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            right: 20px;
+            font-size: 10px;
+            color: #666;
+            line-height: 1.4;
+            padding: 8px;
+            background: rgba(26, 42, 74, 0.5);
+            border-radius: 3px;
+            border: 1px solid #2a3a5a;
+            z-index: 50;
+        }
+
+        @media (max-width: 1200px) {
+            #sidebar {
+                width: 240px;
+            }
+
+            #details-panel {
+                width: 280px;
+            }
+
+            #search-box {
+                left: 260px;
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container">
+        <svg id="graph"></svg>
+
+        <div id="sidebar">
+            <div class="sidebar-title">Market Graph</div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Statistics</div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Markets</span>
+                    <span class="stat-value" id="stat-nodes">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Connections</span>
+                    <span class="stat-value" id="stat-edges">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Network Density</span>
+                    <span class="stat-value" id="stat-density">0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Categories</span>
+                    <span class="stat-value" id="stat-categories">0</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Categories</div>
+                <div id="category-legend"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Similarity Threshold</div>
+                <div class="slider-container">
+                    <input type="range" id="threshold-slider" min="0" max="100" value="30" step="5">
+                    <div class="slider-value">
+                        <span id="threshold-value">0.30</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Graph Metrics</div>
+                <div class="stat-item">
+                    <span class="stat-label">Avg Degree</span>
+                    <span class="stat-value" id="metric-avg-degree">0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Clustering Coeff</span>
+                    <span class="stat-value" id="metric-clustering-coeff">0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Components</span>
+                    <span class="stat-value" id="metric-components">0</span>
+                </div>
+            </div>
+        </div>
+
+        <button class="sidebar-toggle" title="Toggle sidebar">☰</button>
+
+        <input type="text" id="search-box" placeholder="Search markets...">
+
+        <div id="details-panel" class="hidden">
+            <div class="details-title" id="details-question">Select a market to see details</div>
+            <div id="details-content"></div>
+        </div>
+
+        <button class="panel-toggle" title="Toggle details panel">⧘</button>
+
+        <div class="spinner" id="spinner">
+            <div class="spinner-circle"></div>
+        </div>
+
+        <div id="bottom-bar">
+            <div class="bottom-left">
+                <span class="bottom-info">Last updated: <span id="last-updated">--</span></span>
+                <span class="bottom-info">Auto-refresh: 60s</span>
+            </div>
+            <div class="bottom-right">
+                <button class="refresh-btn" id="refresh-btn">↻ Refresh</button>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            Market data from Polymarket Gamma API (live). Graph edges computed client-side from event grouping and category similarity.
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            categoryColors: {
+                'Politics': '#4da6ff',
+                'Sports': '#ff6b6b',
+                'Crypto': '#ffd93d',
+                'Science': '#6bcb77',
+                'Culture': '#c77dff',
+                'Business': '#ff8c42',
+                'Other': '#888'
+            },
+            categoryKeywords: {
+                'Politics': ['election', 'government', 'political', 'trump', 'biden', 'congress', 'senate', 'vote'],
+                'Sports': ['nfl', 'nba', 'nhl', 'mlb', 'soccer', 'football', 'basketball', 'sports', 'championship'],
+                'Crypto': ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'btc', 'eth', 'token'],
+                'Science': ['ai', 'climate', 'space', 'scientific', 'research', 'breakthrough'],
+                'Culture': ['entertainment', 'music', 'movie', 'awards', 'celebrity', 'oscars'],
+                'Business': ['business', 'economy', 'market', 'tech', 'startup', 'ipo']
+            },
+            forceConfig: {
+                charge: -300,
+                linkDistance: (link) => Math.max(30, 200 * (1 - link.weight)),
+                collisionRadius: 10
+            },
+            api: {
+                gammaUrl: 'https://gamma-api.polymarket.com/events',
+                // CORS proxy for file:// access — tries direct first, then proxy
+                corsProxies: [
+                    '', // direct (works from http:// origins)
+                    'https://corsproxy.io/?url=',
+                    'https://api.allorigins.win/raw?url='
+                ],
+                pageSize: 100,
+                maxPages: 5
+            }
+        };
+
+        // State
+        const state = {
+            markets: [],
+            nodes: [],
+            edges: [],
+            selectedNode: null,
+            hoveredNode: null,
+            filteredCategories: new Set(),
+            thresholdValue: 0.3,
+            simulation: null,
+            data: { nodes: [], links: [] },
+            refreshInterval: null,
+            lastRefresh: null
+        };
+
+        // Color mappings
+        const categoryMap = new Map();
+
+        // Utility functions
+        function getCategoryColor(category) {
+            return CONFIG.categoryColors[category] || CONFIG.categoryColors['Other'];
+        }
+
+        function categorizeMarket(event) {
+            if (event.tags && event.tags.length > 0) {
+                const tag = event.tags[0].label || '';
+                for (const [category, keywords] of Object.entries(CONFIG.categoryKeywords)) {
+                    if (keywords.some(keyword => tag.toLowerCase().includes(keyword))) {
+                        return category;
+                    }
+                }
+            }
+            return 'Other';
+        }
+
+        function getMarketPrices(market) {
+            // Try outcomePrices first (Gamma API native format)
+            if (Array.isArray(market.outcomePrices) && market.outcomePrices.length >= 2) {
+                const yes = parseFloat(market.outcomePrices[0]) || 0.5;
+                const no = parseFloat(market.outcomePrices[1]) || 0.5;
+                return { yes, no };
+            }
+            if (market.bestBid !== undefined && market.bestAsk !== undefined) {
+                const mid = (parseFloat(market.bestBid) + parseFloat(market.bestAsk)) / 2;
+                return { yes: mid, no: 1 - mid };
+            }
+            if (market.lastTradePrice !== undefined) {
+                const p = parseFloat(market.lastTradePrice);
+                return { yes: p, no: 1 - p };
+            }
+            return { yes: 0.5, no: 0.5 };
+        }
+
+        function formatNumber(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return num.toFixed(0);
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('last-updated').textContent = now.toLocaleTimeString();
+        }
+
+        // Fallback demo data for when API is unavailable (CORS on file://, etc.)
+        function generateDemoData() {
+            const demoEvents = [
+                { id: 'e1', title: 'US Presidential Election 2028', slug: 'us-presidential-2028', tags: [{label:'politics'}],
+                  markets: [
+                    { conditionId: 'd1', question: 'Will a Democrat win the 2028 presidential election?', volume24h: 5200000, bestBid: 0.48, bestAsk: 0.52 },
+                    { conditionId: 'd2', question: 'Will a Republican win the 2028 presidential election?', volume24h: 4800000, bestBid: 0.47, bestAsk: 0.51 },
+                  ]},
+                { id: 'e2', title: 'Federal Reserve Interest Rate', slug: 'fed-rate-decision', tags: [{label:'economics'}],
+                  markets: [
+                    { conditionId: 'd3', question: 'Will the Fed cut rates in March 2026?', volume24h: 3100000, bestBid: 0.62, bestAsk: 0.66 },
+                    { conditionId: 'd4', question: 'Will the Fed cut rates in June 2026?', volume24h: 2400000, bestBid: 0.55, bestAsk: 0.59 },
+                  ]},
+                { id: 'e3', title: 'Bitcoin Price Milestones', slug: 'bitcoin-price', tags: [{label:'crypto'}],
+                  markets: [
+                    { conditionId: 'd5', question: 'Will Bitcoin hit $150K in 2026?', volume24h: 8900000, bestBid: 0.31, bestAsk: 0.35 },
+                    { conditionId: 'd6', question: 'Will Bitcoin hit $200K in 2026?', volume24h: 4200000, bestBid: 0.12, bestAsk: 0.16 },
+                  ]},
+                { id: 'e4', title: 'Ukraine Conflict', slug: 'ukraine-conflict', tags: [{label:'geopolitics'}],
+                  markets: [
+                    { conditionId: 'd7', question: 'Will there be a Ukraine ceasefire in 2026?', volume24h: 6200000, bestBid: 0.28, bestAsk: 0.33 },
+                    { conditionId: 'd8', question: 'Will Russia capture Pokrovsk?', volume24h: 1900000, bestBid: 0.18, bestAsk: 0.23 },
+                  ]},
+                { id: 'e5', title: 'AI Breakthroughs', slug: 'ai-breakthroughs', tags: [{label:'ai'}],
+                  markets: [
+                    { conditionId: 'd9', question: 'Will GPT-5 be released by June 2026?', volume24h: 3600000, bestBid: 0.72, bestAsk: 0.77 },
+                    { conditionId: 'd10', question: 'Will AI pass the Turing test by 2026?', volume24h: 1200000, bestBid: 0.08, bestAsk: 0.13 },
+                  ]},
+                { id: 'e6', title: 'Ethereum ETF', slug: 'ethereum-etf', tags: [{label:'crypto'}],
+                  markets: [
+                    { conditionId: 'd11', question: 'Will Ethereum hit $10K in 2026?', volume24h: 5100000, bestBid: 0.22, bestAsk: 0.27 },
+                    { conditionId: 'd12', question: 'Will Ethereum staking ETF be approved?', volume24h: 2800000, bestBid: 0.61, bestAsk: 0.66 },
+                  ]},
+                { id: 'e7', title: 'Super Bowl 2027', slug: 'super-bowl-2027', tags: [{label:'sports'}],
+                  markets: [
+                    { conditionId: 'd13', question: 'Will the Chiefs win Super Bowl 2027?', volume24h: 7200000, bestBid: 0.14, bestAsk: 0.18 },
+                    { conditionId: 'd14', question: 'Will the Eagles win Super Bowl 2027?', volume24h: 4500000, bestBid: 0.11, bestAsk: 0.15 },
+                    { conditionId: 'd15', question: 'Will the Lions win Super Bowl 2027?', volume24h: 3800000, bestBid: 0.09, bestAsk: 0.13 },
+                  ]},
+                { id: 'e8', title: 'Climate Targets', slug: 'climate-targets', tags: [{label:'climate'}],
+                  markets: [
+                    { conditionId: 'd16', question: 'Will global temps rise 1.5C by 2030?', volume24h: 1800000, bestBid: 0.71, bestAsk: 0.76 },
+                    { conditionId: 'd17', question: 'Will US rejoin Paris Agreement?', volume24h: 950000, bestBid: 0.35, bestAsk: 0.40 },
+                  ]},
+                { id: 'e9', title: 'Middle East Ceasefire', slug: 'middle-east-ceasefire', tags: [{label:'geopolitics'}],
+                  markets: [
+                    { conditionId: 'd18', question: 'Will Israel-Hamas ceasefire hold through 2026?', volume24h: 4100000, bestBid: 0.42, bestAsk: 0.47 },
+                    { conditionId: 'd19', question: 'Will Iran nuclear deal be renewed?', volume24h: 2200000, bestBid: 0.15, bestAsk: 0.20 },
+                  ]},
+                { id: 'e10', title: 'Oscars 2027', slug: 'oscars-2027', tags: [{label:'entertainment'}],
+                  markets: [
+                    { conditionId: 'd20', question: 'Best Picture winner at Oscars 2027?', volume24h: 1600000, bestBid: 0.25, bestAsk: 0.30 },
+                  ]},
+                { id: 'e11', title: 'SpaceX Mars Mission', slug: 'spacex-mars', tags: [{label:'space'}],
+                  markets: [
+                    { conditionId: 'd21', question: 'Will SpaceX land on Mars by 2030?', volume24h: 2700000, bestBid: 0.18, bestAsk: 0.23 },
+                    { conditionId: 'd22', question: 'Will Starship reach orbit in 2026?', volume24h: 3400000, bestBid: 0.82, bestAsk: 0.87 },
+                  ]},
+                { id: 'e12', title: 'UK General Election', slug: 'uk-election', tags: [{label:'politics'}],
+                  markets: [
+                    { conditionId: 'd23', question: 'Will Labour win next UK election?', volume24h: 1500000, bestBid: 0.55, bestAsk: 0.60 },
+                    { conditionId: 'd24', question: 'Will Reform UK win seats?', volume24h: 1100000, bestBid: 0.78, bestAsk: 0.83 },
+                  ]},
+                { id: 'e13', title: 'NBA Championship 2026', slug: 'nba-championship', tags: [{label:'sports'}],
+                  markets: [
+                    { conditionId: 'd25', question: 'Will the Celtics win the NBA championship?', volume24h: 5500000, bestBid: 0.21, bestAsk: 0.26 },
+                    { conditionId: 'd26', question: 'Will the Thunder win the NBA championship?', volume24h: 4200000, bestBid: 0.18, bestAsk: 0.23 },
+                  ]},
+                { id: 'e14', title: 'Tech IPOs 2026', slug: 'tech-ipos', tags: [{label:'business'}],
+                  markets: [
+                    { conditionId: 'd27', question: 'Will Stripe IPO in 2026?', volume24h: 3100000, bestBid: 0.35, bestAsk: 0.40 },
+                    { conditionId: 'd28', question: 'Will SpaceX IPO in 2026?', volume24h: 2600000, bestBid: 0.08, bestAsk: 0.13 },
+                  ]},
+                { id: 'e15', title: 'World Cup 2026', slug: 'world-cup-2026', tags: [{label:'sports'}],
+                  markets: [
+                    { conditionId: 'd29', question: 'Will Brazil win World Cup 2026?', volume24h: 8100000, bestBid: 0.14, bestAsk: 0.19 },
+                    { conditionId: 'd30', question: 'Will Argentina win World Cup 2026?', volume24h: 7300000, bestBid: 0.16, bestAsk: 0.21 },
+                    { conditionId: 'd31', question: 'Will France win World Cup 2026?', volume24h: 5900000, bestBid: 0.12, bestAsk: 0.17 },
+                    { conditionId: 'd32', question: 'Will England win World Cup 2026?', volume24h: 4700000, bestBid: 0.10, bestAsk: 0.15 },
+                  ]},
+            ];
+            return demoEvents;
+        }
+
+        // Data loading
+        // Fetch with CORS proxy fallback
+        async function fetchWithProxy(url) {
+            for (const proxy of CONFIG.api.corsProxies) {
+                try {
+                    const proxyUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (e) {
+                    console.warn(`Proxy "${proxy || 'direct'}" failed:`, e.message);
+                    continue;
+                }
+            }
+            throw new Error('All fetch methods failed (CORS)');
+        }
+
+        async function fetchMarkets() {
+            document.getElementById('spinner').classList.add('active');
+
+            try {
+                const markets = [];
+                let usedDemo = false;
+
+                try {
+                    for (let page = 0; page < CONFIG.api.maxPages; page++) {
+                        const offset = page * CONFIG.api.pageSize;
+                        const url = `${CONFIG.api.gammaUrl}?closed=false&limit=${CONFIG.api.pageSize}&offset=${offset}`;
+
+                        const events = await fetchWithProxy(url);
+                        if (!Array.isArray(events) || events.length === 0) break;
+
+                        for (const event of events) {
+                            if (event.markets && Array.isArray(event.markets)) {
+                                for (const market of event.markets) {
+                                    market.event = event;
+                                    market.category = categorizeMarket(event);
+                                    markets.push(market);
+                                }
+                            }
+                        }
+                    }
+                } catch (fetchError) {
+                    console.warn('API fetch failed, using demo data:', fetchError.message);
+                    usedDemo = true;
+                    const demoEvents = generateDemoData();
+                    for (const event of demoEvents) {
+                        for (const market of event.markets) {
+                            market.event = event;
+                            market.category = categorizeMarket(event);
+                            markets.push(market);
+                        }
+                    }
+                }
+
+                if (markets.length === 0) {
+                    const demoEvents = generateDemoData();
+                    usedDemo = true;
+                    for (const event of demoEvents) {
+                        for (const market of event.markets) {
+                            market.event = event;
+                            market.category = categorizeMarket(event);
+                            markets.push(market);
+                        }
+                    }
+                }
+
+                // Normalize API field names (volume24hr → volume24h, etc.)
+                markets.forEach(m => {
+                    if (m.volume24hr !== undefined && m.volume24h === undefined) m.volume24h = parseFloat(m.volume24hr) || 0;
+                    if (m.liquidityNum !== undefined && m.liquidity === undefined) m.liquidity = parseFloat(m.liquidityNum) || 0;
+                    if (m.volumeNum !== undefined && m.volumeTotal === undefined) m.volumeTotal = parseFloat(m.volumeNum) || 0;
+                    // Parse outcomePrices if it's a string
+                    if (typeof m.outcomePrices === 'string') {
+                        try { m.outcomePrices = JSON.parse(m.outcomePrices); } catch(e) {}
+                    }
+                    if (Array.isArray(m.outcomePrices) && m.outcomePrices.length >= 2 && m.bestBid === undefined) {
+                        m.bestBid = parseFloat(m.outcomePrices[0]) || 0.5;
+                        m.bestAsk = 1 - (parseFloat(m.outcomePrices[1]) || 0.5);
+                    }
+                });
+
+                state.markets = markets;
+                buildGraph();
+                updateUI();
+                updateTimestamp();
+
+                if (usedDemo) {
+                    showError('Using demo data (API unavailable from file://). Deploy to a web server for live data.');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load data.');
+            } finally {
+                document.getElementById('spinner').classList.remove('active');
+            }
+        }
+
+        // Graph construction
+        function buildGraph() {
+            const nodes = state.markets.map((market, idx) => ({
+                id: market.conditionId || market.condition_id || `market-${idx}`,
+                market,
+                category: market.category,
+                volume: Math.log1p(market.volume24hr || market.volume24h || 0),
+                x: Math.random() * 800,
+                y: Math.random() * 600
+            }));
+
+            const edges = [];
+            const edgeSet = new Set();
+
+            // Event grouping edges (weight 1.0)
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (nodes[i].market.event.id === nodes[j].market.event.id) {
+                        const edgeKey = `${nodes[i].id}-${nodes[j].id}`;
+                        if (!edgeSet.has(edgeKey)) {
+                            edges.push({
+                                source: nodes[i].id,
+                                target: nodes[j].id,
+                                weight: 1.0,
+                                type: 'event'
+                            });
+                            edgeSet.add(edgeKey);
+                        }
+                    }
+                }
+            }
+
+            // Category similarity edges (weight 0.3)
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (nodes[i].category === nodes[j].category && nodes[i].market.event.id !== nodes[j].market.event.id) {
+                        const edgeKey = `${nodes[i].id}-${nodes[j].id}`;
+                        if (!edgeSet.has(edgeKey)) {
+                            edges.push({
+                                source: nodes[i].id,
+                                target: nodes[j].id,
+                                weight: 0.3,
+                                type: 'category'
+                            });
+                            edgeSet.add(edgeKey);
+                        }
+                    }
+                }
+            }
+
+            state.nodes = nodes;
+            state.edges = edges.filter(e => e.weight >= state.thresholdValue);
+            state.data = { nodes, links: state.edges };
+
+            computeGraphMetrics();
+            renderGraph();
+        }
+
+        // Compute and display graph metrics
+        function computeGraphMetrics() {
+            const nodes = state.data.nodes;
+            const edges = state.data.links;
+            const n = nodes.length;
+            const e = edges.length;
+
+            // Build adjacency list
+            const adjList = new Map();
+            nodes.forEach(node => adjList.set(node.id, []));
+            edges.forEach(edge => {
+                adjList.get(edge.source.id).push(edge.target.id);
+                adjList.get(edge.target.id).push(edge.source.id);
+            });
+
+            // Average Degree
+            const avgDegree = n > 0 ? (2 * e) / n : 0;
+
+            // Clustering Coefficient (average local clustering coefficient)
+            let clusteringSum = 0;
+            let clusteringCount = 0;
+
+            nodes.forEach(node => {
+                const neighbors = adjList.get(node.id) || [];
+                const k = neighbors.length;
+
+                if (k < 2) {
+                    // Clustering coefficient is 0 for nodes with degree < 2
+                    clusteringSum += 0;
+                } else {
+                    // Count edges among neighbors
+                    let edgesBetweenNeighbors = 0;
+                    for (let i = 0; i < neighbors.length; i++) {
+                        for (let j = i + 1; j < neighbors.length; j++) {
+                            const neighbor1 = neighbors[i];
+                            const neighbor2 = neighbors[j];
+                            // Check if neighbor1 and neighbor2 are connected
+                            if (adjList.get(neighbor1).includes(neighbor2)) {
+                                edgesBetweenNeighbors++;
+                            }
+                        }
+                    }
+                    // Clustering coefficient = (2 * edges between neighbors) / (k * (k-1))
+                    const localCC = (2 * edgesBetweenNeighbors) / (k * (k - 1));
+                    clusteringSum += localCC;
+                }
+                clusteringCount++;
+            });
+
+            const clusteringCoeff = clusteringCount > 0 ? clusteringSum / clusteringCount : 0;
+
+            // Number of Connected Components (using BFS/DFS)
+            const visited = new Set();
+            let components = 0;
+
+            for (const node of nodes) {
+                if (!visited.has(node.id)) {
+                    // BFS to find all nodes in this component
+                    const queue = [node.id];
+                    visited.add(node.id);
+
+                    while (queue.length > 0) {
+                        const current = queue.shift();
+                        const neighbors = adjList.get(current) || [];
+
+                        for (const neighbor of neighbors) {
+                            if (!visited.has(neighbor)) {
+                                visited.add(neighbor);
+                                queue.push(neighbor);
+                            }
+                        }
+                    }
+                    components++;
+                }
+            }
+
+            // Update UI
+            document.getElementById('metric-avg-degree').textContent = avgDegree.toFixed(2);
+            document.getElementById('metric-clustering-coeff').textContent = clusteringCoeff.toFixed(2);
+            document.getElementById('metric-components').textContent = components;
+        }
+
+        // D3 Visualization
+        function renderGraph() {
+            const svg = d3.select('#graph');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            svg.attr('width', width).attr('height', height);
+
+            const g = svg.selectAll('*').size() > 0 ? svg.select('g') : svg.append('g');
+
+            if (svg.selectAll('g').size() === 0) {
+                svg.append('defs').append('marker')
+                    .attr('id', 'arrowhead')
+                    .attr('markerWidth', 10)
+                    .attr('markerHeight', 10)
+                    .attr('refX', 9)
+                    .attr('refY', 3)
+                    .attr('orient', 'auto')
+                    .append('polygon')
+                    .attr('points', '0 0, 10 3, 0 6')
+                    .attr('fill', '#4da6ff');
+            }
+
+            // Simulation
+            if (state.simulation) {
+                state.simulation.stop();
+            }
+
+            state.simulation = d3.forceSimulation(state.data.nodes)
+                .force('link', d3.forceLink(state.data.links)
+                    .id(d => d.id)
+                    .distance(d => CONFIG.forceConfig.linkDistance(d))
+                    .strength(d => Math.min(d.weight, 0.5))
+                )
+                .force('charge', d3.forceManyBody()
+                    .strength(CONFIG.forceConfig.charge)
+                    .distanceMax(400)
+                )
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+                .force('collision', d3.forceCollide()
+                    .radius(d => Math.pow(d.volume, 0.5) + CONFIG.forceConfig.collisionRadius)
+                    .strength(0.7)
+                )
+                .on('tick', updatePositions);
+
+            // Links
+            const links = g.selectAll('.link').data(state.data.links, d => `${d.source.id}-${d.target.id}`)
+                .join(
+                    enter => enter.append('line').attr('class', 'link'),
+                    update => update,
+                    exit => exit.remove()
+                )
+                .attr('stroke', d => `rgba(77, 166, 255, ${d.weight * 0.5})`)
+                .attr('stroke-width', d => Math.max(1, d.weight * 3));
+
+            // Nodes
+            const nodes = g.selectAll('.node').data(state.data.nodes, d => d.id)
+                .join(
+                    enter => enter.append('circle')
+                        .attr('class', 'node')
+                        .attr('r', d => Math.pow(d.volume, 0.5))
+                        .attr('fill', d => getCategoryColor(d.category))
+                        .on('click', onNodeClick)
+                        .on('mouseenter', onNodeHover)
+                        .on('mouseleave', onNodeLeave)
+                        .call(drag(state.simulation)),
+                    update => update,
+                    exit => exit.remove()
+                )
+                .attr('r', d => Math.pow(d.volume, 0.5))
+                .attr('fill', d => getCategoryColor(d.category));
+
+            // Zoom
+            const zoom = d3.zoom()
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                    svg.classed('dragging', event.sourceEvent?.type === 'mousemove');
+                });
+
+            svg.call(zoom);
+
+            function updatePositions() {
+                links
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                nodes
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            }
+
+            function drag(simulation) {
+                function dragstarted(event) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    event.subject.fx = event.subject.x;
+                    event.subject.fy = event.subject.y;
+                }
+
+                function dragged(event) {
+                    event.subject.fx = event.x;
+                    event.subject.fy = event.y;
+                }
+
+                function dragended(event) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    event.subject.fx = null;
+                    event.subject.fy = null;
+                }
+
+                return d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended);
+            }
+        }
+
+        function onNodeClick(event, d) {
+            event.stopPropagation();
+            state.selectedNode = state.selectedNode?.id === d.id ? null : d;
+            highlightConnected();
+            updateDetailsPanel();
+        }
+
+        function onNodeHover(event, d) {
+            state.hoveredNode = d;
+            showTooltip(event, d);
+        }
+
+        function onNodeLeave() {
+            state.hoveredNode = null;
+            hideTooltip();
+        }
+
+        function highlightConnected() {
+            const svg = d3.select('#graph');
+
+            if (!state.selectedNode) {
+                svg.selectAll('.node').classed('dimmed', false);
+                svg.selectAll('.link').classed('dimmed', false);
+                return;
+            }
+
+            const connected = new Set([state.selectedNode.id]);
+            state.edges.forEach(edge => {
+                if (edge.source.id === state.selectedNode.id) connected.add(edge.target.id);
+                if (edge.target.id === state.selectedNode.id) connected.add(edge.source.id);
+            });
+
+            svg.selectAll('.node').classed('dimmed', d => !connected.has(d.id)).classed('selected', d => d.id === state.selectedNode.id);
+            svg.selectAll('.link').classed('dimmed', d => !connected.has(d.source.id) || !connected.has(d.target.id));
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            const prices = getMarketPrices(d.market);
+
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${d.market.question?.substring(0, 40)}...</div>
+                <div class="tooltip-item">Yes: ${(prices.yes * 100).toFixed(0)}¢</div>
+                <div class="tooltip-item">No: ${(prices.no * 100).toFixed(0)}¢</div>
+                <div class="tooltip-item">Vol 24h: $${formatNumber(d.market.volume24h || 0)}</div>
+                <div class="tooltip-item">Category: ${d.category}</div>
+            `;
+
+            tooltip.style.display = 'block';
+            const x = event.pageX + 10;
+            const y = event.pageY + 10;
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        function updateDetailsPanel() {
+            const panel = document.getElementById('details-panel');
+            const title = document.getElementById('details-question');
+            const content = document.getElementById('details-content');
+
+            if (!state.selectedNode) {
+                panel.classList.add('hidden');
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            const market = state.selectedNode.market;
+            const event = market.event;
+            const prices = getMarketPrices(market);
+
+            title.textContent = market.question || 'No title';
+
+            const connected = state.edges.filter(edge =>
+                edge.source.id === state.selectedNode.id || edge.target.id === state.selectedNode.id
+            ).map(edge => edge.source.id === state.selectedNode.id ? edge.target : edge.source);
+
+            const eventSlug = event.slug || market.conditionId;
+
+            content.innerHTML = `
+                <div class="price-row">
+                    <div class="price-item price-yes">
+                        <div class="price-label">Yes</div>
+                        <div class="price-value">${(prices.yes * 100).toFixed(0)}¢</div>
+                    </div>
+                    <div class="price-item price-no">
+                        <div class="price-label">No</div>
+                        <div class="price-value">${(prices.no * 100).toFixed(0)}¢</div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Volume 24h</div>
+                    <div class="details-value">$${formatNumber(market.volume24h || 0)}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Category</div>
+                    <div class="details-value">${state.selectedNode.category}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Liquidity</div>
+                    <div class="details-value">${market.liquidity ? '$' + formatNumber(market.liquidity) : 'N/A'}</div>
+                </div>
+                <a href="https://polymarket.com/event/${eventSlug}" target="_blank" class="external-link">
+                    View on Polymarket →
+                </a>
+                ${connected.length > 0 ? `
+                <div class="connected-markets">
+                    <div class="sidebar-section-title">Connected Markets (${connected.length})</div>
+                    ${connected.slice(0, 5).map(node => `
+                        <div class="connected-item" onclick="selectNodeById('${node.id}')">
+                            ${node.market.question?.substring(0, 35)}...
+                        </div>
+                    `).join('')}
+                    ${connected.length > 5 ? `<div class="connected-item">+${connected.length - 5} more</div>` : ''}
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function selectNodeById(id) {
+            const node = state.nodes.find(n => n.id === id);
+            if (node) {
+                state.selectedNode = node;
+                highlightConnected();
+                updateDetailsPanel();
+            }
+        }
+
+        window.selectNodeById = selectNodeById;
+
+        // UI Updates
+        function updateUI() {
+            const categoryCount = new Map();
+            state.nodes.forEach(node => {
+                const count = (categoryCount.get(node.category) || 0) + 1;
+                categoryCount.set(node.category, count);
+            });
+
+            document.getElementById('stat-nodes').textContent = state.nodes.length;
+            document.getElementById('stat-edges').textContent = state.edges.length;
+
+            const density = state.nodes.length > 1
+                ? (2 * state.edges.length) / (state.nodes.length * (state.nodes.length - 1))
+                : 0;
+            document.getElementById('stat-density').textContent = density.toFixed(2);
+            document.getElementById('stat-categories').textContent = categoryCount.size;
+
+            const legendHtml = Array.from(categoryCount.entries())
+                .sort((a, b) => b[1] - a[1])
+                .map(([category, count]) => `
+                    <label class="legend-item">
+                        <input type="checkbox" class="checkbox" data-category="${category}" checked>
+                        <div class="legend-dot" style="background: ${getCategoryColor(category)}"></div>
+                        <span class="legend-label">${category}</span>
+                        <span class="legend-count">(${count})</span>
+                    </label>
+                `)
+                .join('');
+
+            document.getElementById('category-legend').innerHTML = legendHtml;
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', onCategoryFilterChange);
+            });
+
+            state.filteredCategories = new Set(categoryCount.keys());
+        }
+
+        function onCategoryFilterChange(event) {
+            const category = event.target.dataset.category;
+            if (event.target.checked) {
+                state.filteredCategories.add(category);
+            } else {
+                state.filteredCategories.delete(category);
+            }
+            filterAndRedraw();
+        }
+
+        function filterAndRedraw() {
+            const filtered = state.data.nodes.filter(d => state.filteredCategories.has(d.category));
+            const filteredIds = new Set(filtered.map(d => d.id));
+            const filteredLinks = state.data.links.filter(link => filteredIds.has(link.source.id) && filteredIds.has(link.target.id));
+
+            state.data = { nodes: filtered, links: filteredLinks };
+            computeGraphMetrics();
+            renderGraph();
+        }
+
+        // Search
+        document.getElementById('search-box').addEventListener('input', (event) => {
+            const query = event.target.value.toLowerCase();
+            const svg = d3.select('#graph');
+
+            if (!query) {
+                svg.selectAll('.node').classed('dimmed', false);
+                return;
+            }
+
+            svg.selectAll('.node').classed('dimmed', d => !d.market.question.toLowerCase().includes(query));
+        });
+
+        // Threshold slider
+        document.getElementById('threshold-slider').addEventListener('input', (event) => {
+            state.thresholdValue = parseInt(event.target.value) / 100;
+            document.getElementById('threshold-value').textContent = state.thresholdValue.toFixed(2);
+
+            state.edges = state.markets.length > 0
+                ? state.edges.filter(e => e.weight >= state.thresholdValue)
+                : [];
+
+            state.data = { nodes: state.data.nodes, links: state.edges };
+            computeGraphMetrics();
+
+            if (state.simulation) {
+                state.simulation.force('link').links(state.edges);
+                state.simulation.alpha(1).restart();
+            }
+        });
+
+        // Sidebar toggle
+        document.querySelector('.sidebar-toggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
+
+        // Panel toggle
+        document.querySelector('.panel-toggle').addEventListener('click', () => {
+            document.getElementById('details-panel').classList.toggle('hidden');
+        });
+
+        // Refresh button
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            fetchMarkets();
+        });
+
+        // Auto-refresh
+        function setupAutoRefresh() {
+            if (state.refreshInterval) clearInterval(state.refreshInterval);
+            state.refreshInterval = setInterval(fetchMarkets, 60000);
+        }
+
+        function showError(message) {
+            // Show as a non-blocking toast at the top
+            let toast = document.getElementById('error-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'error-toast';
+                toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,193,7,0.15);border:1px solid rgba(255,193,7,0.4);color:#ffd54f;padding:10px 24px;border-radius:8px;font-size:13px;z-index:10000;backdrop-filter:blur(10px);pointer-events:auto;cursor:pointer;max-width:600px;text-align:center;';
+                toast.onclick = () => toast.remove();
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            d3.select('#graph').attr('width', width).attr('height', height);
+            if (state.simulation) {
+                state.simulation.force('center', d3.forceCenter(width / 2, height / 2).strength(0.05));
+                state.simulation.alpha(1).restart();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMarkets();
+            setupAutoRefresh();
+        });
+    </script>
+</body>
+</html>

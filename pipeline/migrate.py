@@ -10,7 +10,7 @@ from pipeline.clickhouse_writer import ClickHouseWriter
 logger = logging.getLogger(__name__)
 
 SCHEMA_DIR = Path(__file__).parent / "schema"
-SCHEMA_FILES = ["001_init.sql", "002_phase2_users.sql", "003_phase3_analytics.sql"]
+SCHEMA_FILES = ["001_init.sql", "002_phase2_users.sql", "003_phase3_analytics.sql", "004_network.sql", "005_gnn_predictions.sql", "006_news_tracking.sql"]
 
 
 def run_migration() -> None:

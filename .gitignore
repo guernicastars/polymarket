@@ -29,3 +29,17 @@ out/
 
 # Docker
 *.log
+
+# Model checkpoints and binary artifacts
+network/gnn/checkpoints/
+*.pt
+*.pth
+*.onnx
+
+# Generated reports
+network/backtest_results/
+dashboard/public/backtest_report.json
+
+# Binary documents
+*.docx
+*.xlsx

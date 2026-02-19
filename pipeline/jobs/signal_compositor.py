@@ -1,4 +1,25 @@
-"""Job: compute composite signal scores per market."""
+"""Job: compute composite signal scores per market.
+
+The composite signal aggregates 8 independent weak signals (OBI, volume
+anomaly, large trade bias, momentum, smart money direction, concentration
+risk, arbitrage flags, insider activity) into a single directional score
+per market.
+
+Architecture note — OpenForage parallel:
+This job implements the first stage of the signal ensemble pattern
+described in OpenForage's protocol. Each of the 8 components is an
+independently discovered "signal" that is scored, weighted, and combined.
+The key insight from OpenForage: the blessing of dimensionality means
+these signals can coexist in high-dimensional space without catastrophic
+correlation — their independence is the norm, not the exception.
+
+The full ensemble (see pipeline.causal.signal_ensemble.SignalEnsemble)
+extends this pattern by adding quality-gated admission: in-sample
+evaluation → out-of-sample validation → uniqueness scoring → marginal
+improvement testing. The composite signal itself becomes one input to
+that larger ensemble alongside GNN predictions and causal analysis
+outputs.
+"""
 
 from __future__ import annotations
 

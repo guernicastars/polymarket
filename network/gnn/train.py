@@ -25,6 +25,7 @@ from torch.utils.data import DataLoader, random_split
 from .config import GNNConfig
 from .model import GNNTCN, PlattScaling
 from .dataset import DonbasTemporalDataset, collate_graph_batch
+from .generic_dataset import create_dataset
 from .backtest import BacktestEngine, kelly_criterion
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,12 @@ class Trainer:
 
     def __init__(self, cfg: Optional[GNNConfig] = None):
         self.cfg = cfg or GNNConfig()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
         logger.info("Using device: %s", self.device)
 
     def train(
@@ -256,6 +262,12 @@ def main():
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--days-back", type=int, default=14, help="Days of history to use")
     parser.add_argument("--stride", type=int, default=30, help="Window stride in minutes")
+    parser.add_argument("--graph-type", choices=["settlement", "market"], default="settlement",
+                        help="Graph type: 'settlement' (geographic) or 'market' (similarity)")
+    parser.add_argument("--graph-method", default="combined",
+                        help="Similarity method for market graphs (event/whale/correlation/signal/combined)")
+    parser.add_argument("--top-markets", type=int, default=200,
+                        help="Max markets for market-type graph")
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
 
@@ -269,17 +281,20 @@ def main():
     cfg.model.window_size = args.window
     cfg.features.window_size = args.window
     cfg.features.step_minutes = args.step_minutes
+    cfg.graph_type = args.graph_type
+    cfg.graph.method = args.graph_method
+    cfg.graph.top_markets = args.top_markets
 
     # Connect to ClickHouse
     logger.info("Connecting to ClickHouse...")
     client = get_clickhouse_client(cfg)
 
     # Build dataset
-    end_date = datetime.utcnow()
+    end_date = datetime.now(tz=None)  # naive UTC
     start_date = end_date - timedelta(days=args.days_back)
 
-    logger.info("Building dataset from %s to %s...", start_date, end_date)
-    dataset = DonbasTemporalDataset(
+    logger.info("Building %s dataset from %s to %s...", cfg.graph_type, start_date, end_date)
+    dataset = create_dataset(
         client=client,
         config=cfg,
         start_date=start_date,

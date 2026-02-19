@@ -5,7 +5,14 @@ services:
     env_file: .env
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
+        reservations:
+          memory: 256m
     logging:
       driver: json-file
       options:

@@ -13,16 +13,21 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pipeline.clickhouse_writer import ClickHouseWriter
 from pipeline.config import (
     ARBITRAGE_SCAN_INTERVAL,
+    EXECUTION_INTERVAL,
+    FORCE_INCLUDE_TOKEN_IDS,
     HEALTH_CHECK_PORT,
     HOLDER_SYNC_INTERVAL,
     LEADERBOARD_SYNC_INTERVAL,
     MARKET_SYNC_INTERVAL,
+    MICROSTRUCTURE_INTERVAL,
+    NEWS_TRACKER_INTERVAL,
     ORDERBOOK_INTERVAL,
     POSITION_SYNC_INTERVAL,
     PRICE_POLL_INTERVAL,
     PRICE_POLL_MAX_TOKENS,
     PROFILE_ENRICH_INTERVAL,
     SIGNAL_COMPOSITE_INTERVAL,
+    SIMILARITY_SCORER_INTERVAL,
     TRADE_COLLECT_INTERVAL,
     WALLET_ANALYZE_INTERVAL,
     WS_MAX_TOTAL_TOKENS,
@@ -39,6 +44,9 @@ from pipeline.jobs.profile_enricher import run_profile_enricher
 from pipeline.jobs.arbitrage_scanner import run_arbitrage_scanner
 from pipeline.jobs.wallet_analyzer import run_wallet_analyzer
 from pipeline.jobs.signal_compositor import run_signal_compositor
+from pipeline.jobs.news_runner import run_news_tracker, run_microstructure
+from pipeline.jobs.similarity_scorer import run_similarity_scorer
+from pipeline.jobs.execution_runner import run_execution_cycle, get_execution_status
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +175,38 @@ class PipelineScheduler:
             name="Signal Compositor",
         )
 
+        # --- Phase 4 jobs ---
+        self._scheduler.add_job(
+            self._job_news_tracker,
+            "interval",
+            seconds=NEWS_TRACKER_INTERVAL,
+            id="news_tracker",
+            name="News Tracker",
+        )
+        self._scheduler.add_job(
+            self._job_microstructure,
+            "interval",
+            seconds=MICROSTRUCTURE_INTERVAL,
+            id="microstructure",
+            name="Microstructure Engine",
+        )
+        self._scheduler.add_job(
+            self._job_similarity_scorer,
+            "interval",
+            seconds=SIMILARITY_SCORER_INTERVAL,
+            id="similarity_scorer",
+            name="Similarity Scorer",
+        )
+
+        # --- Phase 5: Execution ---
+        self._scheduler.add_job(
+            self._job_execution_cycle,
+            "interval",
+            seconds=EXECUTION_INTERVAL,
+            id="execution_cycle",
+            name="Execution Cycle",
+        )
+
         # Periodic buffer flush for stale data
         self._scheduler.add_job(
             self._writer.flush_stale,
@@ -238,6 +278,10 @@ class PipelineScheduler:
         try:
             # Only poll top-N tokens; WS covers the rest in real-time
             poll_tokens = self._active_token_ids[:PRICE_POLL_MAX_TOKENS]
+            # Merge force-include tokens (Ukraine network model targets)
+            forced = [t for t in FORCE_INCLUDE_TOKEN_IDS if t not in poll_tokens]
+            if forced:
+                poll_tokens = poll_tokens + forced
             await run_price_poller(poll_tokens)
         except Exception:
             logger.error("price_poller_error", exc_info=True)
@@ -250,7 +294,12 @@ class PipelineScheduler:
 
     async def _job_orderbook_snapshot(self) -> None:
         try:
-            await run_orderbook_snapshot(self._active_token_ids)
+            # Merge force-include tokens for orderbook snapshots too
+            all_tokens = self._active_token_ids
+            forced = [t for t in FORCE_INCLUDE_TOKEN_IDS if t not in all_tokens]
+            if forced:
+                all_tokens = all_tokens + forced
+            await run_orderbook_snapshot(all_tokens)
         except Exception:
             logger.error("orderbook_snapshot_error", exc_info=True)
 
@@ -300,6 +349,34 @@ class PipelineScheduler:
         except Exception:
             logger.error("signal_compositor_error", exc_info=True)
 
+    # --- Phase 4 job wrappers ---
+
+    async def _job_news_tracker(self) -> None:
+        try:
+            await run_news_tracker()
+        except Exception:
+            logger.error("news_tracker_error", exc_info=True)
+
+    async def _job_microstructure(self) -> None:
+        try:
+            await run_microstructure()
+        except Exception:
+            logger.error("microstructure_error", exc_info=True)
+
+    async def _job_similarity_scorer(self) -> None:
+        try:
+            await run_similarity_scorer()
+        except Exception:
+            logger.error("similarity_scorer_error", exc_info=True)
+
+    # --- Phase 5 job wrapper ---
+
+    async def _job_execution_cycle(self) -> None:
+        try:
+            await run_execution_cycle()
+        except Exception:
+            logger.error("execution_cycle_error", exc_info=True)
+
     # ------------------------------------------------------------------
     # WebSocket callback
     # ------------------------------------------------------------------
@@ -323,10 +400,16 @@ class PipelineScheduler:
 
     async def _health_handler(self, request: web.Request) -> web.Response:
         from pipeline.jobs.leaderboard_sync import discovered_wallets
+        try:
+            exec_status = get_execution_status()
+        except Exception:
+            exec_status = {"error": "not_initialized"}
         return web.json_response({
             "status": "ok",
             "active_tokens": len(self._active_token_ids),
             "tracked_wallets": len(discovered_wallets),
             "scheduler_running": self._scheduler.running,
             "phase3_jobs": ["arbitrage_scanner", "wallet_analyzer", "signal_compositor"],
+            "phase4_jobs": ["news_tracker", "microstructure", "similarity_scorer"],
+            "phase5_execution": exec_status,
         })

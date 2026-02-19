@@ -337,12 +337,12 @@ class TestConfig:
         assert cfg.gat_out == cfg.tcn_channels[0] or True  # TCN takes gat_out as in_ch
 
     def test_target_count(self):
-        """Should have 7 Polymarket target settlements."""
+        """Should have 10 Polymarket target settlements."""
         with open(DATA_DIR / "settlements.json") as f:
             settlements = json.load(f)
         targets = [s for s in settlements if s.get("is_polymarket_target")]
         cfg = ModelConfig()
-        assert len(targets) == cfg.n_targets == 7
+        assert len(targets) == cfg.n_targets == 10
 
 
 # ============================================================
@@ -353,7 +353,7 @@ class TestIntegration:
     def test_full_training_step(self):
         """Simulate one training step: forward → loss → backward → optimizer step."""
         cfg = ModelConfig()
-        model = GNNTCN(cfg, n_nodes=40, target_indices=list(range(7)))
+        model = GNNTCN(cfg, n_nodes=40, target_indices=list(range(10)))
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
         criterion = torch.nn.MSELoss()
 
@@ -390,8 +390,8 @@ class TestIntegration:
 
     def test_platt_end_to_end(self):
         """Model → logits → Platt → calibrated probability."""
-        model = GNNTCN(n_nodes=40, target_indices=list(range(7)))
-        platt = PlattScaling(n_targets=7)
+        model = GNNTCN(n_nodes=40, target_indices=list(range(10)))
+        platt = PlattScaling(n_targets=10)
         model.eval()
         platt.eval()
 

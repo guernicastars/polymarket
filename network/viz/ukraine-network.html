@@ -405,6 +405,83 @@
             animation: assault-glow-intense 1s ease-in-out infinite;
         }
 
+        /* Bottom-right graph metrics panel */
+        .graph-metrics-panel {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid #2a3a5a;
+            border-radius: 8px;
+            padding: 12px;
+            width: 240px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .graph-metrics-panel.collapsed {
+            height: auto;
+        }
+
+        .graph-metrics-panel.collapsed .graph-metrics-content {
+            display: none;
+        }
+
+        .graph-metrics-header {
+            font-size: 13px;
+            color: #66cc00;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .graph-metrics-header:hover {
+            color: #99ff00;
+        }
+
+        .graph-metrics-toggle {
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        .graph-metrics-content {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .graph-metrics-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(102, 204, 0, 0.1);
+            color: #ccc;
+        }
+
+        .graph-metrics-row:last-child {
+            border-bottom: none;
+        }
+
+        .graph-metrics-label {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .graph-metrics-value {
+            color: #66cc00;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .info-panel {
@@ -419,6 +496,11 @@
             .pm-targets-panel {
                 width: 260px;
                 right: 20px;
+            }
+
+            .graph-metrics-panel {
+                width: 220px;
+                font-size: 11px;
             }
 
             .legend {
@@ -464,6 +546,48 @@
     <div class="pm-targets-panel">
         <h3>Polymarket Targets</h3>
         <div id="pm-targets-list"></div>
+    </div>
+
+    <!-- Graph Metrics Panel -->
+    <div class="graph-metrics-panel" id="graph-metrics-panel">
+        <h3 class="graph-metrics-header" onclick="toggleGraphMetricsPanel()">
+            Graph Metrics
+            <span class="graph-metrics-toggle">▼</span>
+        </h3>
+        <div class="graph-metrics-content" id="graph-metrics-content">
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Nodes</span>
+                <span class="graph-metrics-value" id="metric-nodes">0</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Edges</span>
+                <span class="graph-metrics-value" id="metric-edges">0</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Density</span>
+                <span class="graph-metrics-value" id="metric-density">0.00</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Avg Degree</span>
+                <span class="graph-metrics-value" id="metric-avg-degree">0.00</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Clustering</span>
+                <span class="graph-metrics-value" id="metric-clustering">0.00</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Components</span>
+                <span class="graph-metrics-value" id="metric-components">0</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Bridges</span>
+                <span class="graph-metrics-value" id="metric-bridges">0</span>
+            </div>
+            <div class="graph-metrics-row">
+                <span class="graph-metrics-label">Art. Points</span>
+                <span class="graph-metrics-value" id="metric-articulation">0</span>
+            </div>
+        </div>
     </div>
 
     <!-- Legend -->
@@ -1107,6 +1231,181 @@
             });
         }
 
+        // Graph metrics computation
+        function buildAdjacencyList() {
+            const adj = {};
+            settlementsData.forEach(s => {
+                adj[s.id] = [];
+            });
+            edgesData.forEach(edge => {
+                adj[edge.source].push(edge.target);
+                adj[edge.target].push(edge.source);
+            });
+            return adj;
+        }
+
+        function computeComponents(adj) {
+            const visited = new Set();
+            let componentCount = 0;
+
+            function dfs(node) {
+                visited.add(node);
+                for (const neighbor of adj[node]) {
+                    if (!visited.has(neighbor)) {
+                        dfs(neighbor);
+                    }
+                }
+            }
+
+            for (const node of Object.keys(adj)) {
+                if (!visited.has(node)) {
+                    dfs(node);
+                    componentCount++;
+                }
+            }
+
+            return componentCount;
+        }
+
+        function computeLocalClusteringCoefficient(node, adj) {
+            const neighbors = adj[node];
+            if (neighbors.length < 2) return 0;
+
+            let edgesBetweenNeighbors = 0;
+            for (let i = 0; i < neighbors.length; i++) {
+                for (let j = i + 1; j < neighbors.length; j++) {
+                    if (adj[neighbors[i]].includes(neighbors[j])) {
+                        edgesBetweenNeighbors++;
+                    }
+                }
+            }
+
+            const possibleEdges = (neighbors.length * (neighbors.length - 1)) / 2;
+            return edgesBetweenNeighbors / possibleEdges;
+        }
+
+        function computeClusteringCoefficient(adj) {
+            const nodes = Object.keys(adj);
+            if (nodes.length === 0) return 0;
+
+            let sum = 0;
+            for (const node of nodes) {
+                sum += computeLocalClusteringCoefficient(node, adj);
+            }
+
+            return sum / nodes.length;
+        }
+
+        function computeBridges(adj) {
+            // Tarjan's bridge algorithm
+            const visited = new Set();
+            const disc = {};
+            const low = {};
+            const parent = {};
+            let timer = 0;
+            let bridgeCount = 0;
+
+            function dfs(u) {
+                visited.add(u);
+                disc[u] = low[u] = timer++;
+
+                for (const v of (adj[u] || [])) {
+                    if (!visited.has(v)) {
+                        parent[v] = u;
+                        dfs(v);
+                        low[u] = Math.min(low[u], low[v]);
+                        if (low[v] > disc[u]) bridgeCount++;
+                    } else if (v !== parent[u]) {
+                        low[u] = Math.min(low[u], disc[v]);
+                    }
+                }
+            }
+
+            for (const node of Object.keys(adj)) {
+                if (!visited.has(node)) {
+                    parent[node] = undefined;
+                    dfs(node);
+                }
+            }
+
+            return bridgeCount;
+        }
+
+        function computeArticulationPoints(adj) {
+            // Tarjan's algorithm for articulation points
+            const visited = new Set();
+            const disc = {};
+            const low = {};
+            const parent = {};
+            const ap = new Set();
+            let timer = 0;
+
+            function dfs(u) {
+                visited.add(u);
+                disc[u] = low[u] = timer++;
+                let childCount = 0;
+
+                for (const v of (adj[u] || [])) {
+                    if (!visited.has(v)) {
+                        childCount++;
+                        parent[v] = u;
+                        dfs(v);
+                        low[u] = Math.min(low[u], low[v]);
+                        // u is AP if: (1) root with 2+ children, or (2) non-root with low[v] >= disc[u]
+                        if (parent[u] === undefined && childCount > 1) ap.add(u);
+                        if (parent[u] !== undefined && low[v] >= disc[u]) ap.add(u);
+                    } else if (v !== parent[u]) {
+                        low[u] = Math.min(low[u], disc[v]);
+                    }
+                }
+            }
+
+            for (const node of Object.keys(adj)) {
+                if (!visited.has(node)) {
+                    parent[node] = undefined;
+                    dfs(node);
+                }
+            }
+
+            return ap.size;
+        }
+
+        function updateGraphMetrics() {
+            const adj = buildAdjacencyList();
+            const nodeCount = settlementsData.length;
+            const edgeCount = edgesData.length;
+            const density = nodeCount <= 1 ? 0 : (2 * edgeCount) / (nodeCount * (nodeCount - 1));
+            const avgDegree = nodeCount === 0 ? 0 : (2 * edgeCount) / nodeCount;
+            const clustering = computeClusteringCoefficient(adj);
+            const components = computeComponents(adj);
+            const bridges = computeBridges(adj);
+            const articulations = computeArticulationPoints(adj);
+
+            document.getElementById('metric-nodes').textContent = nodeCount;
+            document.getElementById('metric-edges').textContent = edgeCount;
+            document.getElementById('metric-density').textContent = density.toFixed(4);
+            document.getElementById('metric-avg-degree').textContent = avgDegree.toFixed(2);
+            document.getElementById('metric-clustering').textContent = clustering.toFixed(3);
+            document.getElementById('metric-components').textContent = components;
+            document.getElementById('metric-bridges').textContent = bridges;
+            document.getElementById('metric-articulation').textContent = articulations;
+        }
+
+        function toggleGraphMetricsPanel() {
+            const panel = document.getElementById('graph-metrics-panel');
+            const content = document.getElementById('graph-metrics-content');
+            const header = panel.querySelector('.graph-metrics-header');
+            const toggle = header.querySelector('.graph-metrics-toggle');
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
         // Initialize
         createNodes();
         createEdges();
@@ -1114,6 +1413,7 @@
         updateTimelineEvent(0);
         updatePMTargets();
         initializeTimeline();
+        updateGraphMetrics();
     </script>
 </body>
 </html>

@@ -1,0 +1,58 @@
+{
+  "gaza_city": {
+    "slug": "will-the-israel-x-hamas-ceasefire-be-cancelled-before-march-31-2026",
+    "description": "Will the Israel x Hamas ceasefire be cancelled before March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "gaza_ceasefire"
+  },
+  "khan_younis": {
+    "slug": "will-the-israel-x-hamas-ceasefire-be-cancelled-before-march-31-2026",
+    "description": "Will the Israel x Hamas ceasefire be cancelled before March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "gaza_ceasefire"
+  },
+  "rafah": {
+    "slug": "will-the-israel-x-hamas-ceasefire-be-cancelled-before-march-31-2026",
+    "description": "Will the Israel x Hamas ceasefire be cancelled before March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "gaza_ceasefire"
+  },
+  "tel_aviv": {
+    "slug": "will-the-israel-x-iran-ceasefire-be-broken-by-march-31-2026",
+    "description": "Will the Israel x Iran ceasefire be broken by March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "israel_iran"
+  },
+  "tehran": {
+    "slug": "will-the-israel-x-iran-ceasefire-be-broken-by-march-31-2026",
+    "description": "Will the Israel x Iran ceasefire be broken by March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "iran_nuclear"
+  },
+  "natanz": {
+    "slug": "will-the-israel-x-iran-ceasefire-be-broken-by-march-31-2026",
+    "description": "Will the Israel x Iran ceasefire be broken by March 31, 2026?",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "iran_nuclear"
+  },
+  "beirut": {
+    "slug": "",
+    "description": "Lebanon/Hezbollah conflict market (TBD)",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "lebanon_conflict"
+  },
+  "sanaa": {
+    "slug": "",
+    "description": "Houthi/Red Sea shipping market (TBD)",
+    "condition_id": "",
+    "token_id": "",
+    "region_key": "houthi_red_sea"
+  }
+}

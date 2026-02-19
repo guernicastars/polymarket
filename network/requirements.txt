@@ -2,3 +2,4 @@ networkx>=3.2
 numpy>=1.24
 torch>=2.1
 clickhouse-connect>=0.7
+pytest>=7.0

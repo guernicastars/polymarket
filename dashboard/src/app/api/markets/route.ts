@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getTopMarkets } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

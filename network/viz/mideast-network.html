@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Middle East Conflict Network — Live Polymarket Data</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27; color: #e0e0e0;
+        }
+
+        /* Layout: map left, markets panel right */
+        .app-container { display: flex; width: 100%; height: 100%; }
+        #map { flex: 1; height: 100%; position: relative; }
+        .leaflet-container { background: #0a0e27; }
+
+        /* Right sidebar: Markets panel */
+        .markets-panel {
+            width: 380px; height: 100%; background: rgba(10, 14, 39, 0.98);
+            border-left: 1px solid #2a3a5a; overflow-y: auto;
+            transition: width 0.3s ease; flex-shrink: 0;
+        }
+        .markets-panel.collapsed { width: 0; overflow: hidden; border: none; }
+        .markets-panel-header {
+            padding: 16px 20px; border-bottom: 1px solid #2a3a5a;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; background: rgba(10, 14, 39, 0.98); z-index: 10;
+        }
+        .markets-panel-header h2 { font-size: 16px; color: #4da6ff; margin: 0; }
+        .refresh-btn {
+            background: rgba(77, 166, 255, 0.15); border: 1px solid rgba(77, 166, 255, 0.3);
+            color: #4da6ff; padding: 4px 10px; border-radius: 4px; font-size: 11px;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .refresh-btn:hover { background: rgba(77, 166, 255, 0.3); }
+        .refresh-btn.loading { opacity: 0.5; pointer-events: none; }
+
+        .market-tabs {
+            display: flex; border-bottom: 1px solid #2a3a5a;
+            position: sticky; top: 55px; background: rgba(10, 14, 39, 0.98); z-index: 10;
+        }
+        .market-tab {
+            flex: 1; padding: 10px; text-align: center; font-size: 12px; cursor: pointer;
+            color: #888; border-bottom: 2px solid transparent; transition: all 0.2s;
+        }
+        .market-tab.active { color: #4da6ff; border-bottom-color: #4da6ff; }
+        .market-tab:hover { color: #ccc; }
+
+        .market-card {
+            margin: 8px 12px; padding: 14px; background: rgba(77, 166, 255, 0.04);
+            border: 1px solid rgba(77, 166, 255, 0.15); border-radius: 6px;
+            transition: border-color 0.2s; cursor: pointer;
+        }
+        .market-card:hover { border-color: rgba(77, 166, 255, 0.4); }
+        .market-card.highlighted { border-color: #4da6ff; background: rgba(77, 166, 255, 0.1); }
+        .market-question {
+            font-size: 13px; font-weight: 600; color: #e0e0e0;
+            line-height: 1.4; margin-bottom: 10px;
+        }
+        .market-prices { display: flex; gap: 8px; margin-bottom: 8px; }
+        .price-pill {
+            padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600;
+        }
+        .price-yes {
+            background: rgba(76, 175, 80, 0.2); color: #66bb6a; border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        .price-no {
+            background: rgba(244, 67, 54, 0.2); color: #ef5350; border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        .market-meta {
+            display: flex; gap: 12px; font-size: 11px; color: #888;
+        }
+        .market-meta-item { display: flex; align-items: center; gap: 4px; }
+        .market-volume { color: #aaa; }
+        .market-end-date { color: #888; }
+        .price-change { font-size: 11px; margin-left: 4px; }
+        .price-change.up { color: #66bb6a; }
+        .price-change.down { color: #ef5350; }
+        .market-link {
+            display: inline-block; margin-top: 6px; font-size: 11px; color: #4da6ff;
+            text-decoration: none; opacity: 0.7; transition: opacity 0.2s;
+        }
+        .market-link:hover { opacity: 1; text-decoration: underline; }
+
+        .last-updated {
+            padding: 8px 16px; font-size: 10px; color: #555; text-align: center;
+            border-top: 1px solid #1a2a4a;
+        }
+
+        /* Toggle button */
+        .panel-toggle {
+            position: absolute; right: 380px; top: 50%; transform: translateY(-50%);
+            z-index: 1001; background: rgba(10, 14, 39, 0.95); border: 1px solid #2a3a5a;
+            border-right: none; color: #4da6ff; padding: 12px 6px; cursor: pointer;
+            border-radius: 4px 0 0 4px; font-size: 14px; transition: right 0.3s ease;
+        }
+        .panel-toggle.collapsed { right: 0; }
+
+        /* Top-left info panel */
+        .info-panel {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(10, 14, 39, 0.95); border: 1px solid #2a3a5a;
+            border-radius: 8px; padding: 16px; width: 300px; z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
+        }
+        .info-panel h2 { margin: 0 0 6px 0; font-size: 17px; color: #4da6ff; }
+        .info-subtitle { font-size: 11px; color: #888; margin-bottom: 12px; border-bottom: 1px solid #2a3a5a; padding-bottom: 8px; }
+        .info-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+        .stat-item {
+            background: rgba(77, 166, 255, 0.05); border: 1px solid rgba(77, 166, 255, 0.2);
+            padding: 6px 8px; border-radius: 4px;
+        }
+        .stat-label { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
+        .stat-value { color: #4da6ff; font-weight: 600; font-size: 14px; }
+
+        /* Live price overlay on map nodes */
+        .node-price-label {
+            background: rgba(10, 14, 39, 0.9); border: 1px solid #2a3a5a;
+            border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: 600;
+            color: #66bb6a; white-space: nowrap; text-align: center;
+        }
+        .node-price-label.bearish { color: #ef5350; border-color: rgba(244, 67, 54, 0.4); }
+
+        /* Graph Metrics panel */
+        .graph-metrics-panel {
+            position: absolute; top: 20px; right: 400px;
+            background: rgba(10, 14, 39, 0.95); border: 1px solid #2a3a5a;
+            border-radius: 8px; padding: 0; width: 260px; z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
+            transition: right 0.3s ease;
+            max-height: 500px; overflow-y: auto;
+        }
+        .graph-metrics-panel.panel-collapsed { right: 20px; }
+        .graph-metrics-header {
+            padding: 12px 14px; font-size: 13px; color: #4da6ff; font-weight: 600;
+            border-bottom: 1px solid #2a3a5a; cursor: pointer; user-select: none;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(77, 166, 255, 0.05);
+        }
+        .graph-metrics-header:hover { background: rgba(77, 166, 255, 0.1); }
+        .graph-metrics-toggle { transition: transform 0.2s; }
+        .graph-metrics-toggle.collapsed { transform: rotate(-90deg); }
+        .graph-metrics-content {
+            padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+            max-height: 450px; overflow-y: auto; transition: max-height 0.2s;
+        }
+        .graph-metrics-content.collapsed { max-height: 0; overflow: hidden; padding: 0; }
+        .metric-box {
+            background: rgba(77, 166, 255, 0.05); border: 1px solid rgba(77, 166, 255, 0.15);
+            border-radius: 4px; padding: 8px; text-align: center;
+        }
+        .metric-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+        .metric-value { font-size: 14px; font-weight: 600; color: #4da6ff; }
+
+        /* Conflict zones panel */
+        .conflict-zones-panel {
+            position: absolute; top: 540px; right: 400px;
+            background: rgba(10, 14, 39, 0.95); border: 1px solid #2a3a5a;
+            border-radius: 8px; padding: 14px; width: 240px; z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
+            max-height: 340px; overflow-y: auto; transition: right 0.3s ease;
+        }
+        .conflict-zones-panel.panel-collapsed { right: 20px; }
+        .conflict-zones-panel h3 { margin: 0 0 10px 0; font-size: 14px; color: #ff6666; border-bottom: 1px solid #2a3a5a; padding-bottom: 6px; }
+        .zone-item {
+            background: rgba(255, 102, 102, 0.05); border: 1px solid rgba(255, 102, 102, 0.15);
+            border-radius: 4px; padding: 8px; margin-bottom: 6px; font-size: 11px;
+        }
+        .zone-name { color: #ff8888; font-weight: 600; margin-bottom: 2px; }
+        .zone-desc { color: #999; font-size: 10px; line-height: 1.3; }
+
+        /* Legend */
+        .legend {
+            position: absolute; bottom: 20px; left: 20px;
+            background: rgba(10, 14, 39, 0.95); border: 1px solid #2a3a5a;
+            border-radius: 8px; padding: 14px; z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
+            font-size: 11px; width: 260px;
+        }
+        .legend h3 { margin: 0 0 8px 0; font-size: 13px; color: #4da6ff; border-bottom: 1px solid #2a3a5a; padding-bottom: 6px; }
+        .legend-section { margin-bottom: 10px; }
+        .legend-section h4 { margin: 0 0 6px 0; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .legend-item { margin: 4px 0; display: flex; align-items: center; gap: 6px; }
+        .legend-swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .legend-line { width: 16px; height: 2px; flex-shrink: 0; }
+        .legend-text { color: #ccc; font-size: 10px; }
+
+        /* Disclaimer */
+        .disclaimer {
+            position: absolute; bottom: 20px; right: 400px;
+            background: rgba(10, 14, 39, 0.9); border: 1px solid #2a3a5a;
+            border-radius: 6px; padding: 10px; font-size: 10px; color: #666;
+            max-width: 260px; z-index: 999; line-height: 1.4;
+            transition: right 0.3s ease;
+        }
+        .disclaimer.panel-collapsed { right: 20px; }
+
+        /* Node popup */
+        .leaflet-popup-content-wrapper {
+            background: rgba(10, 14, 39, 0.98) !important;
+            border: 1px solid #2a3a5a !important; border-radius: 6px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7) !important;
+        }
+        .leaflet-popup-content { margin: 10px 14px !important; color: #e0e0e0; font-size: 12px; }
+        .leaflet-popup-tip { background: rgba(10, 14, 39, 0.98) !important; }
+        .popup-title { font-size: 14px; font-weight: 600; color: #4da6ff; margin-bottom: 6px; }
+        .popup-row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .popup-label { color: #888; }
+        .popup-value { color: #e0e0e0; font-weight: 500; }
+        .popup-market { margin-top: 8px; padding-top: 8px; border-top: 1px solid #2a3a5a; }
+        .popup-market-q { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+        .popup-price { font-size: 16px; font-weight: 700; }
+        .popup-price.bullish { color: #66bb6a; }
+        .popup-price.bearish { color: #ef5350; }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: flex; align-items: center; justify-content: center;
+            padding: 40px; color: #555; font-size: 13px;
+        }
+        .spinner { width: 20px; height: 20px; border: 2px solid #2a3a5a; border-top: 2px solid #4da6ff;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Pulse animation for nodes with market data */
+        @keyframes pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+        .node-pulse { animation: pulse 2s ease-in-out infinite; }
+
+        @media (max-width: 768px) {
+            .markets-panel { width: 300px; }
+            .info-panel { width: 240px; }
+            .conflict-zones-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div id="map">
+            <!-- Info Panel -->
+            <div class="info-panel">
+                <h2>Middle East Network</h2>
+                <div class="info-subtitle">Conflict graph with live Polymarket data</div>
+                <div class="info-stats">
+                    <div class="stat-item"><span class="stat-label">Settlements</span><span class="stat-value" id="stat-nodes">0</span></div>
+                    <div class="stat-item"><span class="stat-label">Connections</span><span class="stat-value" id="stat-edges">0</span></div>
+                    <div class="stat-item"><span class="stat-label">Regions</span><span class="stat-value" id="stat-regions">0</span></div>
+                    <div class="stat-item"><span class="stat-label">Live Markets</span><span class="stat-value" id="stat-markets">—</span></div>
+                </div>
+            </div>
+
+            <!-- Graph Metrics Panel -->
+            <div class="graph-metrics-panel" id="graph-metrics-panel">
+                <div class="graph-metrics-header" onclick="toggleGraphMetrics()">
+                    <span>Graph Metrics ▼</span>
+                    <span class="graph-metrics-toggle"></span>
+                </div>
+                <div class="graph-metrics-content" id="graph-metrics-content">
+                    <div class="metric-box"><span class="metric-label">Nodes</span><span class="metric-value" id="metric-nodes">0</span></div>
+                    <div class="metric-box"><span class="metric-label">Edges</span><span class="metric-value" id="metric-edges">0</span></div>
+                    <div class="metric-box"><span class="metric-label">Density</span><span class="metric-value" id="metric-density">0.00</span></div>
+                    <div class="metric-box"><span class="metric-label">Avg Degree</span><span class="metric-value" id="metric-avg-degree">0.00</span></div>
+                    <div class="metric-box"><span class="metric-label">Clustering Coeff</span><span class="metric-value" id="metric-clustering">0.00</span></div>
+                    <div class="metric-box"><span class="metric-label">Components</span><span class="metric-value" id="metric-components">0</span></div>
+                    <div class="metric-box"><span class="metric-label">Bridges</span><span class="metric-value" id="metric-bridges">0</span></div>
+                    <div class="metric-box"><span class="metric-label">Art. Points</span><span class="metric-value" id="metric-articulation">0</span></div>
+                </div>
+            </div>
+
+            <!-- Conflict Zones -->
+            <div class="conflict-zones-panel" id="conflict-zones">
+                <h3>Conflict Zones</h3>
+                <div class="zone-item"><div class="zone-name">Gaza Strip</div><div class="zone-desc">Urban warfare, tunnel networks, ceasefire negotiations</div></div>
+                <div class="zone-item"><div class="zone-name">South Lebanon</div><div class="zone-desc">Hezbollah positions, Israeli operations, UNIFIL</div></div>
+                <div class="zone-item"><div class="zone-name">Iran Nuclear Sites</div><div class="zone-desc">Natanz enrichment, Isfahan UCF, IRGC</div></div>
+                <div class="zone-item"><div class="zone-name">Red Sea / Bab el-Mandeb</div><div class="zone-desc">Houthi shipping attacks, global trade route</div></div>
+                <div class="zone-item"><div class="zone-name">West Bank</div><div class="zone-desc">PA governance, IDF raids, settler tensions</div></div>
+                <div class="zone-item"><div class="zone-name">Strait of Hormuz</div><div class="zone-desc">IRGC naval control, 20% global oil transit</div></div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <h3>Legend</h3>
+                <div class="legend-section">
+                    <h4>Control Status</h4>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#4da6ff"></div><span class="legend-text">Israel</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#ffa500"></div><span class="legend-text">Contested</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#66cc66"></div><span class="legend-text">Lebanon</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#ff4444"></div><span class="legend-text">Iran</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#ff6666"></div><span class="legend-text">Houthi</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#cc66cc"></div><span class="legend-text">Syria (Rebel)</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#66aaaa"></div><span class="legend-text">Palestinian Auth.</span></div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:#cccccc"></div><span class="legend-text">International</span></div>
+                </div>
+                <div class="legend-section">
+                    <h4>Connections</h4>
+                    <div class="legend-item"><div class="legend-line" style="background:#ff4444"></div><span class="legend-text">Frontline / Border</span></div>
+                    <div class="legend-item"><div class="legend-line" style="background:#4da6ff"></div><span class="legend-text">Highway / Road</span></div>
+                    <div class="legend-item"><div class="legend-line" style="background:#ff6644"></div><span class="legend-text">Supply / Proxy</span></div>
+                    <div class="legend-item"><div class="legend-line" style="background:#44aaff"></div><span class="legend-text">Maritime</span></div>
+                    <div class="legend-item"><div class="legend-line" style="background:#aaaaaa"></div><span class="legend-text">Diplomatic</span></div>
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="disclaimer" id="disclaimer">
+                <strong>Data sources:</strong> Settlement positions from public OSINT. Market prices from Polymarket Gamma API (live). No simulated data.
+            </div>
+
+            <!-- Panel toggle -->
+            <button class="panel-toggle" id="panel-toggle" title="Toggle Markets Panel">◀</button>
+        </div>
+
+        <!-- Markets Panel -->
+        <div class="markets-panel" id="markets-panel">
+            <div class="markets-panel-header">
+                <h2>Polymarket — Live</h2>
+                <button class="refresh-btn" id="refresh-btn" onclick="fetchMarkets()">Refresh</button>
+            </div>
+            <div class="market-tabs">
+                <div class="market-tab active" data-tab="all" onclick="switchTab('all')">All</div>
+                <div class="market-tab" data-tab="ceasefire" onclick="switchTab('ceasefire')">Ceasefire</div>
+                <div class="market-tab" data-tab="iran" onclick="switchTab('iran')">Iran</div>
+                <div class="market-tab" data-tab="conflict" onclick="switchTab('conflict')">Conflict</div>
+            </div>
+            <div id="markets-list">
+                <div class="loading-spinner"><div class="spinner"></div>Loading markets...</div>
+            </div>
+            <div class="last-updated" id="last-updated">—</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+    // ======================================================================
+    // DATA
+    // ======================================================================
+    const settlementsData = [
+        {"id":"gaza_city","name":"Gaza City","lat":31.5017,"lng":34.4668,"control":"CONTESTED","population":590000,"region":"Gaza","strategic_value":0.9,"tags":["urban_warfare","hamas_stronghold","tunnel_network"]},
+        {"id":"khan_younis","name":"Khan Younis","lat":31.3462,"lng":34.3065,"control":"CONTESTED","population":400000,"region":"Gaza","strategic_value":0.7,"tags":["southern_gaza","hamas_military"]},
+        {"id":"rafah","name":"Rafah","lat":31.2969,"lng":34.2505,"control":"CONTESTED","population":280000,"region":"Gaza","strategic_value":0.8,"tags":["egypt_border","philadelphi_corridor"]},
+        {"id":"jabalia","name":"Jabalia","lat":31.5333,"lng":34.4833,"control":"CONTESTED","population":180000,"region":"Gaza","strategic_value":0.6,"tags":["refugee_camp","northern_gaza"]},
+        {"id":"deir_al_balah","name":"Deir al-Balah","lat":31.4167,"lng":34.3500,"control":"CONTESTED","population":75000,"region":"Gaza","strategic_value":0.5,"tags":["central_gaza","aid_corridor"]},
+        {"id":"netzarim","name":"Netzarim Corridor","lat":31.4500,"lng":34.4000,"control":"IL","population":0,"region":"Gaza","strategic_value":0.8,"tags":["idf_corridor","divides_gaza"]},
+        {"id":"tel_aviv","name":"Tel Aviv","lat":32.0853,"lng":34.7818,"control":"IL","population":460000,"region":"Israel","strategic_value":1.0,"tags":["economic_center","iron_dome"]},
+        {"id":"jerusalem","name":"Jerusalem","lat":31.7683,"lng":35.2137,"control":"IL","population":936000,"region":"Israel","strategic_value":1.0,"tags":["capital","holy_city"]},
+        {"id":"haifa","name":"Haifa","lat":32.7940,"lng":34.9896,"control":"IL","population":285000,"region":"Israel","strategic_value":0.8,"tags":["port_city","northern_front"]},
+        {"id":"sderot","name":"Sderot","lat":31.5250,"lng":34.5972,"control":"IL","population":27000,"region":"Israel","strategic_value":0.5,"tags":["gaza_border","oct7"]},
+        {"id":"kiryat_shmona","name":"Kiryat Shmona","lat":33.2075,"lng":35.5719,"control":"IL","population":24000,"region":"Israel","strategic_value":0.5,"tags":["lebanon_border","evacuated"]},
+        {"id":"golan_heights","name":"Golan Heights","lat":33.0000,"lng":35.7500,"control":"IL","population":50000,"region":"Israel","strategic_value":0.7,"tags":["strategic_plateau","syria_border"]},
+        {"id":"beirut","name":"Beirut","lat":33.8938,"lng":35.5018,"control":"LB","population":2400000,"region":"Lebanon","strategic_value":0.9,"tags":["capital","hezbollah_political"]},
+        {"id":"south_lebanon","name":"South Lebanon (Tyre)","lat":33.2700,"lng":35.2000,"control":"CONTESTED","population":200000,"region":"Lebanon","strategic_value":0.8,"tags":["hezbollah_military","unifil"]},
+        {"id":"baalbek","name":"Baalbek","lat":34.0047,"lng":36.2117,"control":"LB","population":82000,"region":"Lebanon","strategic_value":0.6,"tags":["hezbollah_stronghold","bekaa_valley"]},
+        {"id":"nabatieh","name":"Nabatieh","lat":33.3779,"lng":35.4839,"control":"CONTESTED","population":120000,"region":"Lebanon","strategic_value":0.6,"tags":["hezbollah_territory"]},
+        {"id":"damascus","name":"Damascus","lat":33.5138,"lng":36.2765,"control":"SY_REBEL","population":2100000,"region":"Syria","strategic_value":0.8,"tags":["capital","post_assad","hts_control"]},
+        {"id":"quneitra","name":"Quneitra","lat":33.1260,"lng":35.8241,"control":"SY_REBEL","population":5000,"region":"Syria","strategic_value":0.5,"tags":["golan_border","undof"]},
+        {"id":"daraa","name":"Daraa","lat":32.6189,"lng":36.1021,"control":"SY_REBEL","population":120000,"region":"Syria","strategic_value":0.4,"tags":["jordan_border"]},
+        {"id":"tehran","name":"Tehran","lat":35.6892,"lng":51.3890,"control":"IR","population":9000000,"region":"Iran","strategic_value":1.0,"tags":["capital","irgc_hq","nuclear_program"]},
+        {"id":"isfahan","name":"Isfahan","lat":32.6546,"lng":51.6680,"control":"IR","population":2100000,"region":"Iran","strategic_value":0.8,"tags":["nuclear_facility","ucf"]},
+        {"id":"natanz","name":"Natanz","lat":33.5111,"lng":51.7272,"control":"IR","population":13000,"region":"Iran","strategic_value":0.9,"tags":["uranium_enrichment","underground_facility"]},
+        {"id":"bandar_abbas","name":"Bandar Abbas","lat":27.1832,"lng":56.2666,"control":"IR","population":530000,"region":"Iran","strategic_value":0.7,"tags":["strait_of_hormuz","naval_base"]},
+        {"id":"sanaa","name":"Sanaa","lat":15.3694,"lng":44.1910,"control":"HOUTHI","population":3900000,"region":"Yemen","strategic_value":0.7,"tags":["houthi_capital","drone_missiles"]},
+        {"id":"hodeidah","name":"Hodeidah","lat":14.7980,"lng":42.9540,"control":"HOUTHI","population":600000,"region":"Yemen","strategic_value":0.7,"tags":["port_city","shipping_attacks"]},
+        {"id":"bab_el_mandeb","name":"Bab el-Mandeb Strait","lat":12.5833,"lng":43.3333,"control":"INTL","population":0,"region":"Red Sea","strategic_value":0.9,"tags":["chokepoint","shipping_lane"]},
+        {"id":"strait_of_hormuz","name":"Strait of Hormuz","lat":26.5667,"lng":56.2500,"control":"INTL","population":0,"region":"Persian Gulf","strategic_value":1.0,"tags":["oil_chokepoint","global_trade"]},
+        {"id":"ramallah","name":"Ramallah","lat":31.9038,"lng":35.2034,"control":"PA","population":38000,"region":"West Bank","strategic_value":0.5,"tags":["pa_capital"]},
+        {"id":"jenin","name":"Jenin","lat":32.4607,"lng":35.3004,"control":"CONTESTED","population":40000,"region":"West Bank","strategic_value":0.5,"tags":["idf_raids","militant_hub"]},
+        {"id":"nablus","name":"Nablus","lat":32.2211,"lng":35.2544,"control":"PA","population":160000,"region":"West Bank","strategic_value":0.4,"tags":["old_city"]},
+        {"id":"cairo","name":"Cairo","lat":30.0444,"lng":31.2357,"control":"EG","population":10000000,"region":"Egypt","strategic_value":0.7,"tags":["mediator","rafah_crossing"]},
+        {"id":"amman","name":"Amman","lat":31.9454,"lng":35.9284,"control":"JO","population":4400000,"region":"Jordan","strategic_value":0.5,"tags":["mediator","border_state"]},
+        {"id":"doha","name":"Doha","lat":25.2854,"lng":51.5310,"control":"QA","population":2400000,"region":"Qatar","strategic_value":0.6,"tags":["hamas_political_office","mediator"]}
+    ];
+
+    const edgesData = [
+        {"source":"gaza_city","target":"jabalia","edge_type":"URBAN_ROAD","weight":0.7,"distance_km":5,"is_frontline":true,"description":"Northern Gaza urban corridor"},
+        {"source":"gaza_city","target":"deir_al_balah","edge_type":"HIGHWAY","weight":0.8,"distance_km":15,"is_frontline":true,"description":"Salah al-Din Road"},
+        {"source":"gaza_city","target":"netzarim","edge_type":"FRONTLINE","weight":1.0,"distance_km":8,"is_frontline":true,"description":"Netzarim Corridor"},
+        {"source":"deir_al_balah","target":"khan_younis","edge_type":"HIGHWAY","weight":0.7,"distance_km":12,"is_frontline":true},
+        {"source":"deir_al_balah","target":"netzarim","edge_type":"FRONTLINE","weight":1.0,"distance_km":5,"is_frontline":true},
+        {"source":"khan_younis","target":"rafah","edge_type":"HIGHWAY","weight":0.6,"distance_km":10,"is_frontline":true},
+        {"source":"rafah","target":"cairo","edge_type":"BORDER_CROSSING","weight":0.9,"distance_km":350},
+        {"source":"gaza_city","target":"sderot","edge_type":"BORDER","weight":1.0,"distance_km":5,"is_frontline":true},
+        {"source":"sderot","target":"tel_aviv","edge_type":"HIGHWAY","weight":0.2,"distance_km":85},
+        {"source":"tel_aviv","target":"jerusalem","edge_type":"HIGHWAY","weight":0.1,"distance_km":65},
+        {"source":"tel_aviv","target":"haifa","edge_type":"HIGHWAY","weight":0.2,"distance_km":95},
+        {"source":"haifa","target":"kiryat_shmona","edge_type":"HIGHWAY","weight":0.3,"distance_km":100},
+        {"source":"jerusalem","target":"ramallah","edge_type":"CONTROLLED_CROSSING","weight":0.5,"distance_km":15},
+        {"source":"jerusalem","target":"golan_heights","edge_type":"HIGHWAY","weight":0.3,"distance_km":180},
+        {"source":"ramallah","target":"nablus","edge_type":"HIGHWAY","weight":0.4,"distance_km":50},
+        {"source":"nablus","target":"jenin","edge_type":"HIGHWAY","weight":0.5,"distance_km":45},
+        {"source":"kiryat_shmona","target":"south_lebanon","edge_type":"BORDER","weight":1.0,"distance_km":5,"is_frontline":true},
+        {"source":"south_lebanon","target":"nabatieh","edge_type":"HIGHWAY","weight":0.6,"distance_km":25,"is_frontline":true},
+        {"source":"south_lebanon","target":"beirut","edge_type":"HIGHWAY","weight":0.4,"distance_km":85},
+        {"source":"nabatieh","target":"beirut","edge_type":"HIGHWAY","weight":0.4,"distance_km":70},
+        {"source":"beirut","target":"baalbek","edge_type":"HIGHWAY","weight":0.3,"distance_km":85},
+        {"source":"baalbek","target":"damascus","edge_type":"SUPPLY_ROUTE","weight":0.5,"distance_km":110},
+        {"source":"golan_heights","target":"quneitra","edge_type":"BORDER","weight":0.8,"distance_km":10},
+        {"source":"quneitra","target":"damascus","edge_type":"HIGHWAY","weight":0.4,"distance_km":60},
+        {"source":"damascus","target":"daraa","edge_type":"HIGHWAY","weight":0.3,"distance_km":100},
+        {"source":"daraa","target":"amman","edge_type":"BORDER_CROSSING","weight":0.4,"distance_km":100},
+        {"source":"amman","target":"jerusalem","edge_type":"BORDER_CROSSING","weight":0.3,"distance_km":85},
+        {"source":"tehran","target":"isfahan","edge_type":"HIGHWAY","weight":0.1,"distance_km":340},
+        {"source":"isfahan","target":"natanz","edge_type":"HIGHWAY","weight":0.2,"distance_km":140},
+        {"source":"tehran","target":"natanz","edge_type":"HIGHWAY","weight":0.2,"distance_km":260},
+        {"source":"isfahan","target":"bandar_abbas","edge_type":"HIGHWAY","weight":0.2,"distance_km":680},
+        {"source":"bandar_abbas","target":"strait_of_hormuz","edge_type":"MARITIME","weight":0.3,"distance_km":50},
+        {"source":"tehran","target":"damascus","edge_type":"AIR_CORRIDOR","weight":0.4,"distance_km":1550},
+        {"source":"tehran","target":"baalbek","edge_type":"PROXY_SUPPLY","weight":0.5,"distance_km":1600},
+        {"source":"tehran","target":"sanaa","edge_type":"PROXY_SUPPLY","weight":0.6,"distance_km":2500},
+        {"source":"sanaa","target":"hodeidah","edge_type":"HIGHWAY","weight":0.4,"distance_km":226},
+        {"source":"hodeidah","target":"bab_el_mandeb","edge_type":"MARITIME","weight":0.5,"distance_km":300},
+        {"source":"bab_el_mandeb","target":"strait_of_hormuz","edge_type":"SHIPPING_LANE","weight":0.3,"distance_km":2400},
+        {"source":"cairo","target":"amman","edge_type":"DIPLOMATIC","weight":0.2,"distance_km":450},
+        {"source":"doha","target":"tehran","edge_type":"DIPLOMATIC","weight":0.3,"distance_km":950},
+        {"source":"doha","target":"cairo","edge_type":"DIPLOMATIC","weight":0.2,"distance_km":2100},
+        {"source":"doha","target":"tel_aviv","edge_type":"DIPLOMATIC","weight":0.3,"distance_km":1700}
+    ];
+
+    // Search terms to find relevant Polymarket markets
+    const MARKET_SEARCH_TERMS = [
+        'israel', 'hamas', 'gaza', 'ceasefire', 'iran',
+        'hezbollah', 'lebanon', 'houthi', 'red sea',
+        'netanyahu', 'hostage', 'nuclear', 'syria',
+        'west bank', 'middle east'
+    ];
+
+    // Map settlement regions to market keyword categories
+    const REGION_MARKET_KEYWORDS = {
+        'Gaza': ['hamas', 'ceasefire', 'gaza', 'hostage'],
+        'Israel': ['israel', 'iran', 'netanyahu'],
+        'Lebanon': ['hezbollah', 'lebanon'],
+        'Syria': ['syria'],
+        'Iran': ['iran', 'nuclear'],
+        'Yemen': ['houthi'],
+        'Red Sea': ['red sea', 'houthi', 'shipping'],
+        'Persian Gulf': ['hormuz', 'iran'],
+        'West Bank': ['west bank', 'palestinian'],
+    };
+
+    // ======================================================================
+    // STATE
+    // ======================================================================
+    let nodeMarkers = {};
+    let priceLabels = {};
+    let marketsCache = [];
+    let currentTab = 'all';
+    let autoRefreshInterval = null;
+
+    // ======================================================================
+    // MAP INIT
+    // ======================================================================
+    const map = L.map('map', { zoomControl: true }).setView([28, 42], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB', maxZoom: 19
+    }).addTo(map);
+
+    function getControlColor(c) {
+        return {'IL':'#4da6ff','CONTESTED':'#ffa500','LB':'#66cc66','SY_REBEL':'#cc66cc',
+                'IR':'#ff4444','HOUTHI':'#ff6666','INTL':'#cccccc','PA':'#66aaaa',
+                'EG':'#ffcc44','JO':'#88cc88','QA':'#aa88ff'}[c] || '#888';
+    }
+
+    function getEdgeStyle(e) {
+        const s = {
+            'FRONTLINE':{color:'#ff4444',dashArray:'5,5',weight:2.5,opacity:0.8},
+            'BORDER':{color:'#ff4444',dashArray:'5,5',weight:2.5,opacity:0.8},
+            'HIGHWAY':{color:'#4da6ff',weight:1.5,opacity:0.5},
+            'SUPPLY_ROUTE':{color:'#ff6644',dashArray:'3,4',weight:1.5,opacity:0.6},
+            'PROXY_SUPPLY':{color:'#ff6644',dashArray:'3,4',weight:1.5,opacity:0.6},
+            'AIR_CORRIDOR':{color:'#ffaa44',dashArray:'5,5',weight:1.2,opacity:0.5},
+            'MARITIME':{color:'#44aaff',dashArray:'5,5',weight:1.5,opacity:0.6},
+            'SHIPPING_LANE':{color:'#44aaff',dashArray:'5,5',weight:1.5,opacity:0.6},
+            'DIPLOMATIC':{color:'#aaaaaa',dashArray:'2,4',weight:0.8,opacity:0.4},
+            'CONTROLLED_CROSSING':{color:'#ffa500',dashArray:'5,5',weight:1.5,opacity:0.6},
+            'BORDER_CROSSING':{color:'#ffa500',dashArray:'5,5',weight:1.5,opacity:0.6},
+            'URBAN_ROAD':{color:'#4da6ff',weight:1.2,opacity:0.4},
+        };
+        return s[e.edge_type] || {color:'#666',weight:1,opacity:0.3};
+    }
+
+    // Create edges first (below nodes)
+    edgesData.forEach(edge => {
+        const src = settlementsData.find(s => s.id === edge.source);
+        const tgt = settlementsData.find(s => s.id === edge.target);
+        if (src && tgt) L.polyline([[src.lat, src.lng],[tgt.lat, tgt.lng]], getEdgeStyle(edge)).addTo(map);
+    });
+
+    // Create nodes
+    settlementsData.forEach(s => {
+        const r = Math.max(5, (s.strategic_value || 0.5) * 12);
+        const color = getControlColor(s.control);
+        const circle = L.circleMarker([s.lat, s.lng], {
+            radius: r, fillColor: color, color: color, weight: 1.5, opacity: 1, fillOpacity: 0.75
+        }).addTo(map);
+        circle._settlement = s;
+        circle.on('click', () => showNodePopup(s, circle));
+        nodeMarkers[s.id] = circle;
+    });
+
+    function showNodePopup(s, marker) {
+        const pop = s.population > 0 ? (s.population >= 1e6 ? (s.population/1e6).toFixed(1)+'M' : (s.population/1e3).toFixed(0)+'K') : 'N/A';
+        // Find related markets
+        const regionKws = REGION_MARKET_KEYWORDS[s.region] || [];
+        const related = marketsCache.filter(m => {
+            const q = (m.question || '').toLowerCase();
+            return regionKws.some(kw => q.includes(kw));
+        }).slice(0, 2);
+
+        let marketHtml = '';
+        if (related.length > 0) {
+            marketHtml = related.map(m => {
+                const yesPrice = parseFloat(m.outcomePrices?.[0] || m.yes_price || 0);
+                const cls = yesPrice >= 0.5 ? 'bullish' : 'bearish';
+                return `<div class="popup-market">
+                    <div class="popup-market-q">${(m.question||'').substring(0,80)}...</div>
+                    <span class="popup-price ${cls}">Yes ${(yesPrice*100).toFixed(0)}%</span>
+                </div>`;
+            }).join('');
+        }
+
+        const html = `<div class="popup-title">${s.name}</div>
+            <div class="popup-row"><span class="popup-label">Control</span><span class="popup-value">${s.control}</span></div>
+            <div class="popup-row"><span class="popup-label">Population</span><span class="popup-value">${pop}</span></div>
+            <div class="popup-row"><span class="popup-label">Region</span><span class="popup-value">${s.region}</span></div>
+            <div class="popup-row"><span class="popup-label">Strategic</span><span class="popup-value">${(s.strategic_value*100).toFixed(0)}%</span></div>
+            ${s.tags?.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #2a3a5a;color:#777;font-size:10px">${s.tags.join(', ')}</div>` : ''}
+            ${marketHtml}`;
+        L.popup({className:'custom-popup'}).setLatLng(marker.getLatLng()).setContent(html).openOn(map);
+    }
+
+    // Update stats
+    document.getElementById('stat-nodes').textContent = settlementsData.length;
+    document.getElementById('stat-edges').textContent = edgesData.length;
+    document.getElementById('stat-regions').textContent = new Set(settlementsData.map(s=>s.region)).size;
+
+    // ======================================================================
+    // POLYMARKET API — Live Data
+    // ======================================================================
+    const GAMMA_API = 'https://gamma-api.polymarket.com';
+    const CORS_PROXIES = [
+        '', // direct (works from http:// origins)
+        'https://corsproxy.io/?url=',
+        'https://api.allorigins.win/raw?url='
+    ];
+
+    async function fetchWithProxy(url) {
+        for (const proxy of CORS_PROXIES) {
+            try {
+                const proxyUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                const resp = await fetch(proxyUrl);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                return await resp.json();
+            } catch (e) { continue; }
+        }
+        return null;
+    }
+
+    // Fallback market data (updated 2026-02-17 from web search) — shown when API is unreachable
+    const FALLBACK_MARKETS = [
+        {question:"Israel x Iran ceasefire broken by March 31, 2026?",outcomePrices:'["0.34","0.66"]',volume:"5000000",_eventTitle:"Israel x Iran ceasefire broken by...?",_eventSlug:"israel-x-iran-ceasefire-broken-by",_fallback:true},
+        {question:"Israel x Iran ceasefire broken by June 30, 2026?",outcomePrices:'["0.53","0.47"]',volume:"5000000",_eventTitle:"Israel x Iran ceasefire broken by...?",_eventSlug:"israel-x-iran-ceasefire-broken-by",_fallback:true},
+        {question:"Israel x Hamas ceasefire cancelled by June 30?",outcomePrices:'["0.26","0.74"]',volume:"4000000",_eventTitle:"Israel x Hamas ceasefire cancelled by...?",_eventSlug:"israel-x-hamas-ceasefire-cancelled-by",_fallback:true},
+        {question:"Will the Iranian regime fall before 2027?",outcomePrices:'["0.31","0.69"]',volume:"4000000",_eventTitle:"Will the Iranian regime fall before 2027?",_eventSlug:"will-the-iranian-regime-fall-before-2027",_fallback:true},
+        {question:"Israel x Hamas ceasefire Phase II by March 31?",outcomePrices:'["0.22","0.78"]',volume:"2000000",_eventTitle:"Israel x Hamas ceasefire Phase II",_eventSlug:"israel-x-hamas-ceasefire-phase-ii-by",_fallback:true},
+        {question:"Israel x Hamas ceasefire Phase II by June 30?",outcomePrices:'["0.44","0.56"]',volume:"2000000",_eventTitle:"Israel x Hamas ceasefire Phase II",_eventSlug:"israel-x-hamas-ceasefire-phase-ii-by",_fallback:true},
+        {question:"Khamenei out as Supreme Leader of Iran in 2026?",outcomePrices:'["0.40","0.60"]',volume:"2000000",_eventTitle:"Khamenei out as Supreme Leader of Iran in 2026?",_eventSlug:"khamenei-out-as-supreme-leader-of-iran-in-2026",_fallback:true},
+        {question:"Iran strike on Israel by February 28?",outcomePrices:'["0.12","0.88"]',volume:"1000000",_eventTitle:"Iran strike on Israel by...?",_eventSlug:"iran-strike-on-israel-by",_fallback:true},
+        {question:"How many countries will Israel strike in 2026?",outcomePrices:'["0.34","0.66"]',volume:"852000",_eventTitle:"How many countries will Israel strike in 2026?",_eventSlug:"how-many-countries-will-israel-strike-in-2026",_fallback:true},
+        {question:"Israel strikes Iran by June 30, 2026?",outcomePrices:'["0.49","0.51"]',volume:"487000",_eventTitle:"Israel strikes Iran by June 30, 2026?",_eventSlug:"israel-strikes-iran-by-june-30-2026",_fallback:true},
+        {question:"Will US or Israel strike Iran by December 31, 2026?",outcomePrices:'["0.62","0.38"]',volume:"450000",_eventTitle:"Will US or Israel strike Iran by December 31, 2026?",_eventSlug:"will-us-or-israel-strike-iran-by-december-31-2026",_fallback:true},
+        {question:"Israel strike on Yemen by June 30?",outcomePrices:'["0.45","0.55"]',volume:"319000",_eventTitle:"Israel strike on Yemen by...?",_eventSlug:"israel-strike-on-yemen-by",_fallback:true},
+        {question:"Will Israel annex any territory by June 30?",outcomePrices:'["0.15","0.85"]',volume:"305000",_eventTitle:"Will Israel annex any territory by...?",_eventSlug:"will-israel-annex-any-territory-by",_fallback:true},
+        {question:"Foreign intervention in Gaza by March 31?",outcomePrices:'["0.12","0.88"]',volume:"292000",_eventTitle:"Foreign intervention in Gaza by...?",_eventSlug:"foreign-intervention-in-gaza-by",_fallback:true},
+        {question:"US-Iran nuclear deal by June 30?",outcomePrices:'["0.45","0.55"]',volume:"85000",_eventTitle:"US-Iran nuclear deal by June 30?",_eventSlug:"us-iran-nuclear-deal-by-june-30",_fallback:true},
+    ];
+
+    async function fetchMarkets() {
+        const btn = document.getElementById('refresh-btn');
+        btn.classList.add('loading');
+        btn.textContent = 'Loading...';
+        document.getElementById('markets-list').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Fetching live data...</div>';
+
+        try {
+            // Fetch Middle East-related events from Gamma API
+            const allMarkets = [];
+            const searchTerms = [
+                'israel hamas', 'israel iran', 'iran ceasefire', 'gaza ceasefire',
+                'gaza', 'hezbollah', 'houthi', 'yemen', 'iran nuclear', 'iran strike',
+                'israel strike', 'netanyahu', 'khamenei', 'middle east',
+                'israel annex', 'hostage', 'iran regime'
+            ];
+
+            for (const term of searchTerms) {
+                try {
+                    const events = await fetchWithProxy(`${GAMMA_API}/events?closed=false&limit=20&title=${encodeURIComponent(term)}`);
+                    if (events && Array.isArray(events)) {
+                        for (const event of events) {
+                            if (event.markets) {
+                                for (const market of event.markets) {
+                                    if (!allMarkets.find(m => m.conditionId === market.conditionId)) {
+                                        market._eventTitle = event.title;
+                                        market._eventSlug = event.slug;
+                                        allMarkets.push(market);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch(e) { console.warn('Search failed for:', term, e); }
+            }
+
+            // Sort by volume
+            allMarkets.sort((a,b) => (parseFloat(b.volume || 0)) - (parseFloat(a.volume || 0)));
+
+            if (allMarkets.length === 0) {
+                console.warn('No live markets found, loading cached fallback data');
+                allMarkets.push(...FALLBACK_MARKETS);
+            }
+
+            marketsCache = allMarkets;
+            renderMarkets();
+            updateMapPrices();
+            document.getElementById('stat-markets').textContent = allMarkets.length;
+            const src = allMarkets[0]?._fallback ? 'cached' : 'live';
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()} (${src})`;
+
+        } catch(e) {
+            console.error('Market fetch failed, using fallback:', e);
+            marketsCache = [...FALLBACK_MARKETS];
+            renderMarkets();
+            updateMapPrices();
+            document.getElementById('stat-markets').textContent = marketsCache.length;
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()} (cached)`;
+        }
+
+        btn.classList.remove('loading');
+        btn.textContent = 'Refresh';
+    }
+
+    function categorizeMarket(m) {
+        const q = ((m.question || '') + ' ' + (m._eventTitle || '')).toLowerCase();
+        if (q.includes('ceasefire') || q.includes('hostage') || q.includes('peace') || q.includes('phase ii') || q.includes('deal')) return 'ceasefire';
+        if (q.includes('iran') || q.includes('nuclear') || q.includes('khamenei') || q.includes('regime')) return 'iran';
+        if (q.includes('attack') || q.includes('strike') || q.includes('war') || q.includes('houthi')
+            || q.includes('hezbollah') || q.includes('conflict') || q.includes('invade')
+            || q.includes('annex') || q.includes('yemen') || q.includes('intervention')) return 'conflict';
+        return 'other';
+    }
+
+    function renderMarkets() {
+        const container = document.getElementById('markets-list');
+        let filtered = marketsCache;
+        if (currentTab !== 'all') {
+            filtered = marketsCache.filter(m => categorizeMarket(m) === currentTab);
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="loading-spinner" style="color:#555">No markets found for this filter</div>';
+            return;
+        }
+
+        container.innerHTML = filtered.map(m => {
+            const prices = m.outcomePrices ? (typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices) : [];
+            const yesPrice = parseFloat(prices[0] || 0);
+            const noPrice = parseFloat(prices[1] || 0);
+            const vol = parseFloat(m.volume || 0);
+            const volStr = vol >= 1e6 ? `$${(vol/1e6).toFixed(1)}M` : vol >= 1e3 ? `$${(vol/1e3).toFixed(0)}K` : `$${vol.toFixed(0)}`;
+            const endDate = m.endDate ? new Date(m.endDate).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
+            const slug = m.slug || m.market_slug || '';
+            const pmUrl = slug ? `https://polymarket.com/event/${m._eventSlug || slug}` : '#';
+            const change = parseFloat(m.oneDayPriceChange || 0);
+            const changeStr = change !== 0 ? `<span class="price-change ${change>0?'up':'down'}">${change>0?'+':''}${(change*100).toFixed(1)}%</span>` : '';
+
+            return `<div class="market-card" data-slug="${slug}" onclick="highlightMarketNodes('${(m.question||'').toLowerCase()}')">
+                <div class="market-question">${m.question || 'Unknown'} ${changeStr}</div>
+                <div class="market-prices">
+                    <span class="price-pill price-yes">Yes ${(yesPrice*100).toFixed(0)}¢</span>
+                    <span class="price-pill price-no">No ${(noPrice*100).toFixed(0)}¢</span>
+                </div>
+                <div class="market-meta">
+                    <span class="market-meta-item market-volume">Vol: ${volStr}</span>
+                    ${endDate ? `<span class="market-meta-item market-end-date">Ends: ${endDate}</span>` : ''}
+                </div>
+                <a href="${pmUrl}" target="_blank" class="market-link">View on Polymarket ↗</a>
+            </div>`;
+        }).join('');
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.market-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.market-tab[data-tab="${tab}"]`).classList.add('active');
+        renderMarkets();
+    }
+
+    // Highlight map nodes related to a clicked market
+    function highlightMarketNodes(question) {
+        // Reset all
+        Object.values(nodeMarkers).forEach(m => {
+            const s = m._settlement;
+            const color = getControlColor(s.control);
+            m.setStyle({ fillColor: color, color: color, fillOpacity: 0.75 });
+            m.setRadius(Math.max(5, (s.strategic_value || 0.5) * 12));
+        });
+
+        // Highlight relevant
+        settlementsData.forEach(s => {
+            const kws = REGION_MARKET_KEYWORDS[s.region] || [];
+            const isRelated = kws.some(kw => question.includes(kw));
+            if (isRelated && nodeMarkers[s.id]) {
+                nodeMarkers[s.id].setStyle({ fillOpacity: 1, weight: 3 });
+                nodeMarkers[s.id].setRadius(Math.max(8, (s.strategic_value || 0.5) * 16));
+            }
+        });
+    }
+
+    // Add price labels to map nodes that have related markets
+    function updateMapPrices() {
+        // Remove old labels
+        Object.values(priceLabels).forEach(l => map.removeLayer(l));
+        priceLabels = {};
+
+        // For key settlements, find the best matching market and show price
+        const keySettlements = settlementsData.filter(s => s.strategic_value >= 0.7);
+        keySettlements.forEach(s => {
+            const kws = REGION_MARKET_KEYWORDS[s.region] || [];
+            const related = marketsCache.filter(m => {
+                const q = (m.question || '').toLowerCase();
+                return kws.some(kw => q.includes(kw));
+            });
+            if (related.length === 0) return;
+
+            // Pick highest volume related market
+            const best = related.sort((a,b) => parseFloat(b.volume||0) - parseFloat(a.volume||0))[0];
+            const prices = best.outcomePrices ? (typeof best.outcomePrices === 'string' ? JSON.parse(best.outcomePrices) : best.outcomePrices) : [];
+            const yesPrice = parseFloat(prices[0] || 0);
+            if (yesPrice === 0) return;
+
+            const cls = yesPrice >= 0.5 ? '' : 'bearish';
+            const icon = L.divIcon({
+                className: 'node-price-label ' + cls,
+                html: `${(yesPrice*100).toFixed(0)}¢`,
+                iconSize: [32, 16],
+                iconAnchor: [-8, 8]
+            });
+            const label = L.marker([s.lat, s.lng], { icon, interactive: false }).addTo(map);
+            priceLabels[s.id] = label;
+        });
+    }
+
+    // ======================================================================
+    // GRAPH METRICS
+    // ======================================================================
+    function buildAdjacencyList() {
+        const adj = {};
+        settlementsData.forEach(s => { adj[s.id] = []; });
+        edgesData.forEach(e => {
+            if (adj[e.source] && adj[e.target]) {
+                adj[e.source].push(e.target);
+                adj[e.target].push(e.source);
+            }
+        });
+        return adj;
+    }
+
+    function computeGraphMetrics() {
+        const n = settlementsData.length;
+        const m = edgesData.length;
+        const adj = buildAdjacencyList();
+
+        // Density: 2*E / (N*(N-1))
+        const density = n > 1 ? (2 * m) / (n * (n - 1)) : 0;
+
+        // Avg degree: 2*E / N
+        const avgDegree = n > 0 ? (2 * m) / n : 0;
+
+        // Clustering coefficient: average local clustering
+        let clusteringSum = 0;
+        let clusteringCount = 0;
+        Object.keys(adj).forEach(nodeId => {
+            const neighbors = adj[nodeId];
+            if (neighbors.length < 2) return; // Need at least 2 neighbors
+
+            let edgeCount = 0;
+            for (let i = 0; i < neighbors.length; i++) {
+                for (let j = i + 1; j < neighbors.length; j++) {
+                    if (adj[neighbors[i]].includes(neighbors[j])) {
+                        edgeCount++;
+                    }
+                }
+            }
+            const maxEdges = (neighbors.length * (neighbors.length - 1)) / 2;
+            const localCluster = maxEdges > 0 ? edgeCount / maxEdges : 0;
+            clusteringSum += localCluster;
+            clusteringCount++;
+        });
+        const clusteringCoeff = clusteringCount > 0 ? clusteringSum / clusteringCount : 0;
+
+        // Connected components (BFS)
+        const visited = new Set();
+        let components = 0;
+        function bfs(start) {
+            const queue = [start];
+            visited.add(start);
+            while (queue.length > 0) {
+                const node = queue.shift();
+                adj[node].forEach(neighbor => {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push(neighbor);
+                    }
+                });
+            }
+        }
+        settlementsData.forEach(s => {
+            if (!visited.has(s.id)) {
+                bfs(s.id);
+                components++;
+            }
+        });
+
+        // Bridges and articulation points via Tarjan's algorithm
+        let bridgeCount = 0;
+        const articulationPoints = new Set();
+        {
+            const disc2 = {}, low2 = {}, parent2 = {};
+            const visited2 = new Set();
+            let timer2 = 0;
+
+            function tarjan(u) {
+                visited2.add(u);
+                disc2[u] = low2[u] = timer2++;
+                let childCount = 0;
+
+                for (const v of (adj[u] || [])) {
+                    if (!visited2.has(v)) {
+                        childCount++;
+                        parent2[v] = u;
+                        tarjan(v);
+                        low2[u] = Math.min(low2[u], low2[v]);
+                        // Bridge
+                        if (low2[v] > disc2[u]) bridgeCount++;
+                        // Articulation point
+                        if (parent2[u] === undefined && childCount > 1) articulationPoints.add(u);
+                        if (parent2[u] !== undefined && low2[v] >= disc2[u]) articulationPoints.add(u);
+                    } else if (v !== parent2[u]) {
+                        low2[u] = Math.min(low2[u], disc2[v]);
+                    }
+                }
+            }
+
+            settlementsData.forEach(s => {
+                if (!visited2.has(s.id)) {
+                    parent2[s.id] = undefined;
+                    tarjan(s.id);
+                }
+            });
+        }
+        const articulationCount = articulationPoints.size;
+
+        return {
+            nodes: n,
+            edges: m,
+            density: density.toFixed(4),
+            avgDegree: avgDegree.toFixed(2),
+            clustering: clusteringCoeff.toFixed(4),
+            components,
+            bridges: bridgeCount,
+            articulation: articulationCount
+        };
+    }
+
+    function updateGraphMetricsDisplay() {
+        const metrics = computeGraphMetrics();
+        document.getElementById('metric-nodes').textContent = metrics.nodes;
+        document.getElementById('metric-edges').textContent = metrics.edges;
+        document.getElementById('metric-density').textContent = metrics.density;
+        document.getElementById('metric-avg-degree').textContent = metrics.avgDegree;
+        document.getElementById('metric-clustering').textContent = metrics.clustering;
+        document.getElementById('metric-components').textContent = metrics.components;
+        document.getElementById('metric-bridges').textContent = metrics.bridges;
+        document.getElementById('metric-articulation').textContent = metrics.articulation;
+    }
+
+    function toggleGraphMetrics() {
+        const content = document.getElementById('graph-metrics-content');
+        const toggle = document.querySelector('.graph-metrics-toggle');
+        content.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+    }
+
+    // ======================================================================
+    // PANEL TOGGLE
+    // ======================================================================
+    document.getElementById('panel-toggle').addEventListener('click', () => {
+        const panel = document.getElementById('markets-panel');
+        const toggle = document.getElementById('panel-toggle');
+        const metrics = document.getElementById('graph-metrics-panel');
+        const zones = document.getElementById('conflict-zones');
+        const disclaimer = document.getElementById('disclaimer');
+
+        panel.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+        toggle.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+
+        if (panel.classList.contains('collapsed')) {
+            toggle.style.right = '0';
+            metrics.classList.add('panel-collapsed');
+            zones.classList.add('panel-collapsed');
+            disclaimer.classList.add('panel-collapsed');
+        } else {
+            toggle.style.right = '380px';
+            metrics.classList.remove('panel-collapsed');
+            zones.classList.remove('panel-collapsed');
+            disclaimer.classList.remove('panel-collapsed');
+        }
+
+        setTimeout(() => map.invalidateSize(), 350);
+    });
+
+    // ======================================================================
+    // AUTO-REFRESH
+    // ======================================================================
+    updateGraphMetricsDisplay(); // Compute and display graph metrics
+    fetchMarkets(); // Initial load
+    autoRefreshInterval = setInterval(fetchMarkets, 60000); // Refresh every 60s
+
+    </script>
+</body>
+</html>

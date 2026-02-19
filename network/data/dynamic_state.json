@@ -11,5 +11,7 @@
   {"settlement_id": "siversk", "assault_intensity": 0.4, "shelling_intensity": 0.6, "supply_disruption": 0.1, "frontline_distance_km": 5, "last_updated": "2026-02-17T00:00:00Z"},
   {"settlement_id": "lyman", "assault_intensity": 0.3, "shelling_intensity": 0.5, "supply_disruption": 0.1, "frontline_distance_km": 10, "last_updated": "2026-02-17T00:00:00Z"},
   {"settlement_id": "zaporizhzhia", "assault_intensity": 0.0, "shelling_intensity": 0.2, "supply_disruption": 0.0, "frontline_distance_km": 40, "last_updated": "2026-02-17T00:00:00Z"},
-  {"settlement_id": "kostiantynivka", "assault_intensity": 0.2, "shelling_intensity": 0.5, "supply_disruption": 0.1, "frontline_distance_km": 15, "last_updated": "2026-02-17T00:00:00Z"}
+  {"settlement_id": "kostiantynivka", "assault_intensity": 0.35, "shelling_intensity": 0.6, "supply_disruption": 0.15, "frontline_distance_km": 12, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "borova", "assault_intensity": 0.2, "shelling_intensity": 0.4, "supply_disruption": 0.1, "frontline_distance_km": 10, "last_updated": "2026-02-17T00:00:00Z"},
+  {"settlement_id": "hulyaipole", "assault_intensity": 0.1, "shelling_intensity": 0.3, "supply_disruption": 0.05, "frontline_distance_km": 20, "last_updated": "2026-02-17T00:00:00Z"}
 ]

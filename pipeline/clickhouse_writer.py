@@ -117,6 +117,38 @@ TABLE_COLUMNS: dict[str, list[str]] = {
         "smart_money_score", "concentration_score", "arbitrage_flag", "insider_activity",
         "computed_at",
     ],
+    # Phase 4: Network, GNN, and news tracking tables
+    "news_articles": [
+        "article_id", "source", "source_url", "title", "body", "language", "category", "region",
+        "sentiment", "urgency", "confidence", "settlements_mentioned", "markets_mentioned",
+        "actors", "control_changes", "published_at", "ingested_at",
+    ],
+    "frontline_state": [
+        "settlement_id", "control", "assault_intensity", "shelling_intensity",
+        "supply_disruption", "frontline_distance_km", "source", "confidence",
+        "observed_at",
+    ],
+    "news_sentiment_hourly": [
+        "settlement_id", "hour", "article_count", "avg_sentiment", "max_urgency",
+        "source_diversity", "weighted_sentiment", "news_velocity",
+    ],
+    "market_microstructure": [
+        "condition_id", "bid_ask_spread", "effective_spread", "realized_spread",
+        "bid_depth_1", "ask_depth_1", "bid_depth_5", "ask_depth_5",
+        "obi", "depth_ratio", "buy_volume_5m", "sell_volume_5m", "trade_count_5m",
+        "large_trade_count_5m", "vwap_5m", "kyle_lambda", "toxic_flow_ratio",
+        "price_impact_1m", "spread_after_trade", "depth_recovery_sec", "snapshot_time",
+    ],
+    # Phase 4: Market similarity graph
+    "market_similarity_graph": [
+        "source_id", "target_id", "similarity_score",
+        "components", "method", "computed_at",
+    ],
+    "market_graph_metrics": [
+        "method", "refresh_time", "node_count", "edge_count",
+        "density", "avg_degree", "clustering_coeff",
+        "min_weight", "max_weight", "median_weight", "computed_at",
+    ],
 }
 
 
@@ -236,6 +268,26 @@ class ClickHouseWriter:
 
     async def write_composite_signals(self, rows: list[list[Any]]) -> None:
         await self.write("composite_signals", rows)
+
+    # Phase 4 convenience helpers
+
+    async def write_news_articles(self, rows: list[list[Any]]) -> None:
+        await self.write("news_articles", rows)
+
+    async def write_frontline_state(self, rows: list[list[Any]]) -> None:
+        await self.write("frontline_state", rows)
+
+    async def write_sentiment(self, rows: list[list[Any]]) -> None:
+        await self.write("news_sentiment_hourly", rows)
+
+    async def write_microstructure(self, rows: list[list[Any]]) -> None:
+        await self.write("market_microstructure", rows)
+
+    async def write_similarity_edges(self, rows: list[list[Any]]) -> None:
+        await self.write("market_similarity_graph", rows)
+
+    async def write_graph_metrics(self, rows: list[list[Any]]) -> None:
+        await self.write("market_graph_metrics", rows)
 
     # ------------------------------------------------------------------
     # Internal

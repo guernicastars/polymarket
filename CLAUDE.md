@@ -55,12 +55,12 @@ Continuous Python pipeline polling Polymarket APIs (Gamma, CLOB, Data, WebSocket
 
 **Key files:**
 - `pipeline/config.py` — All intervals, batch sizes, API URLs, buffer settings
-- `pipeline/scheduler.py` — APScheduler orchestration, WS lifecycle, health endpoint (:8080), all 11 jobs registered
+- `pipeline/scheduler.py` — APScheduler orchestration, WS lifecycle, health endpoint (:8080), all 14 jobs registered
 - `pipeline/api/gamma_client.py` — Gamma API client; categories derived from `event.tags[0].label`
 - `pipeline/api/clob_client.py` — CLOB API with concurrent batch fetching
 - `pipeline/api/data_client.py` — Data API client with leaderboard, positions, activity, holders, value, profile methods + parse helpers
 - `pipeline/api/ws_client.py` — WebSocket with auto-reconnect (exponential backoff)
-- `pipeline/clickhouse_writer.py` — Batched writer with per-table buffers (14 tables)
+- `pipeline/clickhouse_writer.py` — Batched writer with per-table buffers (18 tables)
 - `pipeline/jobs/leaderboard_sync.py` — Leaderboard scraper, populates `discovered_wallets` shared set
 - `pipeline/jobs/holder_sync.py` — Market holder tracker (uses `active_condition_ids` from market_sync)
 - `pipeline/jobs/position_sync.py` — Wallet position/activity poller (uses `discovered_wallets` from leaderboard_sync)
@@ -68,10 +68,12 @@ Continuous Python pipeline polling Polymarket APIs (Gamma, CLOB, Data, WebSocket
 - `pipeline/jobs/arbitrage_scanner.py` — Cross-market arbitrage detection (sum-to-one + related-market)
 - `pipeline/jobs/wallet_analyzer.py` — Wallet clustering + insider scoring
 - `pipeline/jobs/signal_compositor.py` — Multi-factor composite signal computation (8 signal sources)
-- `pipeline/migrate.py` — Schema migration runner (executes `001_init.sql` + `002_phase2_users.sql` + `003_phase3_analytics.sql`)
+- `pipeline/jobs/similarity_scorer.py` — Hourly market similarity graph computation (5 methods + combined)
+- `pipeline/migrate.py` — Schema migration runner (executes 7 schema files)
 - `pipeline/schema/001_init.sql` — Phase 1 ClickHouse DDL (run automatically on startup)
 - `pipeline/schema/002_phase2_users.sql` — Phase 2 ClickHouse DDL (5 new tables, run automatically on startup)
 - `pipeline/schema/003_phase3_analytics.sql` — Phase 3 ClickHouse DDL (4 new tables: arbitrage_opportunities, wallet_clusters, insider_scores, composite_signals)
+- `pipeline/schema/007_market_similarity.sql` — Market similarity graph DDL (2 tables: market_similarity_graph, market_graph_metrics)
 
 **Known behaviors:**
 - WebSocket connections 0-3 reconnect every ~10s (Polymarket server-side idle timeout) — not a bug
@@ -237,7 +239,7 @@ New tables: `arbitrage_opportunities`, `wallet_clusters`, `insider_scores`, `com
 
 Dashboard `/analytics` page with 5 stats cards (open arbitrages, wallet clusters, insider alerts, markets scored, avg confidence) and 4 tabbed views (Composite Scores, Arbitrage, Clusters, Insider). `/signals` page enhanced with Composite tab. Sidebar navigation includes Analytics link.
 
-**System totals:** 11 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3), 3 schema files (14 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components.
+**System totals:** 14 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3 + 3 Phase 4), 7 schema files (18 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components, 6 network visualizations, GNN model with graph builder + generic dataset.
 
 ## Research & Planning
 
@@ -371,8 +373,10 @@ Temporal Graph Neural Network for market prediction, following Anastasiia's 12-f
 - `features.py` — 12-feature extractor from ClickHouse: log returns, high-low spread, MA distance, bid-ask spread, OBI, depth ratio, volume delta, OI change, sentiment (smart money proxy), news velocity, inverse TTL, correlation delta
 - `dataset.py` — Temporal graph dataset: ClickHouse → (N_nodes, window_size, 12_features) tensors + adjacency matrix
 - `backtest.py` — Backtesting engine: dynamic hurdle rate (market impact), Kelly criterion sizing, walk-forward evaluation with 200ms latency + 0.5% spread. Metrics: Sharpe, max drawdown, win rate, profit factor, Calmar ratio.
-- `train.py` — Training loop with early stopping, cosine LR scheduler, gradient clipping. Modes: train, backtest, predict. CLI: `python -m network.gnn.train`
+- `train.py` — Training loop with early stopping, cosine LR scheduler, gradient clipping. Modes: train, backtest, predict. CLI: `python -m network.gnn.train --graph-type market --graph-method combined --top-markets 200`
 - `inference.py` — Production inference: load model → extract features → predict → write to ClickHouse `gnn_predictions` table
+- `graph_builder.py` — MarketGraphBuilder: 5 similarity methods (event, whale, correlation, signal, category) + combined weighted. Constructs adjacency matrices from ClickHouse data. Supports cached (from pipeline) and on-demand graph building.
+- `generic_dataset.py` — GenericMarketDataset: accepts any set of condition_ids + adjacency matrix. Factory function `create_dataset()` dispatches between settlement (DonbasTemporalDataset) and market (GenericMarketDataset) modes.
 
 **12 Features (Anastasiia's spec):**
 | # | Feature | Source |
@@ -397,14 +401,22 @@ Temporal Graph Neural Network for market prediction, following Anastasiia's 12-f
 - `timeline.json` — 19 conflict timeline events (Feb 2022 → Feb 2025) with control changes
 - `dynamic_state.json` — OSINT overlay (assault intensity, shelling, supply disruption)
 - `polymarket_mapping.json` — 7 PM target settlements → market slugs
+- `settlements_mideast.json` — 34 Middle East nodes (Gaza, Israel, Lebanon, Syria, Iran, Yemen, maritime)
+- `edges_mideast.json` — 42 Middle East edges (border, proxy supply, maritime, diplomatic)
+- `polymarket_mapping_mideast.json` — Middle East market mappings
 
 **Visualization (network/viz/):**
 - `donbas-network.html` — Leaflet.js map of Donbas region with network overlay
 - `ukraine-network.html` — Full Ukraine map with temporal slider (19 events), Russian logistics, Crimea, 67 nodes
+- `mideast-network.html` — Middle East conflict map with live Polymarket data (auto-refresh 60s), market tabs, price labels
+- `market-graph.html` — D3.js force-directed graph of 500 markets with live Gamma API, category coloring, event-based edges, search/filter/threshold controls
+- `dual-mode.html` — Toggle between geographic (Leaflet) and topological (D3 force) views of Ukraine/Middle East networks with animated transitions
+- `showcase.html` — Presentation-quality single-page app: 7 sections (hero, pipeline, graph, conflicts, GNN, signals, footer) with particle effects, animated counters, embedded interactive viz
 
 **Schema (pipeline/schema/):**
 - `004_network.sql` — 4 tables: network_vulnerability, network_supply_risk, network_cascade_scenarios, network_signals
 - `005_gnn_predictions.sql` — 3 tables: gnn_predictions, gnn_backtest_runs, gnn_backtest_trades
+- `007_market_similarity.sql` — 2 tables: market_similarity_graph (pairwise edges), market_graph_metrics (graph-level stats)
 
 **Tests:** 8 smoke tests (network) + 33 GNN tests (model, TCN causality, GAT masking, Platt scaling, Kelly, hurdle, backtest, config, integration)
 

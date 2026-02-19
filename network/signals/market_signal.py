@@ -39,23 +39,26 @@ class MarketSignalGenerator:
         self.market_prices = self._load_market_prices()
 
     def _load_market_prices(self) -> dict[str, float]:
-        """Load mock market prices (replace with live ClickHouse query)."""
+        """Load market prices from polymarket_mapping.json."""
         path = DATA_DIR / "polymarket_mapping.json"
         if not path.exists():
             return {}
         with open(path) as f:
             mapping = json.load(f)
-        # Return mock prices for now — will be replaced by ClickHouse bridge
-        mock_prices = {
-            "pokrovsk": 0.35,
-            "chasiv_yar": 0.55,
-            "toretsk": 0.50,
-            "kupiansk": 0.20,
-            "zaporizhzhia": 0.03,
-            "orikhiv": 0.15,
-            "hryshyne": 0.75,
-        }
-        return mock_prices
+
+        prices = {}
+        for settlement_id, data in mapping.items():
+            # Use the nearest-deadline sub_market price if available
+            if "sub_markets" in data:
+                # Pick the earliest unresolved sub-market
+                for key in ["feb_28", "mar_31", "jun_30", "dec_31"]:
+                    if key in data["sub_markets"]:
+                        prices[settlement_id] = data["sub_markets"][key]["market_price"]
+                        break
+            elif "market_price" in data:
+                prices[settlement_id] = data["market_price"]
+
+        return prices
 
     def model_probability(self, settlement_id: str) -> float:
         """Compute P(fall) from vulnerability, supply, and cascade analysis.

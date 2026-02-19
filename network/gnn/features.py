@@ -10,8 +10,10 @@ Maps Anastasiia's 12 features to our existing ClickHouse tables:
   F6  depth_ratio          → orderbook_snapshots (top5/top1 depth)
   F7  volume_delta         → market_trades (volume acceleration)
   F8  open_interest_change → market_holders (delta in total holdings)
-  F9  sentiment_score      → composite_signals.smart_money_score (proxy)
-  F10 news_velocity        → market_trades count where size > 5000 (large trade count)
+  F9  sentiment_score      → news_sentiment_hourly.weighted_sentiment (primary) with
+                              composite_signals.smart_money_score (fallback)
+  F10 news_velocity        → news_articles article count (primary) with
+                              market_trades large trade count (fallback)
   F11 inv_time_to_expiry   → markets.end_date
   F12 correlation_delta    → market_prices of sibling markets in same event
 """
@@ -34,6 +36,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # F1-F3: Price-based features aggregated into 5-min bars
+# Primary: market_prices (tick-level snapshots)
 PRICE_FEATURES_SQL = """
 SELECT
     toStartOfInterval(timestamp, INTERVAL {step} MINUTE) AS bar_time,
@@ -44,6 +47,25 @@ SELECT
     avg(bid) AS avg_bid,
     avg(ask) AS avg_ask
 FROM market_prices
+WHERE condition_id = {{condition_id:String}}
+  AND outcome = 'Yes'
+  AND timestamp >= {{start:DateTime64(3)}}
+  AND timestamp < {{end:DateTime64(3)}}
+GROUP BY bar_time
+ORDER BY bar_time
+"""
+
+# Fallback: derive OHLC from market_trades when market_prices is empty
+PRICE_FROM_TRADES_SQL = """
+SELECT
+    toStartOfInterval(timestamp, INTERVAL {step} MINUTE) AS bar_time,
+    argMin(price, timestamp) AS open_price,
+    max(price) AS high_price,
+    min(price) AS low_price,
+    argMax(price, timestamp) AS close_price,
+    0.0 AS avg_bid,
+    0.0 AS avg_ask
+FROM market_trades
 WHERE condition_id = {{condition_id:String}}
   AND outcome = 'Yes'
   AND timestamp >= {{start:DateTime64(3)}}
@@ -94,7 +116,7 @@ WHERE condition_id = {{condition_id:String}}
 GROUP BY proxy_wallet
 """
 
-# F9: Sentiment proxy — smart money score from composite signals
+# F9: Sentiment — weighted sentiment from news data (primary), fallback to smart money score
 SENTIMENT_SQL = """
 SELECT
     smart_money_score,
@@ -103,6 +125,34 @@ FROM composite_signals FINAL
 WHERE condition_id = {{condition_id:String}}
 ORDER BY computed_at DESC
 LIMIT 1
+"""
+
+NEWS_SENTIMENT_SQL = """
+SELECT
+    toStartOfInterval(hour, INTERVAL {step} MINUTE) AS bar_time,
+    avg(weighted_sentiment) AS sentiment,
+    sum(article_count) AS article_count,
+    avg(news_velocity) AS velocity
+FROM news_sentiment_hourly
+WHERE settlement_id = {{settlement_id:String}}
+  AND hour >= {{start:DateTime}}
+  AND hour < {{end:DateTime}}
+GROUP BY bar_time
+ORDER BY bar_time
+"""
+
+# F10: News velocity — article count from news data (primary), fallback to large trade count
+NEWS_VELOCITY_SQL = """
+SELECT
+    toStartOfInterval(published_at, INTERVAL {step} MINUTE) AS bar_time,
+    count() AS article_count,
+    avg(urgency) AS avg_urgency
+FROM news_articles
+WHERE has(markets_mentioned, {{condition_id:String}})
+  AND published_at >= {{start:DateTime64(3)}}
+  AND published_at < {{end:DateTime64(3)}}
+GROUP BY bar_time
+ORDER BY bar_time
 """
 
 # F11: Time to expiry
@@ -157,8 +207,15 @@ class FeatureExtractor:
         condition_id: str,
         event_slug: str,
         end_time: Optional[datetime] = None,
+        settlement_id: Optional[str] = None,
     ) -> np.ndarray:
         """Extract 12-feature window ending at end_time.
+
+        Args:
+            condition_id: Market condition ID
+            event_slug: Event slug for sibling market correlation
+            end_time: Window end time (defaults to now)
+            settlement_id: Settlement ID for news sentiment enrichment (optional)
 
         Returns:
             np.ndarray of shape (window_size, 12), normalized.
@@ -186,12 +243,16 @@ class FeatureExtractor:
         sibling_prices = self._fetch_sibling_prices(
             condition_id, event_slug, start_time, end_time
         )
+        news_sentiment = self._fetch_news_sentiment(settlement_id, start_time, end_time) if settlement_id else []
+        news_velocity = self._fetch_news_velocity(condition_id, start_time, end_time)
 
         # --- Align to bar_times and compute features ---
         price_map = {row[0]: row[1:] for row in prices}  # bar_time → (o,h,l,c,bid,ask)
         ob_map = {row[0]: row[1:] for row in orderbooks}
         vol_map = {row[0]: row[1:] for row in volumes}
         sib_map = {row[1]: row[2] for row in sibling_prices}  # bar_time → close
+        news_sent_map = {row[0]: row[1:] for row in news_sentiment}  # bar_time → (sentiment, article_count, velocity)
+        news_vel_map = {row[0]: row[1:] for row in news_velocity}  # bar_time → (article_count, avg_urgency)
 
         prev_close = None
         close_history = []
@@ -254,13 +315,21 @@ class FeatureExtractor:
             # Full OI tracking requires per-step holder snapshots; use 0 until available
             features[i, 7] = 0.0
 
-            # --- F9: Sentiment proxy (smart money score) ---
-            if sentiment is not None:
+            # --- F9: Sentiment (news sentiment preferred, fallback to smart money score) ---
+            news_sent = news_sent_map.get(bt)
+            if news_sent is not None:
+                # news_sent[0] is weighted_sentiment, assumed to be in [-1, 1] range
+                features[i, 8] = news_sent[0]
+            elif sentiment is not None:
                 features[i, 8] = sentiment / 100.0  # normalize to [-1, 1]
 
-            # --- F10: News velocity (large trade count) ---
-            if v is not None:
-                features[i, 9] = v[1]  # large_trade_count
+            # --- F10: News velocity (article count preferred, fallback to large trade count) ---
+            news_vel = news_vel_map.get(bt)
+            if news_vel is not None:
+                # news_vel[0] is article_count
+                features[i, 9] = float(news_vel[0])
+            elif v is not None:
+                features[i, 9] = v[1]  # large_trade_count as fallback
 
             # --- F11: Inverse time to expiry ---
             if end_date is not None:
@@ -288,10 +357,21 @@ class FeatureExtractor:
     def _fetch_prices(self, cid, start, end):
         sql = PRICE_FEATURES_SQL.format(step=self.cfg.step_minutes)
         try:
-            return self.client.query(
+            rows = self.client.query(
                 sql,
                 parameters={"condition_id": cid, "start": start, "end": end},
             ).result_rows
+            if rows:
+                return rows
+            # Fallback: derive price bars from market_trades
+            sql_trades = PRICE_FROM_TRADES_SQL.format(step=self.cfg.step_minutes)
+            rows = self.client.query(
+                sql_trades,
+                parameters={"condition_id": cid, "start": start, "end": end},
+            ).result_rows
+            if rows:
+                logger.debug("Using trade-derived prices for %s (%d bars)", cid, len(rows))
+            return rows
         except Exception as e:
             logger.warning("price fetch failed for %s: %s", cid, e)
             return []
@@ -352,4 +432,38 @@ class FeatureExtractor:
             ).result_rows
         except Exception as e:
             logger.warning("sibling fetch failed for %s: %s", cid, e)
+            return []
+
+    def _fetch_news_sentiment(self, settlement_id, start, end):
+        """Fetch news sentiment aggregated into 5-minute bars by settlement_id."""
+        if not settlement_id:
+            return []
+        sql = NEWS_SENTIMENT_SQL.format(step=self.cfg.step_minutes)
+        try:
+            return self.client.query(
+                sql,
+                parameters={
+                    "settlement_id": settlement_id,
+                    "start": start,
+                    "end": end,
+                },
+            ).result_rows
+        except Exception as e:
+            logger.warning("news sentiment fetch failed for settlement %s: %s", settlement_id, e)
+            return []
+
+    def _fetch_news_velocity(self, cid, start, end):
+        """Fetch news article counts aggregated into 5-minute bars by condition_id."""
+        sql = NEWS_VELOCITY_SQL.format(step=self.cfg.step_minutes)
+        try:
+            return self.client.query(
+                sql,
+                parameters={
+                    "condition_id": cid,
+                    "start": start,
+                    "end": end,
+                },
+            ).result_rows
+        except Exception as e:
+            logger.warning("news velocity fetch failed for %s: %s", cid, e)
             return []

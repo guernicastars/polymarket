@@ -1,0 +1,52 @@
+[
+  {"source": "gaza_city", "target": "jabalia", "edge_type": "URBAN_ROAD", "weight": 0.7, "capacity": 0.3, "distance_km": 5, "is_frontline": true, "description": "Northern Gaza urban corridor, heavily contested"},
+  {"source": "gaza_city", "target": "deir_al_balah", "edge_type": "HIGHWAY", "weight": 0.8, "capacity": 0.2, "distance_km": 15, "is_frontline": true, "description": "Salah al-Din Road southward, damaged"},
+  {"source": "gaza_city", "target": "netzarim", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 8, "is_frontline": true, "description": "IDF Netzarim Corridor divides north-south Gaza"},
+  {"source": "deir_al_balah", "target": "khan_younis", "edge_type": "HIGHWAY", "weight": 0.7, "capacity": 0.3, "distance_km": 12, "is_frontline": true, "description": "Central to southern Gaza road"},
+  {"source": "deir_al_balah", "target": "netzarim", "edge_type": "FRONTLINE", "weight": 1.0, "capacity": 0.1, "distance_km": 5, "is_frontline": true, "description": "Netzarim Corridor southern edge"},
+  {"source": "khan_younis", "target": "rafah", "edge_type": "HIGHWAY", "weight": 0.6, "capacity": 0.3, "distance_km": 10, "is_frontline": true, "description": "Southern Gaza road to Egyptian border"},
+  {"source": "rafah", "target": "cairo", "edge_type": "BORDER_CROSSING", "weight": 0.9, "capacity": 0.1, "distance_km": 350, "description": "Rafah crossing → Cairo, severely restricted"},
+
+  {"source": "gaza_city", "target": "sderot", "edge_type": "BORDER", "weight": 1.0, "capacity": 0.0, "distance_km": 5, "is_frontline": true, "description": "Gaza-Israel border fence, Oct 7 attack axis"},
+  {"source": "sderot", "target": "tel_aviv", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 85, "description": "Route 4 / Highway 232 to Tel Aviv"},
+  {"source": "tel_aviv", "target": "jerusalem", "edge_type": "HIGHWAY", "weight": 0.1, "capacity": 1.0, "distance_km": 65, "description": "Highway 1 — major Israeli artery"},
+  {"source": "tel_aviv", "target": "haifa", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 1.0, "distance_km": 95, "description": "Coastal highway northward"},
+  {"source": "haifa", "target": "kiryat_shmona", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 100, "description": "Route 90 to Lebanese border"},
+  {"source": "jerusalem", "target": "ramallah", "edge_type": "CONTROLLED_CROSSING", "weight": 0.5, "capacity": 0.4, "distance_km": 15, "description": "Qalandiya checkpoint corridor"},
+  {"source": "jerusalem", "target": "golan_heights", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.9, "distance_km": 180, "description": "Route 90 through Jordan Valley to Golan"},
+
+  {"source": "ramallah", "target": "nablus", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 50, "description": "West Bank Route 60, IDF checkpoints"},
+  {"source": "nablus", "target": "jenin", "edge_type": "HIGHWAY", "weight": 0.5, "capacity": 0.5, "distance_km": 45, "description": "Route 60 north, frequent IDF raids"},
+
+  {"source": "kiryat_shmona", "target": "south_lebanon", "edge_type": "BORDER", "weight": 1.0, "capacity": 0.0, "distance_km": 5, "is_frontline": true, "description": "Blue Line — Israel-Lebanon border, active conflict zone"},
+  {"source": "south_lebanon", "target": "nabatieh", "edge_type": "HIGHWAY", "weight": 0.6, "capacity": 0.4, "distance_km": 25, "is_frontline": true, "description": "Road through Hezbollah territory, IDF operations"},
+  {"source": "south_lebanon", "target": "beirut", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 85, "description": "Coastal road to Beirut"},
+  {"source": "nabatieh", "target": "beirut", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 70, "description": "Interior road to Beirut via Chouf"},
+  {"source": "beirut", "target": "baalbek", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.8, "distance_km": 85, "description": "Beirut-Baalbek via Bekaa Valley"},
+  {"source": "baalbek", "target": "damascus", "edge_type": "SUPPLY_ROUTE", "weight": 0.5, "capacity": 0.5, "distance_km": 110, "description": "Iran-Hezbollah supply corridor via Syria"},
+
+  {"source": "golan_heights", "target": "quneitra", "edge_type": "BORDER", "weight": 0.8, "capacity": 0.1, "distance_km": 10, "description": "UNDOF buffer zone, Golan-Syria border"},
+  {"source": "quneitra", "target": "damascus", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.7, "distance_km": 60, "description": "Road to Damascus through Golan foothills"},
+  {"source": "damascus", "target": "daraa", "edge_type": "HIGHWAY", "weight": 0.3, "capacity": 0.7, "distance_km": 100, "description": "M5 highway south to Jordanian border"},
+  {"source": "daraa", "target": "amman", "edge_type": "BORDER_CROSSING", "weight": 0.4, "capacity": 0.6, "distance_km": 100, "description": "Nasib/Jaber crossing to Jordan"},
+  {"source": "amman", "target": "jerusalem", "edge_type": "BORDER_CROSSING", "weight": 0.3, "capacity": 0.7, "distance_km": 85, "description": "Allenby/King Hussein Bridge crossing"},
+
+  {"source": "tehran", "target": "isfahan", "edge_type": "HIGHWAY", "weight": 0.1, "capacity": 1.0, "distance_km": 340, "description": "Major Iranian highway south"},
+  {"source": "isfahan", "target": "natanz", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 140, "description": "Road to nuclear enrichment facility"},
+  {"source": "tehran", "target": "natanz", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 260, "description": "Direct route to Natanz facility"},
+  {"source": "isfahan", "target": "bandar_abbas", "edge_type": "HIGHWAY", "weight": 0.2, "capacity": 0.9, "distance_km": 680, "description": "Interior route to Strait of Hormuz port"},
+  {"source": "bandar_abbas", "target": "strait_of_hormuz", "edge_type": "MARITIME", "weight": 0.3, "capacity": 0.8, "distance_km": 50, "description": "IRGC naval base controls strait approaches"},
+
+  {"source": "tehran", "target": "damascus", "edge_type": "AIR_CORRIDOR", "weight": 0.4, "capacity": 0.6, "distance_km": 1550, "description": "Iran-Syria air bridge — IRGC logistics flights"},
+  {"source": "tehran", "target": "baalbek", "edge_type": "PROXY_SUPPLY", "weight": 0.5, "capacity": 0.4, "distance_km": 1600, "description": "Iran → Syria → Bekaa Valley Hezbollah supply chain"},
+  {"source": "tehran", "target": "sanaa", "edge_type": "PROXY_SUPPLY", "weight": 0.6, "capacity": 0.3, "distance_km": 2500, "description": "Iran-Houthi weapons and drone supply route"},
+
+  {"source": "sanaa", "target": "hodeidah", "edge_type": "HIGHWAY", "weight": 0.4, "capacity": 0.6, "distance_km": 226, "description": "Sanaa-Hodeidah road, Houthi-controlled"},
+  {"source": "hodeidah", "target": "bab_el_mandeb", "edge_type": "MARITIME", "weight": 0.5, "capacity": 0.5, "distance_km": 300, "description": "Houthi anti-ship missile/drone range to strait"},
+  {"source": "bab_el_mandeb", "target": "strait_of_hormuz", "edge_type": "SHIPPING_LANE", "weight": 0.3, "capacity": 0.9, "distance_km": 2400, "description": "Global shipping route — Red Sea to Persian Gulf"},
+
+  {"source": "cairo", "target": "amman", "edge_type": "DIPLOMATIC", "weight": 0.2, "capacity": 0.8, "distance_km": 450, "description": "Egypt-Jordan diplomatic axis, ceasefire mediators"},
+  {"source": "doha", "target": "tehran", "edge_type": "DIPLOMATIC", "weight": 0.3, "capacity": 0.7, "distance_km": 950, "description": "Qatar-Iran diplomatic channel"},
+  {"source": "doha", "target": "cairo", "edge_type": "DIPLOMATIC", "weight": 0.2, "capacity": 0.8, "distance_km": 2100, "description": "Qatar-Egypt mediation coordination"},
+  {"source": "doha", "target": "tel_aviv", "edge_type": "DIPLOMATIC", "weight": 0.3, "capacity": 0.6, "distance_km": 1700, "description": "Qatar-Israel back-channel via Hamas political bureau"}
+]
