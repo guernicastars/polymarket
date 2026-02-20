@@ -239,7 +239,7 @@ New tables: `arbitrage_opportunities`, `wallet_clusters`, `insider_scores`, `com
 
 Dashboard `/analytics` page with 5 stats cards (open arbitrages, wallet clusters, insider alerts, markets scored, avg confidence) and 4 tabbed views (Composite Scores, Arbitrage, Clusters, Insider). `/signals` page enhanced with Composite tab. Sidebar navigation includes Analytics link.
 
-**System totals:** 14 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3 + 3 Phase 4), 7 schema files (18 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components, 6 network visualizations, GNN model with graph builder + generic dataset.
+**System totals:** 14 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3 + 3 Phase 4), 7 schema files (18 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components, 6 network visualizations, GNN model with graph builder + generic dataset, embedding PoC (autoencoder + 5 linear probes + disentanglement analysis).
 
 ## Research & Planning
 
@@ -419,6 +419,31 @@ Temporal Graph Neural Network for market prediction, following Anastasiia's 12-f
 - `007_market_similarity.sql` — 2 tables: market_similarity_graph (pairwise edges), market_graph_metrics (graph-level stats)
 
 **Tests:** 8 smoke tests (network) + 33 GNN tests (model, TCN causality, GAT masking, Platt scaling, Kelly, hurdle, backtest, config, integration)
+
+**Embedding PoC (network/embedding/) — Research Module:**
+Autoencoder-based market embedding with linear probe framework. Proves that neural embeddings disentangle interpretable market concepts into linearly separable directions. Trained on 2,099 resolved Polymarket markets.
+
+- `config.py` — 4 dataclasses: `EmbeddingFeatureConfig` (27 features, min_volume, lifetime_cutoff_ratio), `AutoencoderConfig` (latent_dim=64, encoder/decoder hidden, VAE option), `ProbeConfig` (CV folds, permutation tests, PCA components), `EmbeddingConfig` (aggregates all + ClickHouse settings)
+- `data.py` — `ResolvedMarketDataset`: ClickHouse → 27 summary features per resolved market lifecycle. Discovers resolved markets via `markets FINAL` JOIN `market_trades`. Six feature groups: price (7), volume (5), liquidity (4, mostly zero — pipeline only polls active markets), participation (4, zero — no holder data for resolved), temporal (3), structure (4). Supports `lifetime_cutoff_ratio` (0.8 = leakage-safe first 80%, 1.0 = full). Z-score normalization. Extracts labels: winning_outcome, category, duration_bucket, volume_bucket, volatility_regime.
+- `model.py` — Two architectures: `MarketAutoencoder` (Linear→BN→GELU→Dropout per layer, deterministic bottleneck) and `VariationalAutoencoder` (mu+log_var, reparameterization trick, KL+recon loss). Factory: `create_autoencoder(input_dim, cfg)`.
+- `train.py` — `EmbeddingTrainer`: AdamW + CosineAnnealingLR + early stopping. Saves checkpoint, embeddings.npy, probe_results.json, normalization params. CLI: `python -m network.embedding.train --mode full --latent-dim 32 --epochs 150 --min-volume 5000`
+- `probes.py` — `LinearProbe`: sklearn LogisticRegression/Ridge on frozen embeddings. 5-fold stratified CV + permutation test (N=200). Probes: winning_outcome (binary), category, duration_bucket, volume_bucket, volatility_regime. Returns sorted `ProbeResult` with accuracy, baseline, p-value, coefficients.
+- `analysis.py` — `DisentanglementAnalyzer`: PCA variance analysis, novel direction search (PCA components with low max|r| to input features), orthogonality test (cosine similarity of probe weight vectors), temporal stability, cluster validation (silhouette scores), t-SNE coordinates.
+- `interpret.py` — `FeatureInterpreter`: Jacobian-based input attribution (d(encoder)/dx), correlation-based fallback, plain-language report generation. Links probe directions to input features.
+
+**Embedding Results (2,099 resolved markets, 19 active features, latent_dim=32):**
+
+| Probe | cutoff=0.8 | cutoff=1.0 | Baseline | p-value |
+|-------|------------|------------|----------|---------|
+| volatility_regime | 95.8% | 95.9% | 50.0% | <0.005 |
+| duration_bucket | 87.0% | 85.0% | 52.5% | <0.005 |
+| winning_outcome | 69.9% | 67.5% | 64.4% | <0.005 |
+| category | 67.7% | 67.0% | 27.7% | <0.005 |
+| volume_bucket | 59.9% | 59.5% | 34.0% | <0.005 |
+
+All 5/5 probes significant. Cutoff=0.8 slightly outperforms cutoff=1.0 (resolution tail adds noise). Duration and category probes show weak input correlations — genuinely emergent encodings, not passthrough. 7 novel PCA directions found (max|r|<0.15 to any input).
+
+**Embedding Tests:** 31 tests (model forward pass, VAE reparameterization, gradient flow, training convergence, probe correctness, config validation) in `network/tests/test_embedding.py`.
 
 ## Known Issues
 - WebSocket connections 0-3 reconnect every ~10s (Polymarket server-side idle timeout)

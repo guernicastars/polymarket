@@ -1,0 +1,79 @@
+[
+  {
+    "concept_name": "volatility_regime",
+    "task_type": "classification",
+    "accuracy": 0.9575974542561655,
+    "accuracy_std": 0.004869088434012321,
+    "baseline_accuracy": 0.5002382086707956,
+    "p_value": 0.004975124378109453,
+    "is_significant": true,
+    "cv_scores": [
+      0.9523809523809523,
+      0.9666666666666667,
+      0.9571428571428572,
+      0.9571428571428572,
+      0.954653937947494
+    ]
+  },
+  {
+    "concept_name": "duration_bucket",
+    "task_type": "classification",
+    "accuracy": 0.8699409023752699,
+    "accuracy_std": 0.009906992398872216,
+    "baseline_accuracy": 0.525488327775131,
+    "p_value": 0.004975124378109453,
+    "is_significant": true,
+    "cv_scores": [
+      0.8666666666666667,
+      0.8738095238095238,
+      0.8523809523809524,
+      0.8809523809523809,
+      0.8758949880668258
+    ]
+  },
+  {
+    "concept_name": "winning_outcome",
+    "task_type": "classification",
+    "accuracy": 0.6989101034208433,
+    "accuracy_std": 0.031946452185688444,
+    "baseline_accuracy": 0.643639828489757,
+    "p_value": 0.004975124378109453,
+    "is_significant": true,
+    "cv_scores": [
+      0.7333333333333333,
+      0.7166666666666667,
+      0.6928571428571428,
+      0.6404761904761904,
+      0.711217183770883
+    ]
+  },
+  {
+    "concept_name": "category",
+    "task_type": "classification",
+    "accuracy": 0.6774610740387671,
+    "accuracy_std": 0.00920559262789955,
+    "baseline_accuracy": 0.2772748928060981,
+    "p_value": 0.004975124378109453,
+    "is_significant": true,
+    "cv_scores": [
+      0.6866666666666666,
+      0.6682554814108675
+    ]
+  },
+  {
+    "concept_name": "volume_bucket",
+    "task_type": "classification",
+    "accuracy": 0.5988487328105466,
+    "accuracy_std": 0.01254708497669647,
+    "baseline_accuracy": 0.3396855645545498,
+    "p_value": 0.004975124378109453,
+    "is_significant": true,
+    "cv_scores": [
+      0.6047619047619047,
+      0.5976190476190476,
+      0.5904761904761905,
+      0.6190476190476191,
+      0.5823389021479713
+    ]
+  }
+]

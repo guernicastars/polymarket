@@ -1,0 +1,1 @@
+["start_price", "cutoff_price", "min_price", "max_price", "price_volatility", "price_range", "final_runup_speed", "total_volume", "daily_avg_volume", "peak_daily_volume", "volume_gini", "volume_trend_slope", "duration_days", "active_trading_days_ratio", "time_to_peak_volume", "n_outcomes", "is_binary", "category_encoded", "event_group_size"]
