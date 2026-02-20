@@ -13,8 +13,12 @@ import logging
 import pathlib
 from datetime import datetime, timezone
 
-import numpy as np
 import clickhouse_connect
+
+try:
+    import numpy as np
+except ImportError:
+    np = None  # type: ignore[assignment]
 
 from pipeline.clickhouse_writer import ClickHouseWriter
 from pipeline.config import (
@@ -51,6 +55,10 @@ def _get_read_client() -> clickhouse_connect.driver.client.Client:
 async def _initialize() -> None:
     """Initialize the online learner on first run."""
     global _learner, _extractor, _initialized, _target_cids, _target_names
+
+    if np is None:
+        logger.warning("numpy not installed — online GNN disabled")
+        return
 
     from network.gnn.config import GNNConfig, OnlineLearningConfig
     from network.gnn.online_learner import OnlineLearner
