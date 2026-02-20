@@ -1,0 +1,395 @@
+{
+  "experiment": "art_market_orth_svae",
+  "timestamp": "2026-02-20T12:41:36",
+  "dataset": {
+    "name": "Art Market Auctions",
+    "n_samples": 29485,
+    "n_features": 30,
+    "n_features_dropped": 0,
+    "task_type": "regression",
+    "majority_baseline": 0.5,
+    "feature_names": [
+      "age_at_creation",
+      "artist_avg_log_price",
+      "artist_birth_year",
+      "artist_career_length",
+      "artist_market_depth",
+      "artist_median_log_price",
+      "artist_price_std",
+      "artist_prior_lots",
+      "aspect_ratio",
+      "creation_is_approximate",
+      "creation_year",
+      "has_depth",
+      "height_cm",
+      "is_decorative",
+      "is_living",
+      "is_painting",
+      "is_rare_artist",
+      "is_sculpture",
+      "is_work_on_paper",
+      "log_depth_cm",
+      "log_surface_area",
+      "lot_position_pct",
+      "medium_known",
+      "nationality_known",
+      "sale_day_of_week",
+      "sale_month",
+      "sale_size",
+      "sale_year_numeric",
+      "width_cm",
+      "years_since_creation"
+    ]
+  },
+  "hyperparameters": {
+    "embedding_dim": 8,
+    "beta": 1.0,
+    "alpha": 1.0,
+    "gamma": 1.0,
+    "epochs": 300,
+    "batch_size": 128,
+    "patience": 30,
+    "seed": 42
+  },
+  "training": {
+    "best_epoch": 75,
+    "best_val_loss": 1.724035841353396,
+    "pca_explained_variance": 0.5562971264024605
+  },
+  "raw_multicollinearity": {
+    "vif_mean": 4.11044925404152,
+    "vif_max": Infinity,
+    "vif_severe": 4,
+    "condition_number": Infinity,
+    "max_correlation": 0.9999999999999996
+  },
+  "cv_results": {
+    "raw_lr": {
+      "label": "Raw+LR",
+      "cv_accuracy": 0.7015092419874511,
+      "cv_accuracy_std": 0.0050229376520965685,
+      "cv_balanced_accuracy": 0.7016344058928521,
+      "cv_f1_macro": 0.6998618288690044,
+      "cv_auc": 0.7592928534241745
+    },
+    "pca_lr": {
+      "label": "PCA+LR",
+      "cv_accuracy": 0.674648126165847,
+      "cv_accuracy_std": 0.004443584282842149,
+      "cv_balanced_accuracy": 0.6748160142989168,
+      "cv_f1_macro": 0.6713595614001294,
+      "cv_auc": 0.7158704739131958
+    },
+    "raw_rf": {
+      "label": "Raw+RF",
+      "cv_accuracy": 0.7374258097337629,
+      "cv_accuracy_std": 0.003674167221014306,
+      "cv_balanced_accuracy": 0.737519826072648,
+      "cv_f1_macro": 0.7366205326924788,
+      "cv_auc": 0.8169620335603376
+    },
+    "raw_lgbm": {
+      "label": "Raw+LGBM",
+      "cv_accuracy": 0.7324402238426319,
+      "cv_accuracy_std": 0.0038541557322969086,
+      "cv_balanced_accuracy": 0.732553545445392,
+      "cv_f1_macro": 0.7312408849427616,
+      "cv_auc": 0.8100591393335703
+    },
+    "svae_lr": {
+      "label": "SVAE+LR",
+      "cv_accuracy": 0.7542818382228251,
+      "cv_accuracy_std": 0.0029234338734284914,
+      "cv_balanced_accuracy": 0.7543866853096584,
+      "cv_f1_macro": 0.7533325270364049,
+      "cv_auc": 0.8307297033911174
+    },
+    "representation_quality": {
+      "raw": {
+        "label": "Raw+LR",
+        "dims": 30,
+        "vif_mean": 4.11044925404152,
+        "vif_max": Infinity,
+        "vif_severe": 4,
+        "condition_number": Infinity,
+        "orth_max_cos": 3.391555027980534e-05,
+        "orth_mean_cos": 2.9329145856408704e-06,
+        "wald_significant": 21,
+        "wald_total": 30,
+        "wald_fraction": 0.7,
+        "cv_accuracy": 0.7015092419874511,
+        "cv_balanced_accuracy": 0.7016344058928521,
+        "cv_f1_macro": 0.6998618288690044,
+        "cv_auc": 0.7592928534241745,
+        "cv_accuracy_std": 0.0050229376520965685
+      },
+      "pca": {
+        "label": "PCA+LR",
+        "dims": 8,
+        "vif_mean": 1.0052592594835215,
+        "vif_max": 1.0098693605197469,
+        "vif_severe": 0,
+        "condition_number": 1.7224785803506728,
+        "orth_max_cos": 3.2212454666561085e-06,
+        "orth_mean_cos": 1.0542509004772245e-06,
+        "wald_significant": 6,
+        "wald_total": 8,
+        "wald_fraction": 0.75,
+        "cv_accuracy": 0.674648126165847,
+        "cv_balanced_accuracy": 0.6748160142989168,
+        "cv_f1_macro": 0.6713595614001294,
+        "cv_auc": 0.7158704739131958,
+        "cv_accuracy_std": 0.004443584282842149
+      },
+      "svae": {
+        "label": "SVAE+LR",
+        "dims": 8,
+        "vif_mean": 1.0018804026648989,
+        "vif_max": 1.0038614391072265,
+        "vif_severe": 0,
+        "condition_number": 4.024064064025879,
+        "orth_max_cos": 1.2368816442176467e-06,
+        "orth_mean_cos": 4.15830498923242e-07,
+        "wald_significant": 7,
+        "wald_total": 8,
+        "wald_fraction": 0.875,
+        "cv_accuracy": 0.7542818382228251,
+        "cv_balanced_accuracy": 0.7543866853096584,
+        "cv_f1_macro": 0.7533325270364049,
+        "cv_auc": 0.8307297033911174,
+        "cv_accuracy_std": 0.0029234338734284914
+      }
+    }
+  },
+  "oos_results": {
+    "raw_lr": {
+      "label": "Raw+LR",
+      "accuracy": 0.7318562061948903,
+      "balanced_accuracy": 0.700230286083751,
+      "f1_macro": 0.7035375353787447,
+      "auc": 0.7454727897154276
+    },
+    "pca_lr": {
+      "label": "PCA+LR",
+      "accuracy": 0.7151254804431382,
+      "balanced_accuracy": 0.6796854926064941,
+      "f1_macro": 0.6804498603217417,
+      "auc": 0.6861744380347801
+    },
+    "raw_rf": {
+      "label": "Raw+RF",
+      "accuracy": 0.7424824779561384,
+      "balanced_accuracy": 0.7176135266308957,
+      "f1_macro": 0.722240965065735,
+      "auc": 0.7570619316321133
+    },
+    "raw_lgbm": {
+      "label": "Raw+LGBM",
+      "accuracy": 0.7329866606375763,
+      "balanced_accuracy": 0.7041973154982324,
+      "f1_macro": 0.7080775235257841,
+      "auc": 0.7353668623153724
+    },
+    "svae_lr": {
+      "label": "SVAE+LR",
+      "accuracy": 0.7838571105584445,
+      "balanced_accuracy": 0.7651435666843003,
+      "f1_macro": 0.7707127986912958,
+      "auc": 0.8422506738544474
+    }
+  },
+  "walk_forward": {
+    "Raw+LR": {
+      "mean": 0.6949990308199263,
+      "std": 0.029138169633946408
+    },
+    "PCA+LR": {
+      "mean": 0.6717871680558247,
+      "std": 0.03136750222875293
+    },
+    "Raw+RF": {
+      "mean": 0.703915487497577,
+      "std": 0.03049438508845873
+    },
+    "Raw+LGBM": {
+      "mean": 0.6912676875363443,
+      "std": 0.036098445108166705
+    },
+    "SVAE+LR": {
+      "mean": 0.7364799379724751,
+      "std": 0.026959238070500047
+    },
+    "n_windows": 14
+  },
+  "probe_results": [
+    {
+      "concept": "medium",
+      "raw": {
+        "concept": "medium",
+        "input_type": "raw",
+        "accuracy": 0.5696236374033345,
+        "accuracy_std": 0.005110790131480512,
+        "n_classes": 8,
+        "n_samples": 15828
+      },
+      "pca": {
+        "concept": "medium",
+        "input_type": "pca",
+        "accuracy": 0.49886261911961505,
+        "accuracy_std": 0.004388344472937912,
+        "n_classes": 8,
+        "n_samples": 15828
+      },
+      "svae": {
+        "concept": "medium",
+        "input_type": "svae",
+        "accuracy": 0.44882480622011717,
+        "accuracy_std": 0.0021228654099139503,
+        "n_classes": 8,
+        "n_samples": 15828
+      }
+    },
+    {
+      "concept": "artist_vital_status",
+      "raw": {
+        "concept": "artist_vital_status",
+        "input_type": "raw",
+        "accuracy": 0.8426996778022723,
+        "accuracy_std": 0.0035725810635275418,
+        "n_classes": 2,
+        "n_samples": 29485
+      },
+      "pca": {
+        "concept": "artist_vital_status",
+        "input_type": "pca",
+        "accuracy": 0.8142784466677971,
+        "accuracy_std": 0.006773267405276707,
+        "n_classes": 2,
+        "n_samples": 29485
+      },
+      "svae": {
+        "concept": "artist_vital_status",
+        "input_type": "svae",
+        "accuracy": 0.7747668305918263,
+        "accuracy_std": 0.0029884199792315777,
+        "n_classes": 2,
+        "n_samples": 29485
+      }
+    },
+    {
+      "concept": "sale_category",
+      "raw": {
+        "concept": "sale_category",
+        "input_type": "raw",
+        "accuracy": 0.39257249448872306,
+        "accuracy_std": 0.004059961947199042,
+        "n_classes": 10,
+        "n_samples": 29485
+      },
+      "pca": {
+        "concept": "sale_category",
+        "input_type": "pca",
+        "accuracy": 0.3544514159742242,
+        "accuracy_std": 0.005359730113655574,
+        "n_classes": 10,
+        "n_samples": 29485
+      },
+      "svae": {
+        "concept": "sale_category",
+        "input_type": "svae",
+        "accuracy": 0.3613023571307445,
+        "accuracy_std": 0.006162559079523208,
+        "n_classes": 10,
+        "n_samples": 29485
+      }
+    },
+    {
+      "concept": "price_bucket",
+      "raw": {
+        "concept": "price_bucket",
+        "input_type": "raw",
+        "accuracy": 0.3800915719857555,
+        "accuracy_std": 0.006034299845015211,
+        "n_classes": 4,
+        "n_samples": 29485
+      },
+      "pca": {
+        "concept": "price_bucket",
+        "input_type": "pca",
+        "accuracy": 0.3623198236391386,
+        "accuracy_std": 0.0037331763013917466,
+        "n_classes": 4,
+        "n_samples": 29485
+      },
+      "svae": {
+        "concept": "price_bucket",
+        "input_type": "svae",
+        "accuracy": 0.3905375614719349,
+        "accuracy_std": 0.009968518171827001,
+        "n_classes": 4,
+        "n_samples": 29485
+      }
+    },
+    {
+      "concept": "hammer_price",
+      "raw": {
+        "concept": "hammer_price",
+        "input_type": "raw",
+        "r2": 0.2926732613828428,
+        "r2_std": 0.00979920951095358,
+        "mae": 0.9635086578848991,
+        "n_samples": 29485
+      },
+      "pca": {
+        "concept": "hammer_price",
+        "input_type": "pca",
+        "r2": 0.2220985329670066,
+        "r2_std": 0.006965719386362381,
+        "mae": 1.014916232411535,
+        "n_samples": 29485
+      },
+      "svae": {
+        "concept": "hammer_price",
+        "input_type": "svae",
+        "r2": 0.33198044635049495,
+        "r2_std": 0.018623525735848908,
+        "mae": 0.9254340771974474,
+        "n_samples": 29485
+      }
+    }
+  ],
+  "domain_comparison": {
+    "polymarket_reference": {
+      "dataset": "Polymarket Over/Under",
+      "n_samples": 813,
+      "n_features": 8,
+      "raw_vif_max": 6.19,
+      "raw_vif_mean": 2.67,
+      "raw_condition_number": 6.0,
+      "pca_vif_max": 1.04,
+      "pca_accuracy": 0.6936,
+      "pca_auc": 0.7102,
+      "svae_vif_max": 1.02,
+      "svae_condition_number": 1.86,
+      "svae_accuracy": 0.701,
+      "svae_auc": 0.72,
+      "svae_vs_pca_accuracy_delta": 0.0074,
+      "walk_forward_raw": 0.659,
+      "walk_forward_pca": 0.659,
+      "walk_forward_svae": 0.666
+    },
+    "art_svae_vs_pca_delta": 0.07963371205697811,
+    "art_svae_vs_rf_delta": 0.016856028489062203,
+    "art_svae_vs_lgbm_delta": 0.021841614380193275,
+    "poly_svae_vs_pca_delta": 0.0074,
+    "art_vif_reduction": Infinity,
+    "art_cond_reduction": Infinity
+  },
+  "q1_dimensionality_hypothesis": "YES: SVAE-PCA gap larger on art data",
+  "q1_detail": "Art (30D): +8.0pp > Polymarket (8D): +0.7pp. Delta: +7.2pp more on art data.",
+  "q2_practical_value": "YES: SVAE+LR outperforms tree-based models",
+  "q2_detail": "SVAE vs RF: +1.7pp, SVAE vs LGBM: +2.2pp. The embedding approach adds value over standard ML.",
+  "verdict": "STRONG CONFIRMATION: SVAE adds value and scales with dimensionality",
+  "verdict_detail": "Orth-SVAE+LR beats all baselines including RF/LGBM, and the advantage is larger on art data (30D) than Polymarket (8D). The methodology is validated.",
+  "elapsed_seconds": 177.83470125007443
+}

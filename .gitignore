@@ -43,3 +43,7 @@ dashboard/public/backtest_report.json
 # Binary documents
 *.docx
 *.xlsx
+
+# Experiment data artifacts (large binary files)
+*.npz
+*.npy

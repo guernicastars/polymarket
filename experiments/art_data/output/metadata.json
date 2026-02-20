@@ -1,0 +1,236 @@
+{
+  "n_lots": 693650,
+  "n_features": 35,
+  "feature_names": [
+    "age_at_creation",
+    "artist_avg_log_price",
+    "artist_birth_year",
+    "artist_career_length",
+    "artist_market_depth",
+    "artist_median_log_price",
+    "artist_price_std",
+    "artist_price_trend",
+    "artist_prior_lots",
+    "aspect_ratio",
+    "creation_is_approximate",
+    "creation_year",
+    "estimate_spread",
+    "has_depth",
+    "height_cm",
+    "is_decorative",
+    "is_living",
+    "is_painting",
+    "is_rare_artist",
+    "is_sculpture",
+    "is_work_on_paper",
+    "log_depth_cm",
+    "log_estimate_high",
+    "log_estimate_low",
+    "log_estimate_mid",
+    "log_surface_area",
+    "lot_position_pct",
+    "medium_known",
+    "nationality_known",
+    "sale_day_of_week",
+    "sale_month",
+    "sale_size",
+    "sale_year_numeric",
+    "width_cm",
+    "years_since_creation"
+  ],
+  "feature_categories": {
+    "A_artist": [
+      "is_living",
+      "artist_birth_year",
+      "artist_career_length",
+      "is_rare_artist",
+      "artist_market_depth",
+      "nationality_known"
+    ],
+    "B_physical": [
+      "height_cm",
+      "width_cm",
+      "log_surface_area",
+      "aspect_ratio",
+      "has_depth",
+      "creation_year",
+      "creation_is_approximate"
+    ],
+    "C_medium": [
+      "is_painting",
+      "is_sculpture",
+      "is_work_on_paper",
+      "is_decorative",
+      "medium_known"
+    ],
+    "D_estimate": [
+      "log_estimate_low",
+      "log_estimate_high",
+      "log_estimate_mid",
+      "estimate_spread"
+    ],
+    "E_sale_context": [
+      "sale_month",
+      "sale_year_numeric",
+      "sale_day_of_week",
+      "sale_size",
+      "lot_position_pct"
+    ],
+    "F_historical": [
+      "artist_avg_log_price",
+      "artist_median_log_price",
+      "artist_price_std",
+      "artist_prior_lots",
+      "artist_price_trend"
+    ],
+    "G_derived": [
+      "log_depth_cm",
+      "age_at_creation",
+      "years_since_creation"
+    ]
+  },
+  "target": "log_price",
+  "split_sizes": {
+    "train": 485554,
+    "val": 104048,
+    "test": 104048
+  },
+  "nan_fraction": 0.36155788736600386,
+  "multicollinearity_preview": {
+    "max_abs_correlation": 1.0,
+    "high_correlation_pairs_gt_0.5": [
+      {
+        "feat_a": "creation_year",
+        "feat_b": "years_since_creation",
+        "r": -1.0
+      },
+      {
+        "feat_a": "log_estimate_high",
+        "feat_b": "log_estimate_mid",
+        "r": 1.0
+      },
+      {
+        "feat_a": "log_estimate_low",
+        "feat_b": "log_estimate_mid",
+        "r": 0.999
+      },
+      {
+        "feat_a": "log_estimate_high",
+        "feat_b": "log_estimate_low",
+        "r": 0.998
+      },
+      {
+        "feat_a": "artist_avg_log_price",
+        "feat_b": "artist_median_log_price",
+        "r": 0.985
+      },
+      {
+        "feat_a": "has_depth",
+        "feat_b": "log_depth_cm",
+        "r": 0.941
+      },
+      {
+        "feat_a": "artist_market_depth",
+        "feat_b": "artist_prior_lots",
+        "r": 0.933
+      },
+      {
+        "feat_a": "sale_month",
+        "feat_b": "sale_year_numeric",
+        "r": -0.867
+      },
+      {
+        "feat_a": "artist_market_depth",
+        "feat_b": "is_rare_artist",
+        "r": -0.831
+      },
+      {
+        "feat_a": "height_cm",
+        "feat_b": "width_cm",
+        "r": 0.75
+      },
+      {
+        "feat_a": "log_surface_area",
+        "feat_b": "width_cm",
+        "r": 0.712
+      },
+      {
+        "feat_a": "height_cm",
+        "feat_b": "log_surface_area",
+        "r": 0.708
+      },
+      {
+        "feat_a": "artist_avg_log_price",
+        "feat_b": "log_estimate_high",
+        "r": 0.699
+      },
+      {
+        "feat_a": "artist_avg_log_price",
+        "feat_b": "log_estimate_mid",
+        "r": 0.696
+      },
+      {
+        "feat_a": "artist_avg_log_price",
+        "feat_b": "log_estimate_low",
+        "r": 0.692
+      },
+      {
+        "feat_a": "artist_median_log_price",
+        "feat_b": "log_estimate_high",
+        "r": 0.687
+      },
+      {
+        "feat_a": "is_decorative",
+        "feat_b": "medium_known",
+        "r": 0.687
+      },
+      {
+        "feat_a": "artist_median_log_price",
+        "feat_b": "log_estimate_mid",
+        "r": 0.685
+      },
+      {
+        "feat_a": "artist_median_log_price",
+        "feat_b": "log_estimate_low",
+        "r": 0.682
+      },
+      {
+        "feat_a": "artist_birth_year",
+        "feat_b": "creation_year",
+        "r": 0.6
+      }
+    ]
+  },
+  "probe_labels": {
+    "medium": {
+      "n_valid": 66287,
+      "n_classes": 8
+    },
+    "auction_house": {
+      "n_valid": 693650,
+      "n_classes": 3
+    },
+    "artist_vital_status": {
+      "n_valid": 139080,
+      "n_classes": 2
+    },
+    "sale_category": {
+      "n_valid": 49070,
+      "n_classes": 11
+    },
+    "price_bucket": {
+      "n_valid": 693650,
+      "n_classes": 4
+    }
+  },
+  "data_source": {
+    "type": "clickhouse",
+    "auction_houses": {
+      "christies": 654438,
+      "sothebys": 38965,
+      "phillips": 247
+    },
+    "min_hammer_usd": 100.0
+  },
+  "extracted_at": "2026-02-20T12:08:47.542021+00:00"
+}

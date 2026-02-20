@@ -9,6 +9,7 @@ python-dotenv>=1.0.0
 torch>=2.0.0
 scipy>=1.10.0
 statsmodels>=0.14.0
+lightgbm>=4.0.0
 
 # Visualization
 matplotlib>=3.7.0
