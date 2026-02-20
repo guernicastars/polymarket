@@ -1,0 +1,21 @@
+# Model checkpoints
+*.pt
+*.pth
+
+# Data artifacts
+*.parquet
+*.npz
+*.npy
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

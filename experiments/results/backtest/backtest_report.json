@@ -1,0 +1,378 @@
+{
+  "experiment": "out_of_sample_backtest",
+  "timestamp": "2026-02-20T11:44:31",
+  "split_sizes": {
+    "train": 733,
+    "val": 157,
+    "test": 158
+  },
+  "test_results": {
+    "raw": {
+      "accuracy": 0.7278481012658228,
+      "balanced_accuracy": 0.6718776406962987,
+      "f1_yes": 0.5473684210526316,
+      "f1_no": 0.8054298642533937,
+      "auc_roc": 0.7654216663849923,
+      "confusion_matrix": [
+        [
+          89,
+          8
+        ],
+        [
+          35,
+          26
+        ]
+      ],
+      "n_samples": 158,
+      "label": "Raw (25D)",
+      "dims": 25,
+      "vif_mean": 2.805797113432777,
+      "vif_max": 9.326061395701306,
+      "vif_severe": 0,
+      "condition_number": Infinity,
+      "orth_mean_cos": 0.001088550366256011,
+      "orth_max_cos": 0.006329113924050609,
+      "wald_significant": 3,
+      "wald_total": 25,
+      "wald_fraction": 0.12
+    },
+    "pca": {
+      "accuracy": 0.7911392405063291,
+      "balanced_accuracy": 0.7964340037181004,
+      "f1_yes": 0.7518796992481203,
+      "f1_no": 0.819672131147541,
+      "auc_roc": 0.8233902315362515,
+      "confusion_matrix": [
+        [
+          75,
+          22
+        ],
+        [
+          11,
+          50
+        ]
+      ],
+      "n_samples": 158,
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 26920.557594050082,
+      "vif_max": 80844.19741283328,
+      "vif_severe": 8,
+      "condition_number": 933.5038564015222,
+      "orth_mean_cos": 0.006326009540867553,
+      "orth_max_cos": 0.0063290516793521635,
+      "wald_significant": 5,
+      "wald_total": 8,
+      "wald_fraction": 0.625
+    },
+    "orth_svae": {
+      "accuracy": 0.7974683544303798,
+      "balanced_accuracy": 0.7924623964847051,
+      "f1_yes": 0.746031746031746,
+      "f1_no": 0.8315789473684211,
+      "auc_roc": 0.8451918201791447,
+      "confusion_matrix": [
+        [
+          79,
+          18
+        ],
+        [
+          14,
+          47
+        ]
+      ],
+      "n_samples": 158,
+      "label": "Orth-SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 13545.415139742629,
+      "vif_max": 53773.1282051282,
+      "vif_severe": 8,
+      "condition_number": 719.1111450195312,
+      "orth_mean_cos": 0.006313058082014322,
+      "orth_max_cos": 0.006328826304525137,
+      "wald_significant": 6,
+      "wald_total": 8,
+      "wald_fraction": 0.75
+    }
+  },
+  "train_results": {
+    "raw": {
+      "accuracy": 0.9113233287858117,
+      "balanced_accuracy": 0.9101072195505551,
+      "f1_yes": 0.8989113530326595,
+      "f1_no": 0.9210206561360875,
+      "auc_roc": 0.9798037080724677,
+      "confusion_matrix": [
+        [
+          379,
+          33
+        ],
+        [
+          32,
+          289
+        ]
+      ],
+      "n_samples": 733,
+      "label": "Raw (25D)",
+      "dims": 25,
+      "vif_mean": 2.963269011643245,
+      "vif_max": 12.716665605835669,
+      "vif_severe": 2,
+      "condition_number": 10.63495130337247,
+      "orth_mean_cos": 0.00017267707823665805,
+      "orth_max_cos": 0.00122417197332349,
+      "wald_significant": 3,
+      "wald_total": 25,
+      "wald_fraction": 0.12
+    },
+    "pca": {
+      "accuracy": 0.8949522510231923,
+      "balanced_accuracy": 0.8934798717599735,
+      "f1_yes": 0.880248833592535,
+      "f1_no": 0.9064398541919806,
+      "auc_roc": 0.9728775368236398,
+      "confusion_matrix": [
+        [
+          373,
+          39
+        ],
+        [
+          38,
+          283
+        ]
+      ],
+      "n_samples": 733,
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 1.0,
+      "vif_max": 1.0000000000000002,
+      "vif_severe": 0,
+      "condition_number": 1.971847546578618,
+      "orth_mean_cos": 3.9227126506885414e-19,
+      "orth_max_cos": 2.2377813756569873e-18,
+      "wald_significant": 6,
+      "wald_total": 8,
+      "wald_fraction": 0.75
+    },
+    "orth_svae": {
+      "accuracy": 0.9195088676671214,
+      "balanced_accuracy": 0.9184208934458458,
+      "f1_yes": 0.9082426127527217,
+      "f1_no": 0.928311057108141,
+      "auc_roc": 0.9844841665910534,
+      "confusion_matrix": [
+        [
+          382,
+          30
+        ],
+        [
+          29,
+          292
+        ]
+      ],
+      "n_samples": 733,
+      "label": "Orth-SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.0142375996537256,
+      "vif_max": 1.0376064248762087,
+      "vif_severe": 0,
+      "condition_number": 1.4510222673416138,
+      "orth_mean_cos": 4.352263204054907e-05,
+      "orth_max_cos": 0.00018809913308359683,
+      "wald_significant": 8,
+      "wald_total": 8,
+      "wald_fraction": 1.0
+    }
+  },
+  "val_results": {
+    "raw": {
+      "accuracy": 0.8853503184713376,
+      "balanced_accuracy": 0.9203539823008849,
+      "f1_yes": 0.8301886792452831,
+      "f1_no": 0.9134615384615384,
+      "auc_roc": 0.9593724859211584,
+      "confusion_matrix": [
+        [
+          95,
+          18
+        ],
+        [
+          0,
+          44
+        ]
+      ],
+      "n_samples": 157,
+      "label": "Raw (25D)",
+      "dims": 25,
+      "vif_mean": 31.75457633853375,
+      "vif_max": Infinity,
+      "vif_severe": 5,
+      "condition_number": 2010.2086033872622,
+      "orth_mean_cos": 0.0009926152066849873,
+      "orth_max_cos": 0.006364359795890307,
+      "wald_significant": 3,
+      "wald_total": 25,
+      "wald_fraction": 0.12
+    },
+    "pca": {
+      "accuracy": 0.8407643312101911,
+      "balanced_accuracy": 0.7367256637168141,
+      "f1_yes": 0.6376811594202898,
+      "f1_no": 0.8979591836734694,
+      "auc_roc": 0.9458970233306516,
+      "confusion_matrix": [
+        [
+          110,
+          3
+        ],
+        [
+          22,
+          22
+        ]
+      ],
+      "n_samples": 157,
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 1.3059537049101895,
+      "vif_max": 1.4874363650601499,
+      "vif_severe": 0,
+      "condition_number": 5.436935097481364,
+      "orth_mean_cos": 0.001407516008884367,
+      "orth_max_cos": 0.004377600188698008,
+      "wald_significant": 5,
+      "wald_total": 8,
+      "wald_fraction": 0.625
+    },
+    "orth_svae": {
+      "accuracy": 0.8535031847133758,
+      "balanced_accuracy": 0.7525140788415124,
+      "f1_yes": 0.6666666666666666,
+      "f1_no": 0.9061224489795918,
+      "auc_roc": 0.904263877715205,
+      "confusion_matrix": [
+        [
+          111,
+          2
+        ],
+        [
+          21,
+          23
+        ]
+      ],
+      "n_samples": 157,
+      "label": "Orth-SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.785155475197177,
+      "vif_max": 2.4652922414459413,
+      "vif_severe": 0,
+      "condition_number": 7.5879645347595215,
+      "orth_mean_cos": 0.0018311773892492056,
+      "orth_max_cos": 0.004112898372113705,
+      "wald_significant": 6,
+      "wald_total": 8,
+      "wald_fraction": 0.75
+    }
+  },
+  "walk_forward": {
+    "window_starts": [
+      200,
+      250,
+      300,
+      350,
+      400,
+      450,
+      500,
+      550,
+      600,
+      650,
+      700,
+      750,
+      800,
+      850,
+      900,
+      950
+    ],
+    "raw_accuracy": [
+      0.84,
+      0.84,
+      0.86,
+      0.78,
+      0.92,
+      0.96,
+      0.94,
+      0.84,
+      0.88,
+      0.8,
+      0.74,
+      0.94,
+      0.9,
+      0.94,
+      0.64,
+      0.88
+    ],
+    "pca_accuracy": [
+      0.86,
+      0.86,
+      0.9,
+      0.84,
+      0.9,
+      0.96,
+      0.94,
+      0.86,
+      0.9,
+      0.82,
+      0.58,
+      0.94,
+      0.9,
+      0.94,
+      0.7,
+      0.9
+    ],
+    "svae_accuracy": [
+      0.9,
+      0.88,
+      0.92,
+      0.86,
+      0.92,
+      0.94,
+      0.98,
+      0.92,
+      0.98,
+      0.82,
+      0.72,
+      0.88,
+      0.92,
+      0.96,
+      0.8,
+      0.9
+    ],
+    "raw_mean": 0.85625,
+    "pca_mean": 0.8624999999999999,
+    "svae_mean": 0.89375,
+    "n_windows": 16
+  },
+  "betting_70": {
+    "raw": {
+      "threshold": 0.7,
+      "bet_size": 100.0,
+      "total_bets": 121,
+      "wins": 100,
+      "losses": 21,
+      "win_rate": 0.8264462809917356,
+      "total_pnl": -1332.122204227282,
+      "avg_pnl_per_bet": -11.009274415101505,
+      "max_drawdown": -1332.122204227282
+    },
+    "orth_svae": {
+      "threshold": 0.7,
+      "bet_size": 100.0,
+      "total_bets": 120,
+      "wins": 104,
+      "losses": 16,
+      "win_rate": 0.8666666666666667,
+      "total_pnl": -224.33219823285424,
+      "avg_pnl_per_bet": -1.8694349852737853,
+      "max_drawdown": -224.33219823285424
+    }
+  }
+}

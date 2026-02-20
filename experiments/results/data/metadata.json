@@ -1,0 +1,95 @@
+{
+  "n_markets": 1048,
+  "n_features": 25,
+  "feature_names": [
+    "avg_insider_score",
+    "avg_trade_size",
+    "buy_sell_ratio",
+    "buy_volume_ratio",
+    "final_price_velocity",
+    "last_price",
+    "late_volume_ratio",
+    "market_duration_days",
+    "max_trade_size",
+    "neg_risk",
+    "one_day_price_change",
+    "one_week_price_change",
+    "price_at_75pct_life",
+    "price_range",
+    "top_wallet_concentration",
+    "trade_count",
+    "trade_size_gini",
+    "trades_per_day",
+    "unique_wallet_count",
+    "volume_1wk",
+    "volume_24h",
+    "volume_acceleration",
+    "volume_total",
+    "volume_vs_category_median",
+    "whale_buy_ratio"
+  ],
+  "feature_categories": {
+    "A_market_structure": [
+      "volume_total",
+      "liquidity",
+      "neg_risk",
+      "market_duration_days",
+      "num_outcomes"
+    ],
+    "B_price_signals": [
+      "last_price",
+      "one_day_price_change",
+      "one_week_price_change",
+      "price_range",
+      "price_at_75pct_life",
+      "final_price_velocity"
+    ],
+    "C_trade_microstructure": [
+      "trade_count",
+      "avg_trade_size",
+      "max_trade_size",
+      "buy_sell_ratio",
+      "buy_volume_ratio",
+      "trade_size_gini",
+      "trades_per_day",
+      "late_volume_ratio"
+    ],
+    "D_volume_dynamics": [
+      "volume_24h",
+      "volume_1wk",
+      "volume_acceleration",
+      "volume_vs_category_median"
+    ],
+    "E_wallet_smart_money": [
+      "unique_wallet_count",
+      "whale_buy_ratio",
+      "top_wallet_concentration",
+      "avg_insider_score"
+    ]
+  },
+  "split_sizes": {
+    "train": 733,
+    "val": 157,
+    "test": 158
+  },
+  "class_balance": {
+    "positive_frac": 0.4064885496183206,
+    "negative_frac": 0.5935114503816794,
+    "note": "Yes/No markets skew 22/78 toward No; Over/Under ~balanced"
+  },
+  "thresholds": {
+    "min_trades": 20
+  },
+  "nan_fraction": 0.1453562340966921,
+  "data_notes": {
+    "market_prices_broken": "All 22.8M rows have empty condition_id. Not used.",
+    "ohlcv_shallow": "Pipeline ~6 days old; median 3 hourly bars per resolved market.",
+    "price_source": "Price features from market_trades + markets table Gamma API fields.",
+    "wallet_coverage": "36/1048 markets have wallet data."
+  },
+  "extracted_at": "2026-02-20T09:42:41.216821+00:00",
+  "dropped_features": [
+    "liquidity",
+    "num_outcomes"
+  ]
+}

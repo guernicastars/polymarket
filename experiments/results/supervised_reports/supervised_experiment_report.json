@@ -1,0 +1,102 @@
+{
+  "experiment": "B_supervised_vae",
+  "config": {
+    "model_type": "supervised_vae",
+    "embedding_dim": 8,
+    "beta": 4.0,
+    "alpha": 1.0,
+    "epochs": 300,
+    "patience": 30
+  },
+  "verdict": "WEAK SUPPORT",
+  "score": "2/4",
+  "criteria": {
+    "VIF below 10": false,
+    "Probe accuracy preserved (>= 95% of raw)": true,
+    "Significant dimensions > 30% (0/8)": false,
+    "Condition number improved 5x+ (2214.7x)": true
+  },
+  "training": {
+    "best_epoch": 235,
+    "best_val_loss": 1.5987103581428528,
+    "training_time_s": 7.37639729201328,
+    "final_pred_acc": 0.8571428571428571,
+    "best_pred_acc": 0.8904761904761904
+  },
+  "wald_test": {
+    "significant_dims": 0,
+    "total_dims": 8,
+    "fraction": 0.0,
+    "per_dim": {
+      "dim_0": {
+        "coef": 2.1931047231317957,
+        "z_score": 0.07149563230451705,
+        "p_value": 0.943003300580435
+      },
+      "dim_1": {
+        "coef": -2.1441960479062128,
+        "z_score": -0.08704673566962386,
+        "p_value": 0.9306343633709264
+      },
+      "dim_2": {
+        "coef": -2.2685544386191205,
+        "z_score": -0.1578849761768906,
+        "p_value": 0.874547436846479
+      },
+      "dim_3": {
+        "coef": -2.210831994941396,
+        "z_score": -0.13606228240710005,
+        "p_value": 0.8917720444553743
+      },
+      "dim_4": {
+        "coef": -2.223808004199414,
+        "z_score": -0.09951626819469837,
+        "p_value": 0.9207283718644834
+      },
+      "dim_5": {
+        "coef": 2.294966101518492,
+        "z_score": 0.11242567658661096,
+        "p_value": 0.9104858974113814
+      },
+      "dim_6": {
+        "coef": -2.2522640841909283,
+        "z_score": -0.11077056807452629,
+        "p_value": 0.9117982849632886
+      },
+      "dim_7": {
+        "coef": -2.271858292699373,
+        "z_score": -0.13529543843352054,
+        "p_value": 0.8923782915216567
+      }
+    }
+  },
+  "multicollinearity": {
+    "raw_max_vif": 11.323831909057061,
+    "raw_mean_vif": 2.6730549593858597,
+    "embed_max_vif": 1501.7200143215182,
+    "embed_mean_vif": 814.4983094403954,
+    "raw_condition": 271117.9408085859,
+    "embed_condition": 122.41631317138672,
+    "raw_max_corr": 0.8939263516308158,
+    "embed_max_corr": 0.9991579259550638
+  },
+  "prediction": {
+    "raw_accuracy": 0.8883587786259542,
+    "raw_auc": 0.9731065923946681,
+    "embed_accuracy": 0.976145038167939,
+    "embed_auc": 0.9968374016877255
+  },
+  "orthogonality": {
+    "mean_cosine_sim": 0.0009527704096399248,
+    "max_cosine_sim": 0.0009534057462587953,
+    "n_correlated_pairs": 0
+  },
+  "embedding_quality": {
+    "mean_activation": 0.2244703620672226,
+    "std_activation": 0.23226650059223175,
+    "max_inter_dim_correlation": 0.9991579259550638,
+    "mean_inter_dim_correlation": 0.8737172544091044,
+    "dead_dimensions": 0
+  },
+  "timestamp": "2026-02-20T10:53:43"
+}

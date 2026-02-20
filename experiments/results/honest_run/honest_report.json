@@ -1,0 +1,128 @@
+{
+  "experiment": "honest_experiment",
+  "timestamp": "2026-02-20T11:53:47",
+  "data": {
+    "n_markets": 813,
+    "n_features": 13,
+    "feature_names": [
+      "volume_total",
+      "market_duration_days",
+      "trade_count",
+      "avg_trade_size",
+      "max_trade_size",
+      "trade_size_gini",
+      "trades_per_day",
+      "volume_vs_category_median"
+    ],
+    "is_over_under_only": true,
+    "class_balance": {
+      "positive": 451,
+      "negative": 362
+    },
+    "nan_fraction": 0.23076923076923078,
+    "wallet_coverage": "0/813",
+    "dropped_features": [
+      "neg_risk",
+      "unique_wallet_count",
+      "top_wallet_concentration",
+      "avg_insider_score",
+      "num_outcomes"
+    ]
+  },
+  "safe_features": [
+    "volume_total",
+    "market_duration_days",
+    "trade_count",
+    "avg_trade_size",
+    "max_trade_size",
+    "trade_size_gini",
+    "trades_per_day",
+    "volume_vs_category_median"
+  ],
+  "n_samples": 813,
+  "n_features": 8,
+  "majority_baseline": 0.5547355473554736,
+  "cv_results": {
+    "raw": {
+      "label": "Raw (8D)",
+      "dims": 8,
+      "vif_mean": 2.6747021968013396,
+      "vif_max": 6.185534482662766,
+      "condition_number": 6.004422605837236,
+      "orth_max_cos": 0.001088266805141079,
+      "wald_significant": 2,
+      "wald_total": 8,
+      "wald_fraction": 0.25,
+      "cv_accuracy": 0.6936075134439144,
+      "cv_balanced_accuracy": 0.6830896766855671,
+      "cv_f1_pos": 0.7385227715402702,
+      "cv_f1_neg": 0.6290823533005423,
+      "cv_auc": 0.7102168996232922
+    },
+    "pca": {
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 1.0237790872106483,
+      "vif_max": 1.0424935033163458,
+      "condition_number": 6.004422605837244,
+      "orth_max_cos": 0.00018206767501982812,
+      "wald_significant": 3,
+      "wald_total": 8,
+      "wald_fraction": 0.375,
+      "cv_accuracy": 0.6936075134439144,
+      "cv_balanced_accuracy": 0.6830896766855671,
+      "cv_f1_pos": 0.7385227715402702,
+      "cv_f1_neg": 0.6290823533005423,
+      "cv_auc": 0.7102168996232922
+    },
+    "orth_svae": {
+      "label": "Orth-SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.012335551960787,
+      "vif_max": 1.0234308165527082,
+      "condition_number": 1.8649442195892334,
+      "orth_max_cos": 0.00011275376891717315,
+      "wald_significant": 4,
+      "wald_total": 8,
+      "wald_fraction": 0.5,
+      "cv_accuracy": 0.7009997727789139,
+      "cv_balanced_accuracy": 0.6856725960493084,
+      "cv_f1_pos": 0.7542445667999754,
+      "cv_f1_neg": 0.6177387977771753,
+      "cv_auc": 0.7200450813350356
+    }
+  },
+  "oos_results": {
+    "raw": {
+      "label": "Raw (8D)",
+      "accuracy": 0.6229508196721312,
+      "balanced_accuracy": 0.6163522012578616,
+      "f1_pos": 0.5660377358490566,
+      "f1_neg": 0.6666666666666666,
+      "auc": 0.5786163522012578
+    },
+    "pca": {
+      "label": "PCA (8D)",
+      "accuracy": 0.6229508196721312,
+      "balanced_accuracy": 0.6163522012578616,
+      "f1_pos": 0.5660377358490566,
+      "f1_neg": 0.6666666666666666,
+      "auc": 0.5786163522012578
+    },
+    "orth_svae": {
+      "label": "Orth-SVAE (8D)",
+      "accuracy": 0.5983606557377049,
+      "balanced_accuracy": 0.6011758271807492,
+      "f1_pos": 0.5739130434782609,
+      "f1_neg": 0.6201550387596899,
+      "auc": 0.6065080667213563
+    }
+  },
+  "walk_forward": {
+    "raw_mean": 0.6589285714285714,
+    "pca_mean": 0.6589285714285714,
+    "svae_mean": 0.6660714285714286,
+    "n_windows": 14
+  },
+  "verdict": "REAL SIGNAL DETECTED"
+}

@@ -1,0 +1,159 @@
+{
+  "verdict": "WEAK SUPPORT",
+  "criteria": {
+    "VIF below threshold": true,
+    "Probe accuracy preserved": false,
+    "Significant dimensions (>30%)": false,
+    "Condition number improved 5x+": true
+  },
+  "score": "2/4",
+  "raw_stats": {
+    "max_correlation": 0.8939263516308158,
+    "mean_correlation": 0.11208023130972386,
+    "max_vif": 11.323831909057061,
+    "mean_vif": 2.6730549593858597,
+    "problematic_vif_count": 2,
+    "condition_number": 271117.9408085859,
+    "vif_values": {
+      "avg_insider_score": 1.1131138287220486,
+      "avg_trade_size": 1.4852173763090615,
+      "buy_sell_ratio": 1.6875146493297541,
+      "buy_volume_ratio": 1.6187518542329167,
+      "final_price_velocity": 1.5019105332984797,
+      "last_price": 1.5124255819851755,
+      "late_volume_ratio": 1.1877347788126549,
+      "market_duration_days": 1.215341822605148,
+      "max_trade_size": 1.563815860166289,
+      "neg_risk": 1.355118187883495,
+      "one_day_price_change": 1.8881120540796734,
+      "one_week_price_change": 1.9704484246123453,
+      "price_at_75pct_life": 1.1888719655417606,
+      "price_range": 1.5858224623347381,
+      "top_wallet_concentration": 3.885002063356758,
+      "trade_count": 3.108414159175067,
+      "trade_size_gini": 1.9638884212823242,
+      "trades_per_day": 1.231808264890145,
+      "unique_wallet_count": 4.290053099876135,
+      "volume_1wk": 11.323831909057061,
+      "volume_24h": 10.55932904480867,
+      "volume_acceleration": 2.6123188974041742,
+      "volume_total": 3.96477142214782,
+      "volume_vs_category_median": 1.5135025584873536,
+      "whale_buy_ratio": 1.4992547642474463
+    }
+  },
+  "embed_stats": {
+    "max_vif": 1.1497997727980491,
+    "mean_vif": 1.0893462597073968,
+    "problematic_vif_count": 0,
+    "condition_number": 2.343184471130371,
+    "max_correlation": 0.2508263312034315,
+    "vif_reduction_factor": 9.848525088416398,
+    "condition_reduction_factor": 115704.90678345799
+  },
+  "probe_results": {
+    "outcome": {
+      "primary_metric": "accuracy",
+      "raw_value": 0.8740442014126225,
+      "embed_value": 0.5935110503531555,
+      "improvement": -0.28053315105946697,
+      "raw_p_value": 0.009900990099009901,
+      "embed_p_value": 1.0
+    }
+  },
+  "stats_results": {
+    "orthogonality": {
+      "mean_cosine_similarity": 9.47300432017073e-05,
+      "max_cosine_similarity": 0.00023516090004704893,
+      "n_correlated_pairs": 0
+    },
+    "predictive_power": {
+      "raw_accuracy": 0.8883587786259542,
+      "embed_accuracy": 0.5935114503816794,
+      "raw_auc": 0.9731065923946681,
+      "embed_auc": 0.66623643252872
+    },
+    "significant_dimensions": {
+      "count": 0,
+      "total": 8,
+      "fraction": 0.0
+    }
+  },
+  "timestamp": "2026-02-20T10:51:36",
+  "config": {
+    "data": {
+      "min_price_points": 50,
+      "min_trades": 20,
+      "min_hours_active": 24,
+      "snapshot_horizons": [
+        1,
+        4,
+        12,
+        24,
+        48,
+        168,
+        720
+      ],
+      "momentum_windows": [
+        1,
+        4,
+        12,
+        24,
+        48,
+        168
+      ],
+      "volatility_windows": [
+        4,
+        12,
+        24,
+        48,
+        168
+      ],
+      "volume_windows": [
+        1,
+        4,
+        12,
+        24,
+        48
+      ],
+      "train_split": 0.7,
+      "val_split": 0.15,
+      "test_split": 0.15,
+      "output_dir": "results/data"
+    },
+    "model": {
+      "type": "vae",
+      "embedding_dim": 8,
+      "hidden_dims": [
+        256,
+        128
+      ],
+      "dropout": 0.1,
+      "learning_rate": 0.001,
+      "batch_size": 128,
+      "epochs": 200,
+      "patience": 20,
+      "beta": 10.0,
+      "checkpoint_dir": "results/checkpoints"
+    },
+    "probes": {
+      "concepts": [
+        "category",
+        "outcome",
+        "time_to_expiry",
+        "volatility_regime"
+      ],
+      "significance_threshold": 0.05,
+      "n_permutations": 100
+    },
+    "statistics": {
+      "vif_threshold": 10.0,
+      "condition_number_threshold": 30.0,
+      "correlation_threshold": 0.8
+    },
+    "output": {
+      "figures_dir": "results/figures",
+      "reports_dir": "results/reports"
+    }
+  }
+}

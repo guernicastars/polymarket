@@ -1,0 +1,1 @@
+{"feature_names": ["volume_total", "market_duration_days", "trade_count", "avg_trade_size", "max_trade_size", "trade_size_gini", "trades_per_day", "volume_vs_category_median"], "n_features": 8}

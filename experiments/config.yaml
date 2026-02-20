@@ -1,0 +1,66 @@
+# Experiment Configuration
+# Disentangled Feature Analysis via Neural Embeddings
+# ---------------------------------------------------
+
+data:
+  # Minimum data quality thresholds for including a market
+  min_price_points: 50
+  min_trades: 20
+  min_hours_active: 24
+
+  # Snapshot horizons: hours before resolution to capture features
+  snapshot_horizons: [1, 4, 12, 24, 48, 168, 720]
+
+  # Rolling feature windows (hours)
+  momentum_windows: [1, 4, 12, 24, 48, 168]
+  volatility_windows: [4, 12, 24, 48, 168]
+  volume_windows: [1, 4, 12, 24, 48]
+
+  # Train / validation / test split (temporal, by resolution date)
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+
+  # Output directory for extracted data
+  output_dir: results/data
+
+model:
+  # Architecture
+  type: vae                    # "vae" or "autoencoder"
+  embedding_dim: 64
+  hidden_dims: [256, 128]
+  dropout: 0.1
+
+  # Training
+  learning_rate: 0.001
+  batch_size: 128
+  epochs: 200
+  patience: 20                 # Early stopping patience
+
+  # VAE-specific
+  beta: 1.0                    # KL divergence weight (beta-VAE)
+
+  # Checkpoints
+  checkpoint_dir: results/checkpoints
+
+probes:
+  # Concepts to test for linear separability in embedding space
+  concepts:
+    - category                 # Market category (crypto, politics, sports, ...)
+    - outcome                  # Binary resolution (Yes / No)
+    - time_to_expiry           # Bucketed time remaining at snapshot
+    - volatility_regime        # Low / medium / high volatility
+
+  # Statistical thresholds
+  significance_threshold: 0.05
+  n_permutations: 100
+
+statistics:
+  # Multicollinearity thresholds
+  vif_threshold: 10.0          # VIF above this = problematic
+  condition_number_threshold: 30.0
+  correlation_threshold: 0.8   # |r| above this = highly correlated
+
+output:
+  figures_dir: results/figures
+  reports_dir: results/reports
