@@ -286,30 +286,53 @@ def fetch_lots_clickhouse(client: Client, min_price: float) -> pd.DataFrame:
 
         try:
             if house_name == "sothebys":
-                # Sotheby's: artist_name, height/width/depth as separate columns, creation_year
+                # Sotheby's: artist_name, height/width/depth as separate columns,
+                # creation_year, confidence scores, tax/guarantee flags
                 query = f"""
                 SELECT
                     l.lot_uuid AS lot_uuid, l.auction_uuid AS auction_uuid,
                     l.lot_number AS lot_number,
+                    l.title AS title, l.accepts_crypto AS accepts_crypto,
                     l.estimate_low AS estimate_low, l.estimate_high AS estimate_high,
                     s.hammer_price AS hammer_price, s.final_price AS final_price,
                     s.num_bids AS num_bids, s.is_sold AS is_sold,
                     s.currency AS sale_currency,
+                    s.starting_bid AS starting_bid,
+                    s.bid_method AS bid_method,
+                    s.reserve_met AS reserve_met,
                     a.title AS auction_title, a.department AS department,
                     a.category AS auction_category, a.location AS location,
                     a.date_starts_closing AS sale_date, a.lot_count AS lot_count,
                     a.sap_sale_number AS sale_number,
+                    a.auction_type AS auction_type,
                     se.artist_name AS artist_name,
                     se.artist_birth_year AS artist_birth_year,
                     se.artist_death_year AS artist_death_year,
                     se.artist_nationality AS artist_nationality,
-                    se.medium AS medium,
+                    se.medium AS medium, se.support AS support,
                     se.height_cm AS height_cm, se.width_cm AS width_cm,
                     se.depth_cm AS depth_cm,
                     se.creation_year AS creation_year,
                     se.creation_is_approximate AS creation_is_approximate,
+                    se.creation_period AS creation_period,
+                    se.artist_name_confidence AS artist_name_confidence,
+                    se.dimensions_confidence AS dimensions_confidence,
+                    se.medium_confidence AS medium_confidence,
+                    se.creation_confidence AS creation_confidence,
+                    se.tax_bonded AS tax_bonded,
+                    se.tax_vat AS tax_vat,
+                    se.is_guaranteed AS is_guaranteed,
+                    se.raw_description AS raw_description,
                     '' AS dimensions_cm,
-                    '' AS date_created
+                    '' AS date_created,
+                    '' AS creator_type,
+                    '' AS lot_category,
+                    '' AS signed_inscribed,
+                    '' AS origin,
+                    '' AS style_period,
+                    '' AS condition_summary,
+                    '' AS lot_essay_excerpt,
+                    '' AS lot_title
                 FROM {db_name}.lots l
                 INNER JOIN {db_name}.sales s ON l.lot_uuid = s.lot_uuid
                 LEFT JOIN {db_name}.auctions a ON l.auction_uuid = a.auction_uuid
@@ -318,19 +341,25 @@ def fetch_lots_clickhouse(client: Client, min_price: float) -> pd.DataFrame:
                 """
             else:
                 # Christie's / Phillips: creator_name, dimensions_cm as string,
-                # date_created as string, no reliable sale dates in auctions
+                # date_created as string, provenance/literature/exhibition arrays,
+                # creator_type, lot_category, signed/origin/style/condition/essay
                 query = f"""
                 SELECT
                     l.lot_uuid AS lot_uuid, l.auction_uuid AS auction_uuid,
                     l.lot_number AS lot_number,
+                    l.title AS title, l.accepts_crypto AS accepts_crypto,
                     l.estimate_low AS estimate_low, l.estimate_high AS estimate_high,
                     s.hammer_price AS hammer_price, s.final_price AS final_price,
                     s.num_bids AS num_bids, s.is_sold AS is_sold,
                     s.currency AS sale_currency,
+                    s.starting_bid AS starting_bid,
+                    s.bid_method AS bid_method,
+                    s.reserve_met AS reserve_met,
                     a.title AS auction_title, a.department AS department,
                     a.category AS auction_category, a.location AS location,
                     l.created_at AS sale_date, a.lot_count AS lot_count,
                     a.sale_number AS sale_number,
+                    a.auction_type AS auction_type,
                     se.creator_name AS artist_name,
                     se.creator_birth_year AS artist_birth_year,
                     se.creator_death_year AS artist_death_year,
@@ -339,7 +368,27 @@ def fetch_lots_clickhouse(client: Client, min_price: float) -> pd.DataFrame:
                     0 AS height_cm, 0 AS width_cm, 0 AS depth_cm,
                     0 AS creation_year, 0 AS creation_is_approximate,
                     se.dimensions_cm AS dimensions_cm,
-                    se.date_created AS date_created
+                    se.date_created AS date_created,
+                    se.creator_type AS creator_type,
+                    se.lot_category AS lot_category,
+                    se.signed_inscribed AS signed_inscribed,
+                    se.origin AS origin,
+                    se.style_period AS style_period,
+                    se.condition_summary AS condition_summary,
+                    se.lot_essay_excerpt AS lot_essay_excerpt,
+                    se.lot_title AS lot_title,
+                    se.provenance AS provenance,
+                    se.exhibitions AS exhibitions,
+                    se.literature AS literature,
+                    0 AS artist_name_confidence,
+                    0 AS dimensions_confidence,
+                    0 AS medium_confidence,
+                    0 AS creation_confidence,
+                    0 AS tax_bonded, 0 AS tax_vat,
+                    0 AS is_guaranteed,
+                    '' AS raw_description,
+                    '' AS support,
+                    '' AS creation_period
                 FROM {db_name}.lots l
                 INNER JOIN {db_name}.sales s ON l.lot_uuid = s.lot_uuid
                 LEFT JOIN {db_name}.auctions a ON l.auction_uuid = a.auction_uuid
@@ -373,6 +422,13 @@ def fetch_lots_clickhouse(client: Client, min_price: float) -> pd.DataFrame:
             for col in ("height_cm", "width_cm", "depth_cm", "creation_year"):
                 if col in df.columns:
                     df[col] = df[col].replace(0, None)
+
+            # For Christie's/Phillips: replace confidence placeholders with NaN
+            if house_name != "sothebys":
+                for col in ("artist_name_confidence", "dimensions_confidence",
+                            "medium_confidence", "creation_confidence"):
+                    if col in df.columns:
+                        df[col] = df[col].replace(0, None)
 
             # FX normalize hammer_price and estimates to USD (vectorized)
             df["hammer_price_usd"] = _fx_convert_batch(
@@ -563,10 +619,10 @@ def compute_lot_positions(df: pd.DataFrame) -> pd.DataFrame:
         if has_auction.any():
             for auction_id, group in df[has_auction].groupby(group_col):
                 if has_lot_number:
-                    df.loc[group.index, "lot_position"] = group["lot_number"]
+                    df.loc[group.index, "lot_position"] = pd.to_numeric(group["lot_number"], errors="coerce")
                     missing = df.loc[group.index, "lot_position"].isna()
                     if missing.any():
-                        df.loc[group.index[missing], "lot_position"] = range(1, missing.sum() + 1)
+                        df.loc[group.index[missing], "lot_position"] = list(range(1, int(missing.sum()) + 1))
                 else:
                     df.loc[group.index, "lot_position"] = range(1, len(group) + 1)
 
@@ -840,6 +896,37 @@ def main(
             ],
             "G_derived": [
                 "log_depth_cm", "age_at_creation", "years_since_creation",
+            ],
+            "H_confidence": [
+                "artist_name_confidence", "dimensions_confidence",
+                "medium_confidence", "creation_confidence",
+            ],
+            "I_sale_mechanics": [
+                "num_bids", "log_starting_bid", "is_online_sale",
+                "reserve_met", "hammer_start_ratio",
+            ],
+            "J_attribution": [
+                "is_attributed_artist", "is_maker_not_artist",
+            ],
+            "K_provenance": [
+                "provenance_count", "literature_count", "exhibition_count",
+            ],
+            "L_text": [
+                "title_length", "has_description", "has_signed_inscribed",
+                "has_condition_report",
+            ],
+            "M_style": [
+                "has_style_period", "has_origin",
+            ],
+            "N_lot_category": [
+                "is_wine", "is_jewelry", "is_book", "is_asian_art",
+            ],
+            "O_sale_flags": [
+                "has_crypto", "is_guaranteed", "final_hammer_ratio",
+            ],
+            "P_estimate_accuracy": [
+                "estimate_mid_usd", "log_estimate_range_usd",
+                "estimate_relative_level",
             ],
         },
         "target": target,

@@ -1,6 +1,6 @@
 {
   "n_lots": 693650,
-  "n_features": 35,
+  "n_features": 65,
   "feature_names": [
     "age_at_creation",
     "artist_avg_log_price",
@@ -8,33 +8,63 @@
     "artist_career_length",
     "artist_market_depth",
     "artist_median_log_price",
+    "artist_name_confidence",
     "artist_price_std",
     "artist_price_trend",
     "artist_prior_lots",
     "aspect_ratio",
+    "creation_confidence",
     "creation_is_approximate",
     "creation_year",
+    "dimensions_confidence",
+    "estimate_mid_usd",
+    "estimate_relative_level",
     "estimate_spread",
+    "exhibition_count",
+    "final_hammer_ratio",
+    "hammer_start_ratio",
+    "has_condition_report",
+    "has_crypto",
     "has_depth",
+    "has_description",
+    "has_origin",
+    "has_signed_inscribed",
+    "has_style_period",
     "height_cm",
+    "is_asian_art",
+    "is_attributed_artist",
+    "is_book",
     "is_decorative",
+    "is_guaranteed",
+    "is_jewelry",
     "is_living",
+    "is_maker_not_artist",
+    "is_online_sale",
     "is_painting",
     "is_rare_artist",
     "is_sculpture",
+    "is_wine",
     "is_work_on_paper",
+    "literature_count",
     "log_depth_cm",
     "log_estimate_high",
     "log_estimate_low",
     "log_estimate_mid",
+    "log_estimate_range_usd",
+    "log_starting_bid",
     "log_surface_area",
     "lot_position_pct",
+    "medium_confidence",
     "medium_known",
     "nationality_known",
+    "num_bids",
+    "provenance_count",
+    "reserve_met",
     "sale_day_of_week",
     "sale_month",
     "sale_size",
     "sale_year_numeric",
+    "title_length",
     "width_cm",
     "years_since_creation"
   ],
@@ -87,6 +117,54 @@
       "log_depth_cm",
       "age_at_creation",
       "years_since_creation"
+    ],
+    "H_confidence": [
+      "artist_name_confidence",
+      "dimensions_confidence",
+      "medium_confidence",
+      "creation_confidence"
+    ],
+    "I_sale_mechanics": [
+      "num_bids",
+      "log_starting_bid",
+      "is_online_sale",
+      "reserve_met",
+      "hammer_start_ratio"
+    ],
+    "J_attribution": [
+      "is_attributed_artist",
+      "is_maker_not_artist"
+    ],
+    "K_provenance": [
+      "provenance_count",
+      "literature_count",
+      "exhibition_count"
+    ],
+    "L_text": [
+      "title_length",
+      "has_description",
+      "has_signed_inscribed",
+      "has_condition_report"
+    ],
+    "M_style": [
+      "has_style_period",
+      "has_origin"
+    ],
+    "N_lot_category": [
+      "is_wine",
+      "is_jewelry",
+      "is_book",
+      "is_asian_art"
+    ],
+    "O_sale_flags": [
+      "has_crypto",
+      "is_guaranteed",
+      "final_hammer_ratio"
+    ],
+    "P_estimate_accuracy": [
+      "estimate_mid_usd",
+      "log_estimate_range_usd",
+      "estimate_relative_level"
     ]
   },
   "target": "log_price",
@@ -95,7 +173,7 @@
     "val": 104048,
     "test": 104048
   },
-  "nan_fraction": 0.36155788736600386,
+  "nan_fraction": 0.3398287542487067,
   "multicollinearity_preview": {
     "max_abs_correlation": 1.0,
     "high_correlation_pairs_gt_0.5": [
@@ -105,9 +183,24 @@
         "r": -1.0
       },
       {
+        "feat_a": "estimate_mid_usd",
+        "feat_b": "log_estimate_high",
+        "r": 1.0
+      },
+      {
+        "feat_a": "estimate_mid_usd",
+        "feat_b": "log_estimate_mid",
+        "r": 1.0
+      },
+      {
         "feat_a": "log_estimate_high",
         "feat_b": "log_estimate_mid",
         "r": 1.0
+      },
+      {
+        "feat_a": "estimate_mid_usd",
+        "feat_b": "log_estimate_low",
+        "r": 0.999
       },
       {
         "feat_a": "log_estimate_low",
@@ -120,9 +213,34 @@
         "r": 0.998
       },
       {
+        "feat_a": "final_hammer_ratio",
+        "feat_b": "is_online_sale",
+        "r": 0.992
+      },
+      {
+        "feat_a": "log_estimate_high",
+        "feat_b": "log_estimate_range_usd",
+        "r": 0.99
+      },
+      {
+        "feat_a": "estimate_mid_usd",
+        "feat_b": "log_estimate_range_usd",
+        "r": 0.986
+      },
+      {
+        "feat_a": "log_estimate_mid",
+        "feat_b": "log_estimate_range_usd",
+        "r": 0.986
+      },
+      {
         "feat_a": "artist_avg_log_price",
         "feat_b": "artist_median_log_price",
         "r": 0.985
+      },
+      {
+        "feat_a": "log_estimate_low",
+        "feat_b": "log_estimate_range_usd",
+        "r": 0.979
       },
       {
         "feat_a": "has_depth",
@@ -130,74 +248,34 @@
         "r": 0.941
       },
       {
+        "feat_a": "is_online_sale",
+        "feat_b": "sale_year_numeric",
+        "r": -0.934
+      },
+      {
         "feat_a": "artist_market_depth",
         "feat_b": "artist_prior_lots",
         "r": 0.933
       },
       {
+        "feat_a": "final_hammer_ratio",
+        "feat_b": "sale_year_numeric",
+        "r": -0.932
+      },
+      {
+        "feat_a": "is_attributed_artist",
+        "feat_b": "is_maker_not_artist",
+        "r": -0.909
+      },
+      {
+        "feat_a": "is_online_sale",
+        "feat_b": "sale_month",
+        "r": 0.878
+      },
+      {
         "feat_a": "sale_month",
         "feat_b": "sale_year_numeric",
         "r": -0.867
-      },
-      {
-        "feat_a": "artist_market_depth",
-        "feat_b": "is_rare_artist",
-        "r": -0.831
-      },
-      {
-        "feat_a": "height_cm",
-        "feat_b": "width_cm",
-        "r": 0.75
-      },
-      {
-        "feat_a": "log_surface_area",
-        "feat_b": "width_cm",
-        "r": 0.712
-      },
-      {
-        "feat_a": "height_cm",
-        "feat_b": "log_surface_area",
-        "r": 0.708
-      },
-      {
-        "feat_a": "artist_avg_log_price",
-        "feat_b": "log_estimate_high",
-        "r": 0.699
-      },
-      {
-        "feat_a": "artist_avg_log_price",
-        "feat_b": "log_estimate_mid",
-        "r": 0.696
-      },
-      {
-        "feat_a": "artist_avg_log_price",
-        "feat_b": "log_estimate_low",
-        "r": 0.692
-      },
-      {
-        "feat_a": "artist_median_log_price",
-        "feat_b": "log_estimate_high",
-        "r": 0.687
-      },
-      {
-        "feat_a": "is_decorative",
-        "feat_b": "medium_known",
-        "r": 0.687
-      },
-      {
-        "feat_a": "artist_median_log_price",
-        "feat_b": "log_estimate_mid",
-        "r": 0.685
-      },
-      {
-        "feat_a": "artist_median_log_price",
-        "feat_b": "log_estimate_low",
-        "r": 0.682
-      },
-      {
-        "feat_a": "artist_birth_year",
-        "feat_b": "creation_year",
-        "r": 0.6
       }
     ]
   },
@@ -221,6 +299,10 @@
     "price_bucket": {
       "n_valid": 693650,
       "n_classes": 4
+    },
+    "lot_category": {
+      "n_valid": 366299,
+      "n_classes": 13
     }
   },
   "data_source": {
@@ -232,5 +314,5 @@
     },
     "min_hammer_usd": 100.0
   },
-  "extracted_at": "2026-02-20T12:08:47.542021+00:00"
+  "extracted_at": "2026-02-20T12:39:14.509064+00:00"
 }

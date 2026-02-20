@@ -211,27 +211,28 @@ pip install -r requirements.txt
 ### Full Pipeline
 
 ```bash
-# Run the complete experiment end-to-end
-python run_experiment.py
+# Polymarket experiment (honest, non-leaking features)
+python run_honest_experiment.py
 
-# With custom config
-python run_experiment.py --config custom_config.yaml
+# Art market experiment (5-model comparison)
+python run_art_experiment.py
 
-# Skip data extraction (use cached data)
-python run_experiment.py --skip-extract
+# Art market with custom hyperparameters (65-feature final run)
+python run_art_experiment.py --embedding-dim 12 --batch-size 512 --patience 20 --epochs 200
 
-# Skip model training (use saved checkpoint)
-python run_experiment.py --skip-train
+# Art market with custom data directory
+python run_art_experiment.py --data-dir art_data/output --embedding-dim 8
 
-# Skip both (analysis only)
-python run_experiment.py --skip-extract --skip-train
+# Regression precision analysis (29K Sotheby's)
+python run_regression_analysis.py
 ```
 
 ### Individual Steps
 
 ```bash
-# Step 1: Extract data from ClickHouse
-python -m data.extract
+# Step 1: Extract data from ClickHouse / SQLite
+python art_data/extract.py                     # From ClickHouse (3 houses, 693K)
+python art_data/extract.py --source sqlite     # From SQLite (Sotheby's only, 29K)
 
 # Step 2: Train autoencoder
 python -m models.train
@@ -250,28 +251,31 @@ All outputs are written to `results/`:
 
 ```
 results/
-├── data/
-│   ├── features.npz          — Feature matrix X, labels y, metadata
-│   └── metadata.json         — Feature names, market IDs, split indices
-├── checkpoints/
-│   └── vae_best.pt           — Best model checkpoint
-├── figures/
-│   ├── correlation_raw.png   — Raw feature correlation heatmap
-│   ├── correlation_embed.png — Embedding correlation heatmap
-│   ├── vif_comparison.png    — VIF bar chart (raw vs. embedding)
-│   ├── tsne_outcome.png      — t-SNE colored by outcome
-│   ├── tsne_category.png     — t-SNE colored by category
-│   ├── probe_accuracy.png    — Probe accuracy comparison
-│   └── attribution.png       — Feature attribution heatmap
-└── reports/
-    └── experiment_report.json — Full metrics, verdicts, timestamps
+├── honest_run/                — Polymarket honest experiment
+│   ├── honest_report.json     — Full metrics (8D, 813 samples)
+│   └── checkpoints/           — Model checkpoint
+├── art_market/                — Art market experiment (latest: 63D, 693K)
+│   ├── art_experiment_report.json — Full 5-model comparison metrics
+│   ├── checkpoints/           — Best SVAE model checkpoint
+│   ├── train_data/            — Saved feature matrix for reproducibility
+│   ├── vif_comparison.png     — VIF: Raw vs PCA vs Orth-SVAE
+│   ├── correlation_matrices.png — Correlation heatmaps (3 panels)
+│   ├── model_comparison.png   — 5-model CV metric bar chart
+│   ├── walk_forward.png       — Walk-forward temporal backtest (all methods)
+│   ├── feature_attribution.png — Jacobian heatmap (input -> embedding)
+│   └── domain_comparison.png  — Polymarket vs Art Market comparison
+└── art_data/output/           — Input data
+    ├── features.npz           — Feature matrix (X_train/val/test, labels, probes)
+    └── metadata.json          — 65 features, 15 categories, split sizes
 ```
 
 ## Experimental Results
 
 ### Iteration History
 
-Six experiment iterations, each addressing a failure mode from the previous:
+Nine experiment iterations: six on Polymarket, three on art market data:
+
+**Polymarket Iterations (methodology development):**
 
 | Run | Model | Dims | Key Change | VIF | Acc | Sig Dims | Verdict |
 |-----|-------|------|------------|-----|-----|----------|---------|
@@ -279,8 +283,16 @@ Six experiment iterations, each addressing a failure mode from the previous:
 | 2 | VAE | 8 | Reduce dims | 7.15 | 80.0% | 3/8 (37%) | MODERATE (3/4) |
 | 3 | Supervised VAE | 8 | Add prediction loss | 1502 (worse) | 97.6% | 0/8 (0%) | WEAK (2/4) |
 | 4 | **Orth-SVAE** | **8** | **Add orthogonality penalty** | **1.005** | **91.9%** | **8/8 (100%)** | **STRONG (4/4)** |
-| 5 | PCA baseline | 8 | Linear comparison | 1.0 | 85.4% | 6/8 (75%) | — |
+| 5 | PCA baseline | 8 | Linear comparison | 1.0 | 85.4% | 6/8 (75%) | -- |
 | 6 | Orth-SVAE (honest) | 8 | Non-leaking features only | 1.01 | 70.1% | 4/8 (50%) | Honest baseline |
+
+**Art Market Iterations (domain transfer + scaling):**
+
+| Run | Dataset | Features | Samples | SVAE CV | Best CV | SVAE OOS | Verdict |
+|-----|---------|----------|---------|---------|---------|----------|---------|
+| 7 | Sotheby's only | 30 | 29K | **0.7543** | SVAE (0.7543) | **0.7839** | STRONG: SVAE wins all |
+| 8 | 3 houses | 35 | 693K | 0.8984 | RF (0.9026) | -- | Mixed: trees win CV |
+| 9 | 3 houses (expanded) | 63 | 693K | 0.9022 | RF (0.9080) | **0.8948** | Interpretability + stability win |
 
 ### Key Result: Orth-SVAE on 25-Feature Set (Run 4)
 
@@ -355,42 +367,59 @@ markets (49/51 baseline):
 ### Conclusions
 
 1. **The Orth-SVAE methodology is validated** as a technique for eliminating
-   multicollinearity while preserving predictive power. On the 25-feature set,
-   it beats PCA by +6.5pp accuracy and achieves 100% individually significant
-   dimensions vs PCA's 75%.
+   multicollinearity while preserving predictive power. Across all experiments
+   (8D to 63D), it reduces VIF to near 1.0 and consistently beats PCA.
 
-2. **The advantage scales with multicollinearity severity.** At VIF=11+ (25
-   features), Orth-SVAE substantially outperforms PCA. At VIF=6 (8 clean
-   features), PCA is equivalent. The technique is most valuable in
-   high-dimensional, highly correlated feature spaces.
+2. **The advantage scales with multicollinearity severity.** At VIF=6 (8 clean
+   features), PCA is equivalent (+0.7pp). At VIF=infinity (30D), SVAE beats all
+   models (+8.0pp vs PCA, +1.7pp vs RF). At VIF=infinity (63D) with large data,
+   SVAE trades ~0.6pp CV accuracy for best OOS generalization (+1.6pp vs RF).
 
-3. **Feature leakage is the dominant risk** in prediction market analysis. Any
+3. **SVAE produces the most stable temporal predictions.** On the 63-feature
+   art market data, walk-forward standard deviation is 0.0078 for SVAE vs 0.0087
+   for RF and 0.0144 for LGBM. The decorrelated embedding resists regime shifts.
+
+4. **Feature leakage is the dominant risk** in prediction market analysis. Any
    feature sourced from an API snapshot taken after resolution must be excluded
    or time-truncated.
 
-4. **Trade microstructure contains genuine predictive signal** for binary market
+5. **Trade microstructure contains genuine predictive signal** for binary market
    outcomes, independent of price information.
+
+6. **The practical recommendation depends on the use case:**
+   - For maximum in-distribution accuracy with large data: use RF/LGBM on raw features.
+   - For interpretable inference, OOS generalization, and temporal stability: use Orth-SVAE.
+   - For valid statistical testing on correlated features: Orth-SVAE is the only option that eliminates multicollinearity while preserving predictive signal.
 
 ## Out-of-Sample Validation
 
-### Test Set (last 15% by resolution date)
+### Polymarket Test Set (last 15% by resolution date)
 - Orth-SVAE AUC: 0.845 on 25 features, 0.607 on clean features
 - Walk-forward accuracy: 89.4% (25 features), 66.6% (clean)
 - Betting simulation: negative returns (market efficiency)
 
+### Art Market Test Set (last 15% by sale date, 104K lots)
+- Orth-SVAE OOS accuracy: **0.8948** (best of all 5 models)
+- RF OOS accuracy: 0.8785 (SVAE +1.6pp better)
+- LGBM OOS accuracy: 0.8930 (SVAE +0.2pp better)
+- Walk-forward (14 windows): SVAE mean 0.9019 with lowest variance (std=0.0078)
+
 ### Overfitting Disclosure
-- 25-feature set: 91.9% train vs 79.8% test (12pp gap)
-- Clean features: 70.1% CV vs 59.8% test (10pp gap)
-- Small test set (158 samples for 25-feature, 122 for clean) limits confidence
+- Polymarket 25-feature set: 91.9% train vs 79.8% test (12pp gap)
+- Polymarket clean features: 70.1% CV vs 59.8% test (10pp gap)
+- Art market 63-feature: 0.9022 CV vs 0.8948 OOS (0.7pp gap -- minimal overfitting)
+- Art market RF: 0.9080 CV vs 0.8785 OOS (3.0pp gap -- RF overfits more)
 
 ## Replication on Other Domains
 
-The methodology is domain-agnostic. To apply to a new dataset:
+The methodology is domain-agnostic. It has been validated on two domains:
+Polymarket prediction markets (8D, 813 samples) and art market auctions (63D,
+693K samples). To apply to a new dataset:
 
-1. **Replace `data/extract.py`** — swap ClickHouse queries for your data source
-2. **Replace `data/features.py`** — define your domain's feature engineering
-3. **Keep `models/` unchanged** — autoencoder, probes, stats, viz are generic
-4. **Run `python run_experiment.py`** — same pipeline, different data
+1. **Replace `data/extract.py`** -- swap ClickHouse queries for your data source
+2. **Replace `data/features.py`** -- define your domain's feature engineering
+3. **Keep `models/` unchanged** -- autoencoder, probes, stats, viz are generic
+4. **Run `python run_experiment.py`** -- same pipeline, different data
 
 The `models/` folder accepts any feature matrix X (n_samples x n_features) and
 label vector y. No domain-specific code in the model layer.
@@ -399,27 +428,72 @@ label vector y. No domain-specific code in the model layer.
 - Feature count > 20 and max VIF > 10
 - Pairwise correlations form dense blocks
 - You need individually significant dimensions for inference
+- OOS generalization and temporal stability matter more than peak CV accuracy
 
 **When PCA is sufficient:**
 - Feature count < 15 and VIF < 10
 - Goal is decorrelation only, not prediction improvement
 
-## Connection to Art Market Transfer
+**When to use trees (RF/LGBM) on raw features instead:**
+- Maximum in-distribution accuracy is the only goal
+- N > 100K samples (trees can learn interaction effects)
+- Interpretability via SHAP/permutation importance is acceptable
 
-The ultimate application is art market analytics, where:
-- Features (artist reputation, medium, size, provenance, auction house) are
-  deeply entangled — typically 50+ features with VIF >> 10
-- Labeled data is scarce (resolved auctions with known hammer prices)
-- Classical hedonic regression suffers from severe multicollinearity
+## Art Market Results
 
-The Polymarket experiment validates the approach:
-- **Methodology proven**: Orth-SVAE eliminates multicollinearity while
-  preserving and improving predictive power on high-dimensional correlated data
-- **PCA comparison complete**: nonlinear embedding justified when VIF > 10
-- **Interpretability pipeline works**: embedding dims map back to input features
-  via Jacobian attribution with economic meaning
-- **Art market will benefit most**: 50+ correlated features is exactly the
-  regime where Orth-SVAE outperforms PCA
+The methodology has been fully validated on art market auction data from three
+houses (Sotheby's, Christie's, Phillips) across three dataset scales.
+
+### Final Results: 63 Features, 693,650 Lots
+
+**5-Model Comparison (Cross-Validated):**
+
+| Model | CV Accuracy | CV AUC | OOS Accuracy | Walk-Forward |
+|-------|------------|--------|-------------|-------------|
+| Raw+LR | 0.8994 | 0.9627 | 0.8941 | 0.9006 |
+| PCA+LR | 0.8931 | 0.9593 | 0.8707 | 0.8911 |
+| Raw+RF | **0.9080** | **0.9700** | 0.8785 | 0.9027 |
+| Raw+LGBM | 0.9079 | 0.9697 | 0.8930 | **0.9056** |
+| SVAE+LR | 0.9022 | 0.9646 | **0.8948** | 0.9019 |
+
+**Multicollinearity Reduction:**
+
+| Metric | Raw (63D) | PCA (12D) | SVAE (12D) |
+|--------|-----------|----------|-----------|
+| Max VIF | infinity (17 severe) | 9.21 | **1.01** |
+| Mean VIF | 3,233 | 2.90 | **1.003** |
+| Condition # | infinity | 14.57 | **3.48** |
+| Sig Dims (Wald) | 35/63 (56%) | 12/12 (100%) | 12/12 (100%) |
+
+**Key findings:**
+- SVAE achieves **best OOS accuracy** (0.8948) despite losing CV to trees (-0.6pp)
+- SVAE has **lowest walk-forward variance** (std=0.0078 vs RF 0.0087, LGBM 0.0144)
+- VIF reduction from infinity to 1.01 enables valid coefficient-based inference
+- 15 feature categories (A-P) compressed into 12 decorrelated dimensions
+
+### Progression Across Dataset Scales
+
+| Metric | 30D / 29K | 35D / 693K | 63D / 693K |
+|--------|-----------|------------|------------|
+| SVAE CV | 0.7543 | 0.8984 | 0.9022 |
+| RF CV | 0.7369 | 0.9026 | 0.9080 |
+| SVAE vs RF (CV) | **+1.7pp** | -0.4pp | -0.6pp |
+| SVAE vs RF (OOS) | **+4.1pp** | -- | **+1.6pp** |
+| Raw max VIF | inf | inf | inf |
+| SVAE max VIF | 1.00 | 1.01 | 1.01 |
+
+**Pattern:** On small data (29K), SVAE's regularization wins everywhere. On
+large data (693K), trees have enough samples to learn interaction effects and
+win in-distribution, but SVAE generalizes better to unseen data.
+
+### Feature Attribution (63D Experiment)
+
+Each of the 12 embedding dimensions captures distinct input feature groups:
+- **Dims 0, 2, 5, 6:** Estimate features (log_estimate_low/mid/high, estimate_mid_usd)
+- **Dim 1:** Physical dimensions (width_cm, is_book, is_jewelry)
+- **Dim 3:** Text/confidence (is_book, title_length, artist_name_confidence)
+- **Dim 4:** Provenance (exhibition_count, estimate_relative_level, is_attributed_artist)
+- **Dim 7:** 3D properties (has_depth, log_depth_cm, height_cm)
 
 ## References
 
