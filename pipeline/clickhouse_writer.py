@@ -175,6 +175,36 @@ TABLE_COLUMNS: dict[str, list[str]] = {
         "platt_a", "platt_b",
         "updated_at",
     ],
+    # Phase 4: GNN predictions
+    "gnn_predictions": [
+        "condition_id", "settlement_id", "market_slug",
+        "raw_logit", "calibrated_prob", "market_price", "edge",
+        "direction", "kelly_fraction", "position_size_usd", "hurdle_rate",
+        "model_version", "window_size", "step_minutes", "confidence",
+        "top_features",
+        "predicted_at", "target_time",
+    ],
+    # Phase 5: Execution layer
+    "execution_orders": [
+        "order_id", "condition_id", "token_id",
+        "side", "price", "size", "edge", "kelly_fraction", "confidence",
+        "signal_source", "status", "error_msg",
+        "fill_price", "filled_size", "latency_ms",
+        "submitted_at", "created_at",
+    ],
+    "execution_positions": [
+        "condition_id", "token_id", "side",
+        "entry_price", "size", "cost_basis",
+        "current_price", "unrealized_pnl", "realized_pnl",
+        "signal_source", "edge_at_entry",
+        "opened_at", "snapshot_at",
+    ],
+    "execution_snapshots": [
+        "timestamp", "capital", "total_value",
+        "n_positions", "total_unrealized_pnl", "total_realized_pnl",
+        "total_cost_basis", "max_position_value",
+        "high_water_mark", "current_drawdown", "mode",
+    ],
 }
 
 
@@ -328,6 +358,22 @@ class ClickHouseWriter:
 
     async def write_online_learning(self, rows: list[list[Any]]) -> None:
         await self.write("online_learning_state", rows)
+
+    # Phase 4 convenience helpers (GNN predictions)
+
+    async def write_gnn_predictions(self, rows: list[list[Any]]) -> None:
+        await self.write("gnn_predictions", rows)
+
+    # Phase 5 convenience helpers (Execution layer)
+
+    async def write_execution_orders(self, rows: list[list[Any]]) -> None:
+        await self.write("execution_orders", rows)
+
+    async def write_execution_positions(self, rows: list[list[Any]]) -> None:
+        await self.write("execution_positions", rows)
+
+    async def write_execution_snapshots(self, rows: list[list[Any]]) -> None:
+        await self.write("execution_snapshots", rows)
 
     # ------------------------------------------------------------------
     # Internal

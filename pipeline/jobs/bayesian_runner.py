@@ -121,7 +121,7 @@ async def run_bayesian_update() -> None:
         # 2. Read latest composite signals
         composite = await asyncio.to_thread(
             client.query,
-            f"""SELECT condition_id, composite_score, confidence
+            f"""SELECT condition_id, score, confidence
                 FROM composite_signals FINAL
                 ORDER BY computed_at DESC
                 LIMIT 1 BY condition_id

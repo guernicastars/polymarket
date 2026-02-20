@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from pipeline.api.clob_client import ClobClient
 from pipeline.clickhouse_writer import ClickHouseWriter
+from pipeline.jobs.market_sync import token_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +45,15 @@ async def run_price_poller(active_token_ids: list[str]) -> None:
             # Use midpoint as the canonical price
             price = (bid + ask) / 2 if (bid > 0 and ask > 0) else max(bid, ask)
 
-            # condition_id is not available from the CLOB price endpoint directly;
-            # we store token_id and leave condition_id empty — the market_sync
-            # provides the mapping.  We use token_id as condition_id placeholder
-            # (the orderbook lookup can resolve it later).
+            # Look up condition_id and outcome from the market_sync mapping
+            mapping = token_mapping.get(token_id, {})
+            condition_id = mapping.get("condition_id", "")
+            outcome = mapping.get("outcome", "")
+
             row = [
-                "",            # condition_id (enriched downstream or via join)
+                condition_id,
                 token_id,
-                "",            # outcome (enriched downstream)
+                outcome,
                 price,
                 bid,
                 ask,

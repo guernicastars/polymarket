@@ -378,6 +378,28 @@ async def run_execution_cycle() -> None:
             # Place order
             result = await engine.place_order(request)
 
+            # Persist order to ClickHouse (always — including DRY_RUN)
+            order_row = [
+                result.order_id,
+                request.condition_id,
+                request.token_id,
+                request.side,
+                request.price,
+                request.size,
+                request.edge,
+                request.kelly_fraction,
+                request.confidence,
+                request.signal_source,
+                result.status.value,
+                result.error_msg,
+                result.fill_price,
+                result.filled_size,
+                result.latency_ms,
+                result.submitted_at or now,
+                now,
+            ]
+            await writer.write("execution_orders", [order_row])
+
             if result.status in (
                 OrderStatus.MATCHED,
                 OrderStatus.LIVE,
@@ -451,9 +473,30 @@ async def run_execution_cycle() -> None:
                 )
 
         # ---------------------------------------------------------------
-        # 7. Take snapshot and log
+        # 7. Persist positions, take snapshot, and log
         # ---------------------------------------------------------------
+        # Write current positions to ClickHouse
+        position_rows = pm.to_rows()
+        if position_rows:
+            await writer.write("execution_positions", position_rows)
+
         snapshot = pm.snapshot()
+
+        # Write portfolio snapshot to ClickHouse
+        snapshot_row = [
+            snapshot.timestamp,
+            snapshot.capital,
+            snapshot.total_value,
+            snapshot.n_positions,
+            snapshot.total_unrealized_pnl,
+            snapshot.total_realized_pnl,
+            snapshot.total_cost_basis,
+            snapshot.max_position_value,
+            snapshot.high_water_mark,
+            snapshot.current_drawdown,
+            "DRY_RUN" if engine.dry_run else "LIVE",
+        ]
+        await writer.write("execution_snapshots", [snapshot_row])
 
         await writer.flush_all()
 

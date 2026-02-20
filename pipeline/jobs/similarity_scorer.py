@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timezone
 
 import clickhouse_connect
+import numpy as np
 
 from pipeline.clickhouse_writer import ClickHouseWriter
 from pipeline.config import (

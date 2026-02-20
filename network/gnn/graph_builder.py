@@ -369,9 +369,9 @@ class MarketGraphBuilder:
         try:
             rows = self.client.query(f"""
                 SELECT condition_id,
-                       obi_score, volume_anomaly_score, large_trade_score,
+                       obi_score, volume_score, trade_bias_score,
                        momentum_score, smart_money_score, concentration_score,
-                       arbitrage_flag, insider_score
+                       arbitrage_flag, insider_activity
                 FROM composite_signals FINAL
                 WHERE condition_id IN ({placeholders})
             """).result_rows

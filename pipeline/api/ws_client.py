@@ -18,6 +18,7 @@ from pipeline.config import (
     WS_RECONNECT_MAX_DELAY,
     WS_URL,
 )
+from pipeline.jobs.market_sync import token_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -139,13 +140,17 @@ class WebSocketClient:
         side_raw = (msg.get("side") or "BUY").upper()
         side = "buy" if side_raw == "BUY" else "sell"
 
+        # Resolve outcome from token mapping
+        mapping = token_mapping.get(token_id, {})
+        outcome = mapping.get("outcome", "")
+
         # Price row
-        price_row = [condition_id, token_id, "", price, 0.0, 0.0, 0.0, ts]
+        price_row = [condition_id, token_id, outcome, price, 0.0, 0.0, 0.0, ts]
         await self._callback("market_prices", [price_row])
 
         # Trade row
         trade_id = f"ws-{token_id}-{int(ts.timestamp() * 1000)}"
-        trade_row = [condition_id, token_id, "", price, size, side, trade_id, ts]
+        trade_row = [condition_id, token_id, outcome, price, size, side, trade_id, ts]
         await self._callback("market_trades", [trade_row])
 
     async def _handle_price_change(self, msg: dict) -> None:
@@ -158,7 +163,9 @@ class WebSocketClient:
             price = float(change.get("price", 0))
             best_bid = float(change.get("best_bid", 0))
             best_ask = float(change.get("best_ask", 0))
-            rows.append([condition_id, token_id, "", price, best_bid, best_ask, 0.0, ts])
+            mapping = token_mapping.get(token_id, {})
+            outcome = mapping.get("outcome", "")
+            rows.append([condition_id, token_id, outcome, price, best_bid, best_ask, 0.0, ts])
 
         if rows:
             await self._callback("market_prices", rows)
@@ -176,8 +183,11 @@ class WebSocketClient:
         ask_prices = [float(a["price"]) for a in asks if "price" in a]
         ask_sizes = [float(a["size"]) for a in asks if "size" in a]
 
+        mapping = token_mapping.get(token_id, {})
+        outcome = mapping.get("outcome", "")
+
         row = [
-            condition_id, token_id, "",
+            condition_id, token_id, outcome,
             bid_prices, bid_sizes, ask_prices, ask_sizes,
             ts,
         ]

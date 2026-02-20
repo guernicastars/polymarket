@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pipeline.api.gamma_client import GammaClient
 from pipeline.clickhouse_writer import ClickHouseWriter
@@ -12,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 # Module-level list of active condition IDs sorted by volume (updated each sync)
 active_condition_ids: list[str] = []
+
+# Mapping from token_id -> {condition_id, outcome} for enriching price/trade rows
+token_mapping: dict[str, dict[str, str]] = {}
+
+# Track previous market states to detect status changes for market_events
+_previous_states: dict[str, dict] = {}  # condition_id -> {active, closed, resolved, winning_outcome}
 
 
 async def run_market_sync() -> list[str]:
@@ -79,6 +86,62 @@ async def run_market_sync() -> list[str]:
             if m["resolved"]:
                 resolved_count += 1
 
+        # Build token_id -> {condition_id, outcome} mapping
+        global token_mapping
+        new_mapping: dict[str, dict[str, str]] = {}
+        for m in markets:
+            cid = m["condition_id"]
+            outcomes = m["outcomes"]
+            tids = m["token_ids"]
+            for idx, tid in enumerate(tids):
+                outcome_label = outcomes[idx] if idx < len(outcomes) else ""
+                new_mapping[tid] = {"condition_id": cid, "outcome": outcome_label}
+        token_mapping = new_mapping
+
+        # Detect status changes and emit market_events
+        global _previous_states
+        now = datetime.now(timezone.utc)
+        event_rows = []
+
+        for m in markets:
+            cid = m["condition_id"]
+            prev = _previous_states.get(cid)
+            current = {
+                "active": m["active"],
+                "closed": m["closed"],
+                "resolved": m["resolved"],
+                "winning_outcome": m["winning_outcome"],
+            }
+
+            if prev is not None:
+                if not prev["resolved"] and current["resolved"]:
+                    event_rows.append([
+                        cid, "resolved",
+                        json.dumps({
+                            "winning_outcome": m["winning_outcome"],
+                            "resolution_source": m["resolution_source"],
+                        }),
+                        now,
+                    ])
+                elif not prev["closed"] and current["closed"] and not current["resolved"]:
+                    event_rows.append([
+                        cid, "closed",
+                        json.dumps({"question": m["question"]}),
+                        now,
+                    ])
+            else:
+                # First time seeing this market
+                event_rows.append([
+                    cid, "created",
+                    json.dumps({
+                        "question": m["question"],
+                        "category": m["category"],
+                    }),
+                    now,
+                ])
+
+            _previous_states[cid] = current
+
         # Update module-level condition IDs for Phase 2 holder sync
         global active_condition_ids
         active_condition_ids = [
@@ -88,6 +151,13 @@ async def run_market_sync() -> list[str]:
 
         if rows:
             await writer.write_markets(rows)
+        if event_rows:
+            await writer.write_events(event_rows)
+            logger.info(
+                "market_events_emitted",
+                extra={"count": len(event_rows)},
+            )
+        if rows or event_rows:
             await writer.flush_all()
 
         logger.info(
