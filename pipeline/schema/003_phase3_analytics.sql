@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS arbitrage_opportunities
 )
 ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY (condition_id, arb_type, detected_at)
-TTL detected_at + INTERVAL 30 DAY DELETE
+TTL toDateTime(detected_at) + INTERVAL 30 DAY DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS wallet_clusters
 )
 ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY (cluster_id)
-TTL created_at + INTERVAL 90 DAY DELETE
+TTL toDateTime(created_at) + INTERVAL 90 DAY DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS insider_scores
 )
 ENGINE = ReplacingMergeTree(computed_at)
 ORDER BY (proxy_wallet)
-TTL computed_at + INTERVAL 90 DAY DELETE
+TTL toDateTime(computed_at) + INTERVAL 90 DAY DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================

@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS wallet_activity
     activity_type      LowCardinality(String),             -- TRADE, SPLIT, MERGE, REDEEM, REWARD, CONVERSION, MAKER_REBATE
     side               LowCardinality(String) DEFAULT '',  -- BUY or SELL (for trades)
     outcome            LowCardinality(String) DEFAULT '',  -- Outcome name
-    outcome_index      UInt8 DEFAULT 0,                    -- 0 = Yes, 1 = No
+    outcome_index      Nullable(UInt8) DEFAULT NULL,        -- 0 = Yes, 1 = No (nullable: not all activity types have outcomes)
 
     -- Amounts
     size               Float64 DEFAULT 0,                  -- Token amount
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS wallet_activity
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (proxy_wallet, timestamp, condition_id)
-TTL timestamp + INTERVAL 1 YEAR DELETE
+TTL toDateTime(timestamp) + INTERVAL 1 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================

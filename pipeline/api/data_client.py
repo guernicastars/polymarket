@@ -424,7 +424,7 @@ class DataClient:
             "activity_type": raw.get("type", "TRADE"),
             "side": (raw.get("side") or "").upper(),
             "outcome": raw.get("outcome", ""),
-            "outcome_index": int(raw.get("outcomeIndex", 0)),
+            "outcome_index": int(raw["outcomeIndex"]) if raw.get("outcomeIndex") is not None else None,
             "size": float(raw.get("size") or 0),
             "usdc_size": float(raw.get("usdcSize") or 0),
             "price": float(raw.get("price") or 0),

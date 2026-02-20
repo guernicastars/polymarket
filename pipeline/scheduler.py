@@ -37,7 +37,8 @@ from pipeline.config import (
     WS_MAX_TOTAL_TOKENS,
 )
 from pipeline.api.ws_client import WebSocketClient
-from pipeline.jobs.market_sync import run_market_sync, active_condition_ids
+from pipeline.jobs import market_sync as market_sync_mod
+from pipeline.jobs.market_sync import run_market_sync
 from pipeline.jobs.orderbook_snapshot import run_orderbook_snapshot
 from pipeline.jobs.price_poller import run_price_poller
 from pipeline.jobs.trade_collector import run_trade_collector
@@ -349,7 +350,7 @@ class PipelineScheduler:
 
     async def _job_holder_sync(self) -> None:
         try:
-            await run_holder_sync(active_condition_ids)
+            await run_holder_sync(market_sync_mod.active_condition_ids)
         except Exception:
             logger.error("holder_sync_error", exc_info=True)
 

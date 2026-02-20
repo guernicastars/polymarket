@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS market_prices
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (condition_id, outcome, timestamp)
-TTL timestamp + INTERVAL 2 YEAR DELETE
+TTL toDateTime(timestamp) + INTERVAL 2 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS market_trades
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (condition_id, outcome, timestamp, trade_id)
-TTL timestamp + INTERVAL 2 YEAR DELETE
+TTL toDateTime(timestamp) + INTERVAL 2 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS orderbook_snapshots
 ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(snapshot_time)
 ORDER BY (condition_id, outcome, snapshot_time)
-TTL snapshot_time + INTERVAL 7 DAY DELETE
+TTL toDateTime(snapshot_time) + INTERVAL 7 DAY DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
