@@ -149,6 +149,32 @@ TABLE_COLUMNS: dict[str, list[str]] = {
         "density", "avg_degree", "clustering_coeff",
         "min_weight", "max_weight", "median_weight", "computed_at",
     ],
+    # Phase 6: Bayesian prediction tables
+    "bayesian_predictions": [
+        "condition_id",
+        "posterior_mean", "posterior_alpha", "posterior_beta",
+        "credible_lo", "credible_hi",
+        "market_price", "edge",
+        "confidence", "n_evidence_sources", "evidence_agreement",
+        "direction", "kelly_fraction", "position_size_usd",
+        "evidence_detail",
+        "predicted_at",
+    ],
+    "bayesian_state": [
+        "condition_id", "alpha", "beta", "n_updates",
+        "last_market_price", "updated_at",
+    ],
+    "calibration_history": [
+        "source", "brier_score", "n_predictions", "n_resolved",
+        "calibration_bins", "reliability_adj", "computed_at",
+    ],
+    "online_learning_state": [
+        "update_id", "model_version",
+        "n_samples", "n_gradient_steps", "avg_loss", "max_grad_norm",
+        "learning_rate", "ema_decay",
+        "platt_a", "platt_b",
+        "updated_at",
+    ],
 }
 
 
@@ -288,6 +314,20 @@ class ClickHouseWriter:
 
     async def write_graph_metrics(self, rows: list[list[Any]]) -> None:
         await self.write("market_graph_metrics", rows)
+
+    # Phase 6 convenience helpers (Bayesian layer)
+
+    async def write_bayesian_predictions(self, rows: list[list[Any]]) -> None:
+        await self.write("bayesian_predictions", rows)
+
+    async def write_bayesian_state(self, rows: list[list[Any]]) -> None:
+        await self.write("bayesian_state", rows)
+
+    async def write_calibration(self, rows: list[list[Any]]) -> None:
+        await self.write("calibration_history", rows)
+
+    async def write_online_learning(self, rows: list[list[Any]]) -> None:
+        await self.write("online_learning_state", rows)
 
     # ------------------------------------------------------------------
     # Internal

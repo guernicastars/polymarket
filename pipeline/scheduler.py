@@ -13,6 +13,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pipeline.clickhouse_writer import ClickHouseWriter
 from pipeline.config import (
     ARBITRAGE_SCAN_INTERVAL,
+    BAYESIAN_CALIBRATION_INTERVAL,
+    BAYESIAN_UPDATE_INTERVAL,
     EXECUTION_INTERVAL,
     FORCE_INCLUDE_TOKEN_IDS,
     HEALTH_CHECK_PORT,
@@ -21,6 +23,8 @@ from pipeline.config import (
     MARKET_SYNC_INTERVAL,
     MICROSTRUCTURE_INTERVAL,
     NEWS_TRACKER_INTERVAL,
+    ONLINE_GNN_PREDICT_INTERVAL,
+    ONLINE_GNN_UPDATE_INTERVAL,
     ORDERBOOK_INTERVAL,
     POSITION_SYNC_INTERVAL,
     PRICE_POLL_INTERVAL,
@@ -47,6 +51,8 @@ from pipeline.jobs.signal_compositor import run_signal_compositor
 from pipeline.jobs.news_runner import run_news_tracker, run_microstructure
 from pipeline.jobs.similarity_scorer import run_similarity_scorer
 from pipeline.jobs.execution_runner import run_execution_cycle, get_execution_status
+from pipeline.jobs.online_gnn_runner import run_online_gnn_predict, run_online_gnn_update
+from pipeline.jobs.bayesian_runner import run_bayesian_update, run_calibration_flush
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +211,36 @@ class PipelineScheduler:
             seconds=EXECUTION_INTERVAL,
             id="execution_cycle",
             name="Execution Cycle",
+        )
+
+        # --- Phase 6: Online GNN + Bayesian ---
+        self._scheduler.add_job(
+            self._job_online_gnn_predict,
+            "interval",
+            seconds=ONLINE_GNN_PREDICT_INTERVAL,
+            id="online_gnn_predict",
+            name="Online GNN Predict",
+        )
+        self._scheduler.add_job(
+            self._job_online_gnn_update,
+            "interval",
+            seconds=ONLINE_GNN_UPDATE_INTERVAL,
+            id="online_gnn_update",
+            name="Online GNN Update",
+        )
+        self._scheduler.add_job(
+            self._job_bayesian_update,
+            "interval",
+            seconds=BAYESIAN_UPDATE_INTERVAL,
+            id="bayesian_update",
+            name="Bayesian Update",
+        )
+        self._scheduler.add_job(
+            self._job_calibration_flush,
+            "interval",
+            seconds=BAYESIAN_CALIBRATION_INTERVAL,
+            id="calibration_flush",
+            name="Calibration Flush",
         )
 
         # Periodic buffer flush for stale data
@@ -377,6 +413,32 @@ class PipelineScheduler:
         except Exception:
             logger.error("execution_cycle_error", exc_info=True)
 
+    # --- Phase 6 job wrappers ---
+
+    async def _job_online_gnn_predict(self) -> None:
+        try:
+            await run_online_gnn_predict()
+        except Exception:
+            logger.error("online_gnn_predict_error", exc_info=True)
+
+    async def _job_online_gnn_update(self) -> None:
+        try:
+            await run_online_gnn_update()
+        except Exception:
+            logger.error("online_gnn_update_error", exc_info=True)
+
+    async def _job_bayesian_update(self) -> None:
+        try:
+            await run_bayesian_update()
+        except Exception:
+            logger.error("bayesian_update_error", exc_info=True)
+
+    async def _job_calibration_flush(self) -> None:
+        try:
+            await run_calibration_flush()
+        except Exception:
+            logger.error("calibration_flush_error", exc_info=True)
+
     # ------------------------------------------------------------------
     # WebSocket callback
     # ------------------------------------------------------------------
@@ -412,4 +474,5 @@ class PipelineScheduler:
             "phase3_jobs": ["arbitrage_scanner", "wallet_analyzer", "signal_compositor"],
             "phase4_jobs": ["news_tracker", "microstructure", "similarity_scorer"],
             "phase5_execution": exec_status,
+            "phase6_jobs": ["online_gnn_predict", "online_gnn_update", "bayesian_update", "calibration_flush"],
         })

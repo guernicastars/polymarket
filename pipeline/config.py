@@ -152,6 +152,22 @@ RISK_DAILY_LOSS_LIMIT_PCT = 0.05        # Halt after 5% daily loss
 RISK_KELLY_FRACTION = 0.25              # Quarter Kelly for safety
 
 # ---------------------------------------------------------------------------
+# Phase 6: Bayesian prediction layer (two-layer architecture)
+# ---------------------------------------------------------------------------
+
+# Layer 1: Online GNN-TCN
+ONLINE_GNN_UPDATE_INTERVAL = 900        # 15 minutes — incremental SGD
+ONLINE_GNN_PREDICT_INTERVAL = 300       # 5 minutes — predictions
+
+# Layer 2: Bayesian combiner
+BAYESIAN_UPDATE_INTERVAL = 120          # 2 minutes — run Bayesian update
+BAYESIAN_CALIBRATION_INTERVAL = 3600    # 1 hour — flush calibration metrics
+BAYESIAN_PRIOR_STRENGTH = 20.0          # Concentration of market-price prior
+BAYESIAN_MARKET_EFFICIENCY = 0.85       # How much to trust market (0-1)
+BAYESIAN_DECAY_HALFLIFE = 4.0           # Hours: posterior decays to market price
+BAYESIAN_TOP_MARKETS = 500              # Markets to score per cycle
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 HEALTH_CHECK_PORT = int(os.environ.get("HEALTH_CHECK_PORT", "8080"))

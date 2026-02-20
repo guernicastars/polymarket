@@ -169,40 +169,81 @@ async def run_execution_cycle() -> None:
         )
 
         # ---------------------------------------------------------------
-        # 2. Read latest GNN predictions (if available)
+        # 2. Read latest Bayesian predictions (from bayesian_runner job)
+        #    Falls back to GNN predictions if Bayesian layer unavailable
         # ---------------------------------------------------------------
-        gnn_result = await asyncio.to_thread(
-            client.query,
-            """
-            SELECT
-                condition_id,
-                calibrated_prob,
-                market_price,
-                edge,
-                direction,
-                kelly_fraction,
-                position_size_usd,
-                confidence
-            FROM gnn_predictions
-            WHERE predicted_at >= now() - INTERVAL 15 MINUTE
-            ORDER BY predicted_at DESC
-            LIMIT 100
-            """,
-        )
-
-        gnn_preds: dict[str, dict] = {}
-        for row in gnn_result.result_rows:
-            cid = row[0]
-            if cid not in gnn_preds:  # keep latest only
-                gnn_preds[cid] = {
+        bayesian_preds: dict[str, dict] = {}
+        try:
+            bayesian_result = await asyncio.to_thread(
+                client.query,
+                """
+                SELECT
+                    condition_id,
+                    posterior_mean,
+                    market_price,
+                    edge,
+                    direction,
+                    kelly_fraction,
+                    confidence,
+                    n_evidence_sources,
+                    evidence_agreement
+                FROM bayesian_predictions FINAL
+                WHERE predicted_at >= now() - INTERVAL 5 MINUTE
+                ORDER BY predicted_at DESC
+                LIMIT 1 BY condition_id
+                LIMIT 200
+                """,
+            )
+            for row in bayesian_result.result_rows:
+                bayesian_preds[row[0]] = {
                     "prob": float(row[1]),
                     "market_price": float(row[2]),
                     "edge": float(row[3]),
                     "direction": row[4],
                     "kelly": float(row[5]),
-                    "size_usd": float(row[6]),
-                    "confidence": float(row[7]),
+                    "confidence": float(row[6]),
+                    "n_sources": int(row[7]),
+                    "agreement": float(row[8]),
                 }
+        except Exception:
+            logger.debug("bayesian_predictions_unavailable")
+
+        # Fallback: read raw GNN predictions if Bayesian layer empty
+        gnn_preds: dict[str, dict] = {}
+        if not bayesian_preds:
+            try:
+                gnn_result = await asyncio.to_thread(
+                    client.query,
+                    """
+                    SELECT
+                        condition_id,
+                        calibrated_prob,
+                        market_price,
+                        edge,
+                        direction,
+                        kelly_fraction,
+                        position_size_usd,
+                        confidence
+                    FROM gnn_predictions
+                    WHERE predicted_at >= now() - INTERVAL 15 MINUTE
+                    ORDER BY predicted_at DESC
+                    LIMIT 100
+                    """,
+                )
+                for row in gnn_result.result_rows:
+                    cid = row[0]
+                    if cid not in gnn_preds:
+                        gnn_preds[cid] = {
+                            "prob": float(row[1]),
+                            "market_price": float(row[2]),
+                            "edge": float(row[3]),
+                            "direction": row[4],
+                            "kelly": float(row[5]),
+                            "size_usd": float(row[6]),
+                            "confidence": float(row[7]),
+                        }
+            except Exception:
+                logger.debug("gnn_predictions_unavailable")
 
         # ---------------------------------------------------------------
         # 3. Resolve token IDs for markets we want to trade
@@ -250,20 +291,26 @@ async def run_execution_cycle() -> None:
             if not tokens["yes_token"]:
                 continue
 
-            # Combine composite signal with GNN prediction if available
-            model_prob = _composite_to_prob(composite_score, market_price)
-
+            # Use Bayesian posterior if available, else fall back
+            bayesian = bayesian_preds.get(cid)
             gnn = gnn_preds.get(cid)
-            if gnn and gnn["confidence"] > 0.3:
-                # Weighted average: GNN gets more weight (more sophisticated)
-                gnn_weight = 0.6
-                composite_weight = 0.4
-                model_prob = (
-                    gnn_weight * gnn["prob"]
-                    + composite_weight * model_prob
-                )
 
-            edge = model_prob - market_price
+            if bayesian and bayesian["confidence"] > 0.1:
+                # Bayesian combiner already merged GNN + composite + market
+                model_prob = bayesian["prob"]
+                edge = bayesian["edge"]
+                signal_source = "bayesian"
+            elif gnn and gnn["confidence"] > 0.3:
+                # Fallback: raw GNN prediction
+                model_prob = gnn["prob"]
+                edge = gnn["edge"]
+                signal_source = "gnn"
+            else:
+                # Fallback: composite signal only
+                model_prob = _composite_to_prob(composite_score, market_price)
+                edge = model_prob - market_price
+                signal_source = "composite"
+
             abs_edge = abs(edge)
 
             if abs_edge < RISK_MIN_EDGE:
@@ -280,8 +327,11 @@ async def run_execution_cycle() -> None:
                 price = 1.0 - market_price
                 model_prob = 1.0 - model_prob
 
-            # Kelly sizing
-            kf = _kelly_fraction(model_prob, price)
+            # Kelly sizing — use Bayesian kelly if available
+            if bayesian and signal_source == "bayesian" and bayesian["kelly"] > 0:
+                kf = bayesian["kelly"]
+            else:
+                kf = _kelly_fraction(model_prob, price)
             if kf <= 0:
                 continue
 
@@ -298,7 +348,7 @@ async def run_execution_cycle() -> None:
                 side=side,
                 price=round(price, 2),
                 size=round(size_tokens, 2),
-                signal_source="composite+gnn" if gnn else "composite",
+                signal_source=signal_source,
                 edge=round(edge, 4),
                 kelly_fraction=round(kf, 4),
                 confidence=round(confidence, 3),

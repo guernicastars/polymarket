@@ -159,3 +159,26 @@ class GNNConfig:
     # Paths
     model_save_dir: str = "network/gnn/checkpoints"
     log_dir: str = "network/gnn/logs"
+
+
+@dataclass
+class OnlineLearningConfig:
+    """Configuration for online/incremental GNN-TCN updates."""
+
+    online_lr: float = 1e-4               # 10x lower than batch LR
+    online_weight_decay: float = 1e-5
+    ema_decay: float = 0.995              # EMA smoothing for weight stability
+    min_samples_before_update: int = 16   # Minimum new samples to trigger SGD
+    max_gradient_steps: int = 5           # Steps per update cycle
+    online_grad_clip: float = 0.5         # Tighter than batch (1.0)
+    platt_recalibrate_interval: int = 50  # Recalibrate Platt every N updates
+    cold_start_prob: float = 0.5          # Default when no checkpoint exists
+    checkpoint_save_interval: int = 10    # Save every N updates
+    cold_start_max_steps: int = 50        # Extended initial training steps
+    recalibration_buffer_size: int = 200  # Recent logit/label pairs for Platt refit
+
+    # Features to use (indices into 12-feature vector)
+    # Skip F8 (OI change=0), F9 (sentiment=0), F10 (news=0)
+    feature_mask: list[int] = field(
+        default_factory=lambda: [0, 1, 2, 3, 4, 5, 6, 11]
+    )
