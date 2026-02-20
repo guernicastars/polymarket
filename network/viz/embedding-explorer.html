@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedding Interpretability — Polymarket Resolved Markets</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e27; color: #e0e0e0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow-x: hidden; }
+
+/* Header */
+.header { padding: 32px 48px 24px; border-bottom: 1px solid rgba(77,166,255,0.15); }
+.header h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.header h1 span { color: #4da6ff; }
+.header .subtitle { font-size: 14px; color: #8892b0; font-weight: 400; }
+
+/* Stats ribbon */
+.stats-ribbon { display: flex; gap: 32px; padding: 20px 48px; border-bottom: 1px solid rgba(77,166,255,0.08); }
+.stat-card { display: flex; flex-direction: column; }
+.stat-value { font-size: 24px; font-weight: 700; color: #4da6ff; }
+.stat-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+/* Grid layout */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px 48px; }
+.panel { background: rgba(15, 20, 45, 0.8); border: 1px solid rgba(77,166,255,0.12); border-radius: 12px; padding: 20px; }
+.panel-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.panel-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 16px; }
+.panel.wide { grid-column: 1 / -1; }
+
+/* Probe bar chart */
+.probe-bar { display: flex; align-items: center; margin-bottom: 10px; }
+.probe-label { width: 140px; font-size: 12px; color: #c0c8d8; text-align: right; padding-right: 12px; }
+.probe-track { flex: 1; height: 28px; background: rgba(255,255,255,0.04); border-radius: 4px; position: relative; overflow: hidden; }
+.probe-fill-baseline { position: absolute; top: 0; left: 0; height: 100%; background: rgba(255,255,255,0.06); border-radius: 4px; }
+.probe-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(0.23, 1, 0.32, 1); }
+.probe-value { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 600; color: #fff; }
+.probe-baseline-marker { position: absolute; top: 0; height: 100%; width: 2px; background: rgba(255,255,255,0.3); z-index: 2; }
+.probe-legend { display: flex; gap: 16px; margin-top: 12px; justify-content: center; }
+.probe-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8892b0; }
+.probe-legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+/* Scatter plot */
+.scatter-controls { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
+.scatter-controls label { font-size: 11px; color: #8892b0; }
+.scatter-controls select { background: rgba(255,255,255,0.06); color: #e0e0e0; border: 1px solid rgba(77,166,255,0.2); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+.scatter-controls select:focus { outline: none; border-color: #4da6ff; }
+svg text { font-family: 'Inter', -apple-system, sans-serif; }
+
+/* Tooltip */
+.tooltip { position: absolute; background: rgba(10, 14, 39, 0.95); border: 1px solid rgba(77,166,255,0.3); border-radius: 8px; padding: 10px 14px; pointer-events: none; opacity: 0; transition: opacity 0.15s; font-size: 12px; max-width: 320px; z-index: 100; backdrop-filter: blur(8px); }
+.tooltip .tt-question { color: #fff; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+.tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; color: #8892b0; margin-top: 2px; }
+.tooltip .tt-val { color: #4da6ff; font-weight: 500; }
+
+/* Category legend (scatter) */
+.cat-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
+.cat-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #8892b0; cursor: pointer; opacity: 0.85; transition: opacity 0.2s; }
+.cat-legend-item:hover { opacity: 1; }
+.cat-legend-item.dimmed { opacity: 0.25; }
+.cat-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Training curve */
+.curve-legend { display: flex; gap: 16px; justify-content: center; margin-top: 8px; }
+.curve-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8892b0; }
+.curve-legend-line { width: 20px; height: 2px; border-radius: 1px; }
+
+/* PCA variance */
+.pca-bar-row { display: flex; align-items: center; margin-bottom: 3px; }
+.pca-bar-label { width: 32px; font-size: 10px; color: #6b7280; text-align: right; padding-right: 6px; }
+.pca-bar-track { flex: 1; height: 14px; background: rgba(255,255,255,0.03); border-radius: 2px; overflow: hidden; }
+.pca-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.pca-bar-val { width: 40px; font-size: 10px; color: #8892b0; padding-left: 6px; }
+.pca-cumulative { font-size: 11px; color: #6b7280; text-align: center; margin-top: 8px; }
+
+/* Comparison table */
+.comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.comp-table th { text-align: left; color: #6b7280; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.comp-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.comp-table .val-better { color: #22c55e; font-weight: 600; }
+.comp-table .val-worse { color: #8892b0; }
+.comp-table .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.comp-table .badge-sig { background: rgba(34,197,94,0.15); color: #22c55e; }
+
+/* Feature heatmap */
+.heatmap-row { display: flex; align-items: center; margin-bottom: 2px; }
+.heatmap-label { width: 100px; font-size: 10px; color: #8892b0; text-align: right; padding-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.heatmap-cells { display: flex; gap: 2px; flex: 1; }
+.heatmap-cell { height: 18px; border-radius: 2px; flex: 1; position: relative; }
+.heatmap-cell-label { font-size: 8px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: 600; opacity: 0.8; }
+.heatmap-header { display: flex; margin-bottom: 4px; padding-left: 108px; }
+.heatmap-header span { flex: 1; text-align: center; font-size: 10px; color: #6b7280; }
+
+/* Footer */
+.footer { padding: 24px 48px; text-align: center; color: #4b5563; font-size: 11px; border-top: 1px solid rgba(77,166,255,0.08); margin-top: 24px; }
+
+@media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; padding: 16px; }
+    .header { padding: 20px 16px; }
+    .stats-ribbon { padding: 16px; flex-wrap: wrap; gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Extracting <span>Interpretable Features</span> from Neural Embeddings</h1>
+    <div class="subtitle">Autoencoder-based market embedding with linear probe framework — 2,099 resolved Polymarket markets</div>
+</div>
+
+<div class="stats-ribbon" id="stats-ribbon"></div>
+
+<div class="grid">
+    <!-- Probe accuracy chart -->
+    <div class="panel">
+        <div class="panel-title">Linear Probe Accuracy</div>
+        <div class="panel-subtitle">5-fold CV with permutation test (N=200) — all p &lt; 0.005</div>
+        <div id="probe-chart"></div>
+    </div>
+
+    <!-- Training curve -->
+    <div class="panel">
+        <div class="panel-title">Training Convergence</div>
+        <div class="panel-subtitle">MSE reconstruction loss — AdamW + CosineAnnealingLR</div>
+        <div id="training-curve"></div>
+    </div>
+
+    <!-- t-SNE scatter -->
+    <div class="panel wide">
+        <div class="panel-title">Embedding Space (t-SNE projection)</div>
+        <div class="panel-subtitle">2,099 resolved markets — 32-dim autoencoder latent space projected to 2D</div>
+        <div class="scatter-controls">
+            <label>Color by:</label>
+            <select id="color-select">
+                <option value="category">Category</option>
+                <option value="outcome">Winning Outcome</option>
+                <option value="volume">Volume</option>
+                <option value="volatility">Volatility</option>
+                <option value="duration">Duration</option>
+            </select>
+            <label style="margin-left:12px">Projection:</label>
+            <select id="proj-select">
+                <option value="tsne">t-SNE</option>
+                <option value="pca">PCA (PC1 vs PC2)</option>
+            </select>
+        </div>
+        <div id="scatter-plot"></div>
+        <div class="cat-legend" id="cat-legend"></div>
+    </div>
+
+    <!-- PCA variance -->
+    <div class="panel">
+        <div class="panel-title">PCA Variance Explained</div>
+        <div class="panel-subtitle">How much structure each principal component captures</div>
+        <div id="pca-chart"></div>
+    </div>
+
+    <!-- Cutoff comparison -->
+    <div class="panel">
+        <div class="panel-title">Leakage Test: cutoff=0.8 vs 1.0</div>
+        <div class="panel-subtitle">Using first 80% of market life prevents resolution-period leakage</div>
+        <div id="comparison-table"></div>
+    </div>
+</div>
+
+<div class="footer">
+    Polymarket Signals — Embedding Interpretability PoC &nbsp;|&nbsp; Bloomsbury Technology &nbsp;|&nbsp; Data: 2,099 resolved markets, 19 features → 32-dim latent space
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ========== CATEGORY COLORS ==========
+const CAT_COLORS = {
+    'Sports': '#4da6ff', 'Weather': '#f59e0b', 'Esports': '#a78bfa',
+    'Tennis': '#34d399', 'Daily Temperature': '#fb923c', 'Culture': '#f472b6',
+    'Ethereum': '#818cf8', 'Politics': '#ef4444', 'Solana': '#2dd4bf',
+    'XRP': '#c084fc', 'Games': '#38bdf8', 'winter olympics': '#60a5fa',
+    'Olympics': '#fbbf24', 'Bitcoin': '#f97316', 'Trump': '#dc2626',
+    'Soccer': '#22d3ee', 'Baseball': '#a3e635', 'Basketball': '#e879f9',
+    'Ice Hockey': '#67e8f9', 'Football': '#86efac',
+};
+const DEFAULT_CAT_COLOR = '#6b7280';
+function catColor(c) { return CAT_COLORS[c] || DEFAULT_CAT_COLOR; }
+
+const PROBE_COLORS = {
+    'volatility_regime': '#22c55e',
+    'duration_bucket': '#3b82f6',
+    'winning_outcome': '#f59e0b',
+    'category': '#a78bfa',
+    'volume_bucket': '#ef4444',
+};
+const PROBE_NAMES = {
+    'volatility_regime': 'Volatility Regime',
+    'duration_bucket': 'Duration Bucket',
+    'winning_outcome': 'Winning Outcome',
+    'category': 'Category',
+    'volume_bucket': 'Volume Bucket',
+};
+
+// Cutoff=1.0 results (from results_full)
+const PROBES_10 = [
+    { concept_name: 'volatility_regime', accuracy: 0.959, baseline_accuracy: 0.500 },
+    { concept_name: 'duration_bucket', accuracy: 0.850, baseline_accuracy: 0.527 },
+    { concept_name: 'winning_outcome', accuracy: 0.675, baseline_accuracy: 0.644 },
+    { concept_name: 'category', accuracy: 0.670, baseline_accuracy: 0.276 },
+    { concept_name: 'volume_bucket', accuracy: 0.595, baseline_accuracy: 0.340 },
+];
+
+// ========== LOAD DATA ==========
+let DATA = null;
+const tooltip = d3.select('#tooltip');
+
+fetch('embedding_data.json').then(r => r.json()).then(data => {
+    DATA = data;
+    renderStats(data);
+    renderProbeChart(data.probes);
+    renderTrainingCurve(data.training);
+    renderScatter(data.markets);
+    renderPCA(data.pca_variance);
+    renderComparison(data.probes, PROBES_10);
+});
+
+// ========== STATS RIBBON ==========
+function renderStats(data) {
+    const ribbon = document.getElementById('stats-ribbon');
+    const stats = [
+        { value: data.n_markets.toLocaleString(), label: 'Resolved Markets' },
+        { value: data.n_features, label: 'Input Features' },
+        { value: '32', label: 'Latent Dimensions' },
+        { value: '5/5', label: 'Significant Probes' },
+        { value: '95.8%', label: 'Top Probe Accuracy' },
+        { value: '7', label: 'Novel Directions' },
+        { value: '<0.005', label: 'Best p-value' },
+    ];
+    ribbon.innerHTML = stats.map(s => `<div class="stat-card"><span class="stat-value">${s.value}</span><span class="stat-label">${s.label}</span></div>`).join('');
+}
+
+// ========== PROBE BAR CHART ==========
+function renderProbeChart(probes) {
+    const container = document.getElementById('probe-chart');
+    const sorted = [...probes].sort((a, b) => b.accuracy - a.accuracy);
+
+    let html = '';
+    sorted.forEach(p => {
+        const pct = (p.accuracy * 100).toFixed(1);
+        const basePct = (p.baseline_accuracy * 100).toFixed(1);
+        const color = PROBE_COLORS[p.concept_name] || '#4da6ff';
+        const lift = ((p.accuracy - p.baseline_accuracy) * 100).toFixed(1);
+        html += `
+        <div class="probe-bar">
+            <div class="probe-label">${PROBE_NAMES[p.concept_name] || p.concept_name}</div>
+            <div class="probe-track">
+                <div class="probe-fill-baseline" style="width:${p.baseline_accuracy * 100}%"></div>
+                <div class="probe-fill" style="width:${p.accuracy * 100}%;background:${color}"></div>
+                <div class="probe-baseline-marker" style="left:${p.baseline_accuracy * 100}%"></div>
+                <div class="probe-value">${pct}% (+${lift}pp)</div>
+            </div>
+        </div>`;
+    });
+    html += `<div class="probe-legend">
+        <div class="probe-legend-item"><div class="probe-legend-swatch" style="background:rgba(255,255,255,0.06)"></div>Majority-class baseline</div>
+        <div class="probe-legend-item"><div class="probe-legend-swatch" style="background:#4da6ff"></div>Linear probe on embeddings</div>
+    </div>`;
+    container.innerHTML = html;
+
+    // Animate bars in
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.probe-fill').forEach(el => { el.style.width = el.style.width; });
+    });
+}
+
+// ========== TRAINING CURVE ==========
+function renderTrainingCurve(training) {
+    const container = document.getElementById('training-curve');
+    const W = container.clientWidth || 400;
+    const H = 200;
+    const margin = { top: 12, right: 16, bottom: 32, left: 50 };
+    const w = W - margin.left - margin.right;
+    const h = H - margin.top - margin.bottom;
+
+    const svg = d3.select(container).append('svg').attr('width', W).attr('height', H);
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const n = training.train.length;
+    const x = d3.scaleLinear().domain([1, n]).range([0, w]);
+    const yMax = Math.max(d3.max(training.train), d3.max(training.val)) * 1.05;
+    const y = d3.scaleLog().domain([0.03, yMax]).range([h, 0]).clamp(true);
+
+    // Axes
+    g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.format('d')))
+        .selectAll('text').style('fill', '#6b7280').style('font-size', '10px');
+    g.append('g').call(d3.axisLeft(y).ticks(5, '.2f'))
+        .selectAll('text').style('fill', '#6b7280').style('font-size', '10px');
+    g.selectAll('.domain, .tick line').style('stroke', 'rgba(255,255,255,0.08)');
+
+    // Axis labels
+    g.append('text').attr('x', w / 2).attr('y', h + 28).attr('text-anchor', 'middle').attr('fill', '#6b7280').attr('font-size', '10px').text('Epoch');
+    g.append('text').attr('transform', 'rotate(-90)').attr('x', -h / 2).attr('y', -38).attr('text-anchor', 'middle').attr('fill', '#6b7280').attr('font-size', '10px').text('MSE Loss');
+
+    // Grid
+    g.selectAll('.grid-h').data(y.ticks(5)).enter().append('line')
+        .attr('x1', 0).attr('x2', w).attr('y1', d => y(d)).attr('y2', d => y(d))
+        .style('stroke', 'rgba(255,255,255,0.04)');
+
+    // Lines
+    const lineFn = (data) => d3.line().x((_, i) => x(i + 1)).y(d => y(Math.max(d, 0.03)))(data);
+
+    // Gradient fill under val curve
+    const valGrad = svg.append('defs').append('linearGradient').attr('id', 'val-grad').attr('x1', '0%').attr('y1', '0%').attr('x2', '0%').attr('y2', '100%');
+    valGrad.append('stop').attr('offset', '0%').attr('stop-color', '#22c55e').attr('stop-opacity', 0.15);
+    valGrad.append('stop').attr('offset', '100%').attr('stop-color', '#22c55e').attr('stop-opacity', 0);
+
+    const areaFn = d3.area().x((_, i) => x(i + 1)).y0(h).y1(d => y(Math.max(d, 0.03)));
+    g.append('path').datum(training.val).attr('d', areaFn).attr('fill', 'url(#val-grad)');
+
+    g.append('path').datum(training.train).attr('d', lineFn).attr('fill', 'none').attr('stroke', '#4da6ff').attr('stroke-width', 1.5).attr('opacity', 0.7);
+    g.append('path').datum(training.val).attr('d', lineFn).attr('fill', 'none').attr('stroke', '#22c55e').attr('stroke-width', 2);
+
+    // Best val marker
+    const bestIdx = training.val.indexOf(Math.min(...training.val));
+    g.append('circle').attr('cx', x(bestIdx + 1)).attr('cy', y(training.val[bestIdx])).attr('r', 4).attr('fill', '#22c55e').attr('stroke', '#0a0e27').attr('stroke-width', 2);
+    g.append('text').attr('x', x(bestIdx + 1) + 8).attr('y', y(training.val[bestIdx]) - 6).attr('fill', '#22c55e').attr('font-size', '10px').attr('font-weight', '600').text(`Best: ${training.val[bestIdx].toFixed(4)}`);
+
+    // Legend
+    container.insertAdjacentHTML('beforeend', `<div class="curve-legend">
+        <div class="curve-legend-item"><div class="curve-legend-line" style="background:#4da6ff;opacity:0.7"></div>Training loss</div>
+        <div class="curve-legend-item"><div class="curve-legend-line" style="background:#22c55e"></div>Validation loss</div>
+    </div>`);
+}
+
+// ========== SCATTER PLOT ==========
+let scatterSvg, scatterG, scatterX, scatterY, scatterW, scatterH, dots;
+const scatterMargin = { top: 8, right: 16, bottom: 8, left: 8 };
+let activeCats = new Set();
+
+function renderScatter(markets) {
+    const container = document.getElementById('scatter-plot');
+    const W = container.clientWidth || 800;
+    const H = 420;
+    scatterW = W - scatterMargin.left - scatterMargin.right;
+    scatterH = H - scatterMargin.top - scatterMargin.bottom;
+
+    scatterSvg = d3.select(container).append('svg').attr('width', W).attr('height', H);
+    scatterG = scatterSvg.append('g').attr('transform', `translate(${scatterMargin.left},${scatterMargin.top})`);
+
+    scatterX = d3.scaleLinear().range([0, scatterW]);
+    scatterY = d3.scaleLinear().range([scatterH, 0]);
+
+    // Initial draw
+    updateScatter('category', 'tsne');
+
+    // Event listeners
+    d3.select('#color-select').on('change', function () { updateScatter(this.value, d3.select('#proj-select').node().value); });
+    d3.select('#proj-select').on('change', function () { updateScatter(d3.select('#color-select').node().value, this.value); });
+}
+
+function updateScatter(colorBy, projection) {
+    const markets = DATA.markets;
+
+    // Set domains
+    if (projection === 'tsne') {
+        scatterX.domain(d3.extent(markets, d => d.tx)).nice();
+        scatterY.domain(d3.extent(markets, d => d.ty)).nice();
+    } else {
+        scatterX.domain(d3.extent(markets, d => d.px)).nice();
+        scatterY.domain(d3.extent(markets, d => d.py)).nice();
+    }
+
+    const xAcc = projection === 'tsne' ? d => d.tx : d => d.px;
+    const yAcc = projection === 'tsne' ? d => d.ty : d => d.py;
+
+    // Color scales
+    let colorFn;
+    if (colorBy === 'category') {
+        colorFn = d => catColor(d.cat);
+    } else if (colorBy === 'outcome') {
+        colorFn = d => d.out === 'Yes' ? '#22c55e' : d.out === 'No' ? '#ef4444' : '#6b7280';
+    } else if (colorBy === 'volume') {
+        const volScale = d3.scaleLog().domain([d3.min(markets, d => Math.max(d.vol, 1)), d3.max(markets, d => d.vol)]).range([0, 1]);
+        colorFn = d => d3.interpolateYlOrRd(volScale(Math.max(d.vol, 1)));
+    } else if (colorBy === 'volatility') {
+        const volScale = d3.scaleLinear().domain(d3.extent(markets, d => d.price_vol)).range([0, 1]);
+        colorFn = d => d3.interpolateViridis(volScale(d.price_vol));
+    } else if (colorBy === 'duration') {
+        const durScale = d3.scaleLinear().domain(d3.extent(markets, d => d.dur)).range([0, 1]);
+        colorFn = d => d3.interpolatePlasma(durScale(d.dur));
+    }
+
+    // Draw/update dots
+    const sel = scatterG.selectAll('circle').data(markets, d => d.id);
+
+    sel.enter().append('circle')
+        .attr('r', 0)
+        .attr('cx', d => scatterX(xAcc(d)))
+        .attr('cy', d => scatterY(yAcc(d)))
+        .attr('fill', d => colorFn(d))
+        .attr('opacity', 0.7)
+        .attr('stroke', 'rgba(0,0,0,0.3)')
+        .attr('stroke-width', 0.5)
+        .on('mouseover', function (event, d) {
+            d3.select(this).attr('r', 6).attr('opacity', 1).attr('stroke', '#fff').attr('stroke-width', 1.5);
+            const vol = d.vol >= 1e6 ? (d.vol / 1e6).toFixed(1) + 'M' : d.vol >= 1e3 ? (d.vol / 1e3).toFixed(0) + 'K' : d.vol;
+            tooltip.style('opacity', 1).html(`
+                <div class="tt-question">${d.q}</div>
+                <div class="tt-row"><span>Category</span><span class="tt-val">${d.cat}</span></div>
+                <div class="tt-row"><span>Outcome</span><span class="tt-val">${d.out}</span></div>
+                <div class="tt-row"><span>Volume</span><span class="tt-val">$${vol}</span></div>
+                <div class="tt-row"><span>Volatility</span><span class="tt-val">${d.price_vol.toFixed(3)}</span></div>
+                <div class="tt-row"><span>Duration</span><span class="tt-val">${d.dur.toFixed(0)} days</span></div>
+            `);
+        })
+        .on('mousemove', function (event) {
+            tooltip.style('left', (event.pageX + 14) + 'px').style('top', (event.pageY - 10) + 'px');
+        })
+        .on('mouseout', function () {
+            d3.select(this).attr('r', 3).attr('opacity', 0.7).attr('stroke', 'rgba(0,0,0,0.3)').attr('stroke-width', 0.5);
+            tooltip.style('opacity', 0);
+        })
+        .transition().duration(800).delay((_, i) => i * 0.3)
+        .attr('r', 3);
+
+    sel.transition().duration(600)
+        .attr('cx', d => scatterX(xAcc(d)))
+        .attr('cy', d => scatterY(yAcc(d)))
+        .attr('fill', d => colorFn(d));
+
+    // Category legend
+    updateCatLegend(colorBy, markets, colorFn);
+}
+
+function updateCatLegend(colorBy, markets, colorFn) {
+    const legend = document.getElementById('cat-legend');
+    if (colorBy === 'category') {
+        const cats = [...new Set(markets.map(m => m.cat))].sort((a, b) => {
+            const ca = markets.filter(m => m.cat === a).length;
+            const cb = markets.filter(m => m.cat === b).length;
+            return cb - ca;
+        }).slice(0, 20);
+        activeCats = new Set(cats);
+        legend.innerHTML = cats.map(c =>
+            `<div class="cat-legend-item" data-cat="${c}"><div class="cat-legend-dot" style="background:${catColor(c)}"></div>${c}</div>`
+        ).join('');
+        legend.querySelectorAll('.cat-legend-item').forEach(el => {
+            el.addEventListener('click', () => toggleCat(el.dataset.cat));
+        });
+    } else if (colorBy === 'outcome') {
+        legend.innerHTML = `
+            <div class="cat-legend-item"><div class="cat-legend-dot" style="background:#22c55e"></div>Yes (first outcome)</div>
+            <div class="cat-legend-item"><div class="cat-legend-dot" style="background:#ef4444"></div>No (second outcome)</div>`;
+    } else {
+        legend.innerHTML = `<span style="font-size:10px;color:#6b7280">Continuous scale — hover for values</span>`;
+    }
+}
+
+function toggleCat(cat) {
+    const items = document.querySelectorAll('.cat-legend-item');
+    if (activeCats.has(cat) && activeCats.size > 1) {
+        activeCats.delete(cat);
+    } else {
+        activeCats.add(cat);
+    }
+    items.forEach(el => {
+        el.classList.toggle('dimmed', !activeCats.has(el.dataset.cat));
+    });
+    scatterG.selectAll('circle')
+        .transition().duration(300)
+        .attr('opacity', d => activeCats.has(d.cat) ? 0.7 : 0.04)
+        .attr('r', d => activeCats.has(d.cat) ? 3 : 1.5);
+}
+
+// ========== PCA VARIANCE ==========
+function renderPCA(variance) {
+    const container = document.getElementById('pca-chart');
+    const top = Math.min(15, variance.length);
+    let cumulative = 0;
+    let html = '';
+
+    const maxVar = variance[0];
+    for (let i = 0; i < top; i++) {
+        cumulative += variance[i];
+        const pct = variance[i];
+        const barW = (pct / maxVar) * 100;
+        const hue = 210 + i * 8;
+        html += `<div class="pca-bar-row">
+            <div class="pca-bar-label">PC${i + 1}</div>
+            <div class="pca-bar-track"><div class="pca-bar-fill" style="width:${barW}%;background:hsl(${hue}, 70%, 55%)"></div></div>
+            <div class="pca-bar-val">${pct.toFixed(1)}%</div>
+        </div>`;
+    }
+    html += `<div class="pca-cumulative">Top ${top} components: ${cumulative.toFixed(1)}% &nbsp;|&nbsp; Top 5: ${variance.slice(0, 5).reduce((a, b) => a + b, 0).toFixed(1)}% &nbsp;|&nbsp; Top 10: ${variance.slice(0, 10).reduce((a, b) => a + b, 0).toFixed(1)}%</div>`;
+    container.innerHTML = html;
+}
+
+// ========== COMPARISON TABLE ==========
+function renderComparison(probes08, probes10) {
+    const container = document.getElementById('comparison-table');
+    let html = `<table class="comp-table">
+        <thead><tr><th>Concept</th><th>cutoff=0.8</th><th>cutoff=1.0</th><th>Baseline</th><th>p-value</th></tr></thead><tbody>`;
+
+    const sorted08 = [...probes08].sort((a, b) => b.accuracy - a.accuracy);
+    sorted08.forEach(p08 => {
+        const p10 = probes10.find(p => p.concept_name === p08.concept_name);
+        const a08 = (p08.accuracy * 100).toFixed(1);
+        const a10 = p10 ? (p10.accuracy * 100).toFixed(1) : '—';
+        const base = (p08.baseline_accuracy * 100).toFixed(1);
+        const better08 = p08.accuracy >= (p10 ? p10.accuracy : 0);
+        html += `<tr>
+            <td style="color:${PROBE_COLORS[p08.concept_name] || '#4da6ff'};font-weight:600">${PROBE_NAMES[p08.concept_name]}</td>
+            <td class="${better08 ? 'val-better' : 'val-worse'}">${a08}%</td>
+            <td class="${!better08 ? 'val-better' : 'val-worse'}">${a10}%</td>
+            <td style="color:#6b7280">${base}%</td>
+            <td><span class="badge badge-sig">p&lt;0.005</span></td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    html += '<div style="font-size:10px;color:#4b5563;margin-top:8px;text-align:center">Green = higher accuracy. cutoff=0.8 is leakage-safe (first 80% of market life only).</div>';
+    container.innerHTML = html;
+}
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import {
   Brain,
   Target,
   GitBranch,
+  Atom,
 } from "lucide-react";
 import "./globals.css";
 
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/analytics", label: "Analytics", icon: Brain },
   { href: "/causal", label: "Causal", icon: GitBranch },
   { href: "/backtest", label: "Backtest", icon: Target },
+  { href: "/embedding-explorer.html", label: "Embeddings", icon: Atom },
 ];
 
 export default function RootLayout({
