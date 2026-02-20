@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS execution_orders (
     created_at      DateTime64(3, 'UTC') DEFAULT now64(3)
 ) ENGINE = MergeTree()
 ORDER BY (submitted_at, condition_id)
-TTL created_at + INTERVAL 90 DAY;
+TTL toDateTime(created_at) + INTERVAL 90 DAY;
 
 CREATE TABLE IF NOT EXISTS execution_positions (
     condition_id    String,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS execution_positions (
     snapshot_at     DateTime64(3, 'UTC')
 ) ENGINE = MergeTree()
 ORDER BY (snapshot_at, condition_id)
-TTL snapshot_at + INTERVAL 90 DAY;
+TTL toDateTime(snapshot_at) + INTERVAL 90 DAY;
 
 CREATE TABLE IF NOT EXISTS execution_snapshots (
     timestamp           DateTime64(3, 'UTC'),
@@ -55,4 +55,4 @@ CREATE TABLE IF NOT EXISTS execution_snapshots (
     mode                String DEFAULT 'DRY_RUN'
 ) ENGINE = MergeTree()
 ORDER BY timestamp
-TTL timestamp + INTERVAL 90 DAY;
+TTL toDateTime(timestamp) + INTERVAL 90 DAY;

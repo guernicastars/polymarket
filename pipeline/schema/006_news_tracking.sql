@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS news_articles
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(published_at)
 ORDER BY (source, published_at, article_id)
-TTL published_at + INTERVAL 2 YEAR DELETE
+TTL toDateTime(published_at) + INTERVAL 2 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS frontline_state
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(observed_at)
 ORDER BY (settlement_id, observed_at)
-TTL observed_at + INTERVAL 1 YEAR DELETE
+TTL toDateTime(observed_at) + INTERVAL 1 YEAR DELETE
 SETTINGS index_granularity = 8192;
 
 -- ============================================================
@@ -156,5 +156,5 @@ CREATE TABLE IF NOT EXISTS market_microstructure
 ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(snapshot_time)
 ORDER BY (condition_id, snapshot_time)
-TTL snapshot_time + INTERVAL 30 DAY DELETE
+TTL toDateTime(snapshot_time) + INTERVAL 30 DAY DELETE
 SETTINGS index_granularity = 8192;
