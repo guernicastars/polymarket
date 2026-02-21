@@ -1,13 +1,20 @@
-"""Market embedding PoC: autoencoder + linear probes on resolved Polymarket data.
+"""Market embedding module: autoencoder + transformer + linear probes.
 
-Research question: Do neural embeddings solve multicollinearity? Are interpretable
-concepts linearly separable in the learned embedding space?
+Two complementary embedding architectures:
 
-Pipeline:
-  ClickHouse (resolved markets)
-    -> ResolvedMarketDataset (summary features per market lifecycle)
-    -> MarketAutoencoder / VariationalAutoencoder (compress to latent space)
-    -> LinearProbe (test separability of known concepts)
-    -> DisentanglementAnalyzer (PCA, novel directions, stability)
-    -> FeatureInterpreter (trace back to input features, plain-language output)
+  Autoencoder (static snapshot):
+    ClickHouse (resolved markets)
+      -> ResolvedMarketDataset (27 summary features per lifecycle)
+      -> MarketAutoencoder / VariationalAutoencoder
+      -> LinearProbe + DisentanglementAnalyzer
+
+  Transformer (temporal dynamics):
+    ClickHouse (all markets — active + resolved)
+      -> TemporalMarketDataset (variable-length hourly bar sequences)
+      -> MarketTransformer (patch-based encoder-only, pre-trained via MPP)
+      -> LinearProbe (same framework, apples-to-apples comparison)
+
+  Fusion:
+    Concatenate AE + transformer embeddings, run probes on combined vector.
+    Tests whether temporal patterns add information beyond summary statistics.
 """
