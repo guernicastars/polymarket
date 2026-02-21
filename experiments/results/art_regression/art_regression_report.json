@@ -1,0 +1,523 @@
+{
+  "experiment": "art_market_regression",
+  "timestamp": "2026-02-20T19:45:24",
+  "dataset": {
+    "name": "Art Market Auctions (estimates excluded)",
+    "n_samples": 693650,
+    "n_features": 53,
+    "n_features_dropped_zero_var": 1,
+    "target": "log_hammer_price",
+    "target_stats": {
+      "mean": 9.084024546843128,
+      "std": 1.7617181405696087,
+      "min": 4.605170185988092,
+      "max": 18.335939515497273
+    },
+    "feature_names": [
+      "age_at_creation",
+      "artist_avg_log_price",
+      "artist_birth_year",
+      "artist_career_length",
+      "artist_market_depth",
+      "artist_median_log_price",
+      "artist_name_confidence",
+      "artist_price_std",
+      "artist_price_trend",
+      "artist_prior_lots",
+      "aspect_ratio",
+      "creation_confidence",
+      "creation_is_approximate",
+      "creation_year",
+      "dimensions_confidence",
+      "exhibition_count",
+      "has_condition_report",
+      "has_crypto",
+      "has_depth",
+      "has_description",
+      "has_origin",
+      "has_signed_inscribed",
+      "has_style_period",
+      "height_cm",
+      "is_asian_art",
+      "is_attributed_artist",
+      "is_book",
+      "is_decorative",
+      "is_jewelry",
+      "is_living",
+      "is_maker_not_artist",
+      "is_online_sale",
+      "is_painting",
+      "is_rare_artist",
+      "is_sculpture",
+      "is_wine",
+      "is_work_on_paper",
+      "literature_count",
+      "log_depth_cm",
+      "log_starting_bid",
+      "log_surface_area",
+      "lot_position_pct",
+      "medium_confidence",
+      "medium_known",
+      "nationality_known",
+      "provenance_count",
+      "sale_day_of_week",
+      "sale_month",
+      "sale_size",
+      "sale_year_numeric",
+      "title_length",
+      "width_cm",
+      "years_since_creation"
+    ],
+    "excluded_features": {
+      "category_D_estimate": [
+        "estimate_spread",
+        "log_estimate_high",
+        "log_estimate_low",
+        "log_estimate_mid"
+      ],
+      "category_P_estimate_accuracy": [
+        "estimate_mid_usd",
+        "estimate_relative_level",
+        "log_estimate_range_usd"
+      ],
+      "other_target_leaking": [
+        "final_hammer_ratio",
+        "hammer_start_ratio",
+        "num_bids",
+        "reserve_met"
+      ],
+      "total_excluded": 11,
+      "all_excluded": [
+        "estimate_mid_usd",
+        "estimate_relative_level",
+        "estimate_spread",
+        "final_hammer_ratio",
+        "hammer_start_ratio",
+        "log_estimate_high",
+        "log_estimate_low",
+        "log_estimate_mid",
+        "log_estimate_range_usd",
+        "num_bids",
+        "reserve_met"
+      ]
+    },
+    "split": {
+      "train": 485554,
+      "val": 104048,
+      "test": 104048
+    }
+  },
+  "hyperparameters": {
+    "embedding_dim": 8,
+    "beta": 1.0,
+    "alpha": 1.0,
+    "gamma": 1.0,
+    "epochs": 300,
+    "batch_size": 128,
+    "patience": 30,
+    "ridge_alpha": 1.0,
+    "seed": 42
+  },
+  "training": {
+    "svae_best_epoch": 54,
+    "svae_best_val_loss": 1.7303312921216127,
+    "pca_explained_variance": 0.9093174574284341,
+    "tosvae_available": true
+  },
+  "multicollinearity": {
+    "raw": {
+      "vif_mean": 7.499815079752288,
+      "vif_max": Infinity,
+      "vif_severe": 10,
+      "condition_number": 28480095590212.25,
+      "max_correlation": 1.0
+    },
+    "pca": {
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 1.0,
+      "vif_max": 1.0000000000000002,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 6.7125095596733235,
+      "vif_values": [
+        1.0000000000000002,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0000000000000002,
+        1.0
+      ]
+    },
+    "svae": {
+      "label": "SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.002047992512434,
+      "vif_max": 1.0051170625486054,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 6.020705699920654,
+      "vif_values": [
+        1.0016852359455704,
+        1.000168411479141,
+        1.0041998440299063,
+        1.0022676633735894,
+        1.0005470525093476,
+        1.0013541413998652,
+        1.0051170625486054,
+        1.001044528813446
+      ]
+    },
+    "tosvae": {
+      "label": "T-OSVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.2496342174667077,
+      "vif_max": 1.676006877363769,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 18.5004825592041,
+      "vif_values": [
+        1.0400510912243928,
+        1.4435691915651971,
+        1.3097965934016518,
+        1.1453309845828432,
+        1.0203357838835363,
+        1.1935276165730384,
+        1.1684556011392313,
+        1.676006877363769
+      ]
+    }
+  },
+  "cv_results": {
+    "Raw+Ridge": {
+      "mae": 1.1698311500097336,
+      "mae_std": 0.0014123046081921623,
+      "rmse": 1.5250621357037608,
+      "rmse_std": 0.0021259833196521677,
+      "r2": 0.2506022537491813,
+      "r2_std": 0.0034050321462125123,
+      "mape": 2.1955003758362297,
+      "mape_std": 0.02444809276891316,
+      "median_ae": 0.9391710446857111,
+      "median_ae_std": 0.00322941456434659,
+      "within_10pct": 0.058424277373315084,
+      "within_10pct_std": 0.00044754792895683183,
+      "within_25pct": 0.14923232177611187,
+      "within_25pct_std": 0.0004937306661149737,
+      "label": "Raw+Ridge"
+    },
+    "PCA+Ridge": {
+      "mae": 1.2693219174433072,
+      "mae_std": 0.0022266740258204162,
+      "rmse": 1.6367759313394774,
+      "rmse_std": 0.0021797891863398157,
+      "r2": 0.13679516855502658,
+      "r2_std": 0.0029385550901593594,
+      "mape": 2.4399280959477916,
+      "mape_std": 0.015148275907181567,
+      "median_ae": 1.0448876872340729,
+      "median_ae_std": 0.003272642370287982,
+      "within_10pct": 0.052249693649535064,
+      "within_10pct_std": 0.0002927861494383126,
+      "within_25pct": 0.12860808765227422,
+      "within_25pct_std": 0.0006155589061283386,
+      "label": "PCA+Ridge"
+    },
+    "Raw+RF": {
+      "mae": 1.0459299514009726,
+      "mae_std": 0.0022651154549843456,
+      "rmse": 1.410647562678714,
+      "rmse_std": 0.0033441346258976296,
+      "r2": 0.35882303895202583,
+      "r2_std": 0.00426781472385311,
+      "mape": 1.9348138124787255,
+      "mape_std": 0.017350185414884915,
+      "median_ae": 0.787754071934446,
+      "median_ae_std": 0.002488935313606157,
+      "within_10pct": 0.07804656527066964,
+      "within_10pct_std": 0.00047514537161142577,
+      "within_25pct": 0.19028184242773732,
+      "within_25pct_std": 0.0007522646780843147,
+      "label": "Raw+RF"
+    },
+    "Raw+GBM": {
+      "mae": 1.088675335204543,
+      "mae_std": 0.0016626449961652987,
+      "rmse": 1.4418919180707563,
+      "rmse_std": 0.0026413998009784793,
+      "r2": 0.3301079811508,
+      "r2_std": 0.0038493654227793926,
+      "mape": 1.984587151639603,
+      "mape_std": 0.014989108592074618,
+      "median_ae": 0.8469020389046984,
+      "median_ae_std": 0.002581165436353434,
+      "within_10pct": 0.06716788005478266,
+      "within_10pct_std": 0.00030000163141571826,
+      "within_25pct": 0.16880559359907732,
+      "within_25pct_std": 0.0006243290057804194,
+      "label": "Raw+GBM"
+    },
+    "SVAE+Ridge": {
+      "mae": 1.1599214623197578,
+      "mae_std": 0.0019306249271966978,
+      "rmse": 1.5127937076207298,
+      "rmse_std": 0.0021787073744802487,
+      "r2": 0.26261242808650914,
+      "r2_std": 0.003018134826569096,
+      "mape": 2.181102677408367,
+      "mape_std": 0.031412318379671705,
+      "median_ae": 0.9305037974175494,
+      "median_ae_std": 0.0027532148311725873,
+      "within_10pct": 0.05884668060260938,
+      "within_10pct_std": 0.000497011583417843,
+      "within_25pct": 0.14966337490088663,
+      "within_25pct_std": 0.0010171078091735452,
+      "label": "SVAE+Ridge"
+    },
+    "T-OSVAE+Ridge": {
+      "mae": 1.1586509198569452,
+      "mae_std": 0.0021560034748292593,
+      "rmse": 1.510816465697399,
+      "rmse_std": 0.0028667932332847256,
+      "r2": 0.2645343476301455,
+      "r2_std": 0.004140572637804246,
+      "mape": 2.1758701064040213,
+      "mape_std": 0.015372357477693882,
+      "median_ae": 0.9237210536370654,
+      "median_ae_std": 0.002105750032510755,
+      "within_10pct": 0.060184531103582496,
+      "within_10pct_std": 0.0007578962755749857,
+      "within_25pct": 0.15246305773805233,
+      "within_25pct_std": 0.0008941642780320615,
+      "label": "T-OSVAE+Ridge"
+    }
+  },
+  "oos_results": {
+    "Raw+Ridge": {
+      "mae": 1.3631629100135243,
+      "rmse": 1.722038139394833,
+      "r2": -0.027243534226743638,
+      "mape": 3.5254957917935017,
+      "median_ae": 1.1562626821095598,
+      "within_10pct": 0.04807396586190989,
+      "within_25pct": 0.1181666154082731,
+      "label": "Raw+Ridge"
+    },
+    "PCA+Ridge": {
+      "mae": 1.450686930834407,
+      "rmse": 1.8631566508759108,
+      "r2": -0.20250426899176865,
+      "mape": 2.8737527883661866,
+      "median_ae": 1.1871393485961645,
+      "within_10pct": 0.04719936952175919,
+      "within_25pct": 0.11673458403813625,
+      "label": "PCA+Ridge"
+    },
+    "Raw+RF": {
+      "mae": 1.1194761642602697,
+      "rmse": 1.4877571232906421,
+      "r2": 0.23325321931952436,
+      "mape": 1.8048987634456468,
+      "median_ae": 0.8711242336337728,
+      "within_10pct": 0.06442218975857297,
+      "within_25pct": 0.163040135322159,
+      "label": "Raw+RF"
+    },
+    "Raw+GBM": {
+      "mae": 1.1174699435089321,
+      "rmse": 1.4872692336582543,
+      "r2": 0.23375602513454852,
+      "mape": 2.0180357830666487,
+      "median_ae": 0.8683370844386662,
+      "within_10pct": 0.0655082269721667,
+      "within_25pct": 0.16548131631554666,
+      "label": "Raw+GBM"
+    },
+    "SVAE+Ridge": {
+      "mae": 1.161158601319598,
+      "rmse": 1.5167154927463669,
+      "r2": 0.20311412211340918,
+      "mape": 2.028696527675444,
+      "median_ae": 0.9350564778669472,
+      "within_10pct": 0.05606066430878056,
+      "within_25pct": 0.14184799323389205,
+      "label": "SVAE+Ridge"
+    },
+    "T-OSVAE+Ridge": {
+      "mae": 1.1321116609880317,
+      "rmse": 1.5129749175260414,
+      "r2": 0.207039889197828,
+      "mape": 1.5561088148854996,
+      "median_ae": 0.8675063721524925,
+      "within_10pct": 0.06620982623404582,
+      "within_25pct": 0.16774950023066276,
+      "label": "T-OSVAE+Ridge"
+    }
+  },
+  "walk_forward": {
+    "Raw+Ridge": {
+      "mean_r2": 0.21186353069619454,
+      "std_r2": 0.08024482188109383,
+      "n_windows": 14
+    },
+    "PCA+Ridge": {
+      "mean_r2": 0.13894477920497875,
+      "std_r2": 0.07845075266461479,
+      "n_windows": 14
+    },
+    "Raw+RF": {
+      "mean_r2": 0.2882038642413906,
+      "std_r2": 0.08792135701427109,
+      "n_windows": 14
+    },
+    "Raw+LGBM": {
+      "mean_r2": 0.28974239157939746,
+      "std_r2": 0.1033289166750798,
+      "n_windows": 14
+    },
+    "SVAE+Ridge": {
+      "mean_r2": 0.23176388635343523,
+      "std_r2": 0.07283960952061783,
+      "n_windows": 14
+    },
+    "T-OSVAE+Ridge": {
+      "mean_r2": 0.23295705017170645,
+      "std_r2": 0.07404791680676273,
+      "n_windows": 14
+    }
+  },
+  "vif_analysis": {
+    "Raw (53D)": {
+      "label": "Raw (53D)",
+      "dims": 53,
+      "vif_mean": 7.499815079752288,
+      "vif_max": Infinity,
+      "vif_severe": 10,
+      "vif_moderate": 14,
+      "condition_number": 28480095590212.25,
+      "vif_values": [
+        1.1660879255049292,
+        40.12207977201687,
+        1.2594786410789218,
+        1.0778818391457619,
+        14.587631252921241,
+        36.539874059950485,
+        3.626781361907688,
+        1.7104524091760898,
+        1.0079305460462662,
+        4.490478406257653,
+        1.1294695771252685,
+        1.9534472592477972,
+        1.5481362712820015,
+        Infinity,
+        2.6646234650477854,
+        1.3652150692792826,
+        1.058647097485229,
+        1.053073432237175,
+        10.252015272745426,
+        1.7691359276207765,
+        2.282562635556955,
+        1.840598721269501,
+        1.4995012991175765,
+        2.5562313005987756,
+        1.4207107696920802,
+        67.96334152810464,
+        9.005064624874237,
+        9.036196560967477,
+        1.472240807321184,
+        1.4413059534430046,
+        73.68879568199608,
+        6.0709421878744125,
+        2.746617555191213,
+        10.665597231193686,
+        4.015211139387846,
+        2.8580138980273553,
+        4.016139751238549,
+        1.3987232648312846,
+        9.940282637993384,
+        1.1587701523313763,
+        2.2417038829402824,
+        1.001340796754797,
+        2.983928882346167,
+        15.37083133742146,
+        1.4405731158443091,
+        1.7903454699502321,
+        1.0301539053949005,
+        4.044213638349392,
+        1.0047268123740487,
+        4.042048238237416,
+        1.0872189760551378,
+        2.9941967246112857,
+        Infinity
+      ]
+    },
+    "PCA (8D)": {
+      "label": "PCA (8D)",
+      "dims": 8,
+      "vif_mean": 1.0,
+      "vif_max": 1.0000000000000002,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 6.7125095596733235,
+      "vif_values": [
+        1.0000000000000002,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0000000000000002,
+        1.0
+      ]
+    },
+    "SVAE (8D)": {
+      "label": "SVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.002047992512434,
+      "vif_max": 1.0051170625486054,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 6.020705699920654,
+      "vif_values": [
+        1.0016852359455704,
+        1.000168411479141,
+        1.0041998440299063,
+        1.0022676633735894,
+        1.0005470525093476,
+        1.0013541413998652,
+        1.0051170625486054,
+        1.001044528813446
+      ]
+    },
+    "T-OSVAE (8D)": {
+      "label": "T-OSVAE (8D)",
+      "dims": 8,
+      "vif_mean": 1.2496342174667077,
+      "vif_max": 1.676006877363769,
+      "vif_severe": 0,
+      "vif_moderate": 0,
+      "condition_number": 18.5004825592041,
+      "vif_values": [
+        1.0400510912243928,
+        1.4435691915651971,
+        1.3097965934016518,
+        1.1453309845828432,
+        1.0203357838835363,
+        1.1935276165730384,
+        1.1684556011392313,
+        1.676006877363769
+      ]
+    }
+  },
+  "verdict": {
+    "q1_svae_vs_ml": "NO: Standard ML outperforms SVAE on regression",
+    "q1_detail": "R2 deltas: SVAE vs RF -0.0962, SVAE vs LGBM -0.0675. Tree-based models handle raw features better for price prediction.",
+    "q2_conditioning": "YES: infx VIF reduction, 4730358368220x condition# reduction",
+    "best_model": "Raw+RF",
+    "best_r2": 0.35882303895202583,
+    "q3_tosvae_vs_svae": "COMPARABLE: T-OSVAE R2 0.2645 vs SVAE 0.2626 (+0.0019)"
+  },
+  "elapsed_seconds": 5230.122471250012
+}
