@@ -520,8 +520,10 @@ def collate_temporal_batch(batch: list[dict]) -> dict:
     # because n_bars // n_patches gives wrong ps when n_bars isn't a multiple of 24.
     max_patches = max(b["relative_positions"].shape[0] for b in batch)
 
-    # Pad bars to cover both the longest sequence and all patches
-    max_bars_padded = max(((max_bars + ps - 1) // ps) * ps, max_patches * ps)
+    # Pad bars to exactly max_patches * ps. Trailing bars beyond the last complete
+    # patch boundary are clipped — PatchEmbedding truncates to n_patches * ps anyway,
+    # so those bars would be unused and would create phantom patches with no positions.
+    max_bars_padded = max_patches * ps
 
     B = len(batch)
     features = torch.zeros(B, max_bars_padded, n_features)
@@ -529,8 +531,8 @@ def collate_temporal_batch(batch: list[dict]) -> dict:
     relative_positions = torch.zeros(B, max_patches)
 
     for i, b in enumerate(batch):
-        n = b["features"].shape[0]
-        features[i, :n, :] = b["features"]
+        n = min(b["features"].shape[0], max_bars_padded)
+        features[i, :n, :] = b["features"][:n]
         padding_mask[i, :n] = False
         n_p = b["relative_positions"].shape[0]
         if n_p > 0:
