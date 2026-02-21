@@ -15,6 +15,9 @@ Two complementary embedding architectures:
       -> LinearProbe (same framework, apples-to-apples comparison)
 
   Fusion:
-    Concatenate AE + transformer embeddings, run probes on combined vector.
-    Tests whether temporal patterns add information beyond summary statistics.
+    Two methods for combining AE + transformer embeddings:
+      - Concatenation: simple concat, run probes on combined vector
+      - Cross-attention: learnable gated fusion via bidirectional cross-attention
+    Temporal probes (trajectory shape, momentum profile, volume pattern) test
+    whether temporal dynamics add information beyond summary statistics.
 """

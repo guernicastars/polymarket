@@ -251,6 +251,142 @@ class LinearProbe:
 
         return (count_ge + 1) / (n_permutations + 1)
 
+    def run_temporal_probes(
+        self,
+        embeddings: np.ndarray,
+        sequences: list[np.ndarray],
+        labels: list[dict],
+    ) -> list[ProbeResult]:
+        """Run temporal-specific probes that test for time-series dynamics.
+
+        These probe for concepts that only temporal data can capture:
+        - trajectory_shape: monotonic / V-recovery / mean-reverting / volatile
+        - momentum_profile: accelerating / decelerating / steady
+        - volume_pattern: front-loaded / back-loaded / uniform
+
+        Args:
+            embeddings: (N, d) frozen embeddings
+            sequences: list of (n_bars, 12) arrays (normalized) — one per market
+            labels: list of label dicts (for filtering)
+        """
+        logger.info("Running temporal probes (%d permutations each)...", self.cfg.n_permutation_tests)
+        results = []
+
+        n = len(sequences)
+        if n < 20:
+            logger.warning("Too few sequences for temporal probes: %d", n)
+            return results
+
+        # --- 1. Trajectory shape ---
+        # Classify price path shape based on log-returns (column 0)
+        traj_labels = np.array([self._classify_trajectory(s) for s in sequences])
+        n_classes = len(np.unique(traj_labels[traj_labels >= 0]))
+        if n_classes >= 2:
+            results.append(self.probe_classification(embeddings, traj_labels, "trajectory_shape"))
+
+        # --- 2. Momentum profile ---
+        # Classify acceleration pattern: is momentum building or fading?
+        momentum_labels = np.array([self._classify_momentum(s) for s in sequences])
+        n_classes = len(np.unique(momentum_labels[momentum_labels >= 0]))
+        if n_classes >= 2:
+            results.append(self.probe_classification(embeddings, momentum_labels, "momentum_profile"))
+
+        # --- 3. Volume pattern ---
+        # Classify volume distribution across market lifetime
+        vol_labels = np.array([self._classify_volume_pattern(s) for s in sequences])
+        n_classes = len(np.unique(vol_labels[vol_labels >= 0]))
+        if n_classes >= 2:
+            results.append(self.probe_classification(embeddings, vol_labels, "volume_pattern"))
+
+        results.sort(key=lambda r: (-int(r.is_significant), -r.accuracy))
+        return results
+
+    @staticmethod
+    def _classify_trajectory(seq: np.ndarray) -> int:
+        """Classify price path shape from log-returns (column 0).
+
+        0 = monotonic_up: cumulative returns steadily positive
+        1 = monotonic_down: cumulative returns steadily negative
+        2 = v_recovery: drops then recovers (min in first 60%, ends above midpoint)
+        3 = mean_reverting: oscillates around zero (low cumulative, high variance)
+        """
+        if len(seq) < 8:
+            return -1
+        log_rets = seq[:, 0]  # already z-scored, but sign matters
+        cum_rets = np.cumsum(log_rets)
+        final = cum_rets[-1]
+        mid = len(cum_rets) // 2
+        min_idx = np.argmin(cum_rets)
+        max_idx = np.argmax(cum_rets)
+
+        # Mean-reverting: final cumulative return near zero relative to variation
+        ret_range = np.max(cum_rets) - np.min(cum_rets)
+        if ret_range > 0 and abs(final) / ret_range < 0.2:
+            return 3  # mean_reverting
+
+        # V-recovery: minimum in first 60%, ends positive
+        if min_idx < len(cum_rets) * 0.6 and final > 0 and cum_rets[min_idx] < -0.3 * ret_range:
+            return 2  # v_recovery
+
+        # Monotonic up or down
+        if final > 0:
+            return 0  # monotonic_up
+        return 1  # monotonic_down
+
+    @staticmethod
+    def _classify_momentum(seq: np.ndarray) -> int:
+        """Classify momentum profile from log-returns.
+
+        0 = accelerating: 2nd-half absolute returns > 1st-half
+        1 = decelerating: 1st-half absolute returns > 2nd-half
+        2 = steady: roughly equal
+        """
+        if len(seq) < 8:
+            return -1
+        log_rets = seq[:, 0]
+        mid = len(log_rets) // 2
+        first_half_energy = np.mean(np.abs(log_rets[:mid]))
+        second_half_energy = np.mean(np.abs(log_rets[mid:]))
+
+        total = first_half_energy + second_half_energy
+        if total < 1e-8:
+            return 2  # steady (near-zero returns)
+
+        ratio = second_half_energy / max(first_half_energy, 1e-8)
+        if ratio > 1.5:
+            return 0  # accelerating
+        elif ratio < 0.67:
+            return 1  # decelerating
+        return 2  # steady
+
+    @staticmethod
+    def _classify_volume_pattern(seq: np.ndarray) -> int:
+        """Classify volume distribution from volume delta (column 6).
+
+        0 = front_loaded: higher volume in first third
+        1 = back_loaded: higher volume in last third
+        2 = uniform: roughly even distribution
+        """
+        if len(seq) < 6:
+            return -1
+        vol_delta = seq[:, 6]  # volume delta feature
+        n = len(vol_delta)
+        third = n // 3
+
+        first = np.mean(np.abs(vol_delta[:third]))
+        last = np.mean(np.abs(vol_delta[-third:]))
+
+        total = first + last
+        if total < 1e-8:
+            return 2  # uniform
+
+        ratio = first / max(last, 1e-8)
+        if ratio > 1.5:
+            return 0  # front_loaded
+        elif ratio < 0.67:
+            return 1  # back_loaded
+        return 2  # uniform
+
     def _empty_result(self, name: str, task_type: str, latent_dim: int) -> ProbeResult:
         return ProbeResult(
             concept_name=name,

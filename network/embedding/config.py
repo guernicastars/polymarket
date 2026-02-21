@@ -136,7 +136,7 @@ class TransformerConfig:
 
     # --- Temporal dataset ---
     bar_interval_hours: int = 1   # aggregate to 1h bars
-    min_bars: int = 48            # minimum 48 hours of data to include a market
+    min_bars: int = 24            # minimum 24 hours of data (1 patch) to include a market
     max_bars: int = 3072          # cap at 128 days of hourly data (128 * 24)
     include_active: bool = True   # include active (unresolved) markets for pre-training
     min_volume_pretrain: float = 100.0   # lower threshold for pre-training data

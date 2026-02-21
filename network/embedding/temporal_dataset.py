@@ -93,19 +93,21 @@ class TemporalMarketDataset(Dataset):
         self._global_std = np.std(all_bars, axis=0) if len(all_bars) > 0 else np.ones(12)
         self._global_std[self._global_std < 1e-8] = 1.0
 
-        # 4. Normalize and store
+        # 4. Normalize and store — track which raw indices pass the min_bars filter
+        #    so that self.markets stays aligned with self.sequences.
         self.sequences = []
-        for seq in raw_sequences:
+        valid_indices = []
+        for i, seq in enumerate(raw_sequences):
             if len(seq) >= self.cfg.min_bars:
                 normed = (seq - self._global_mean) / self._global_std
                 self.sequences.append(normed.astype(np.float32))
+                valid_indices.append(i)
 
-        # 5. Extract labels for resolved markets
+        # 5. Filter markets to match valid sequences (must happen BEFORE label extraction)
+        self.markets = [self.markets[i] for i in valid_indices]
+
+        # 6. Extract labels for resolved markets (now self.markets is aligned with self.sequences)
         self.labels = self._extract_labels() if mode == "finetune" else [{}] * len(self.sequences)
-
-        # Filter out markets that didn't have enough bars
-        valid_cids = {self.markets[i]["condition_id"] for i in range(len(self.sequences))}
-        self.markets = [m for m in self.markets if m["condition_id"] in valid_cids]
 
         logger.info("Final dataset: %d markets, features shape per market varies", len(self.sequences))
 
@@ -420,16 +422,28 @@ class TemporalMarketDataset(Dataset):
     # ------------------------------------------------------------------
 
     def _extract_labels(self) -> list[dict]:
-        """Build label dicts for resolved markets (same schema as ResolvedMarketDataset)."""
-        # Volume terciles
-        volumes = np.array([m.get("volume_total", 0) for m in self.markets])
-        vol_t1, vol_t2 = np.percentile(volumes, [33, 67]) if len(volumes) > 2 else (0, 0)
+        """Build label dicts for resolved markets (same schema as ResolvedMarketDataset).
+
+        Precondition: self.markets and self.sequences are aligned (same length, same order).
+        """
+        n = len(self.markets)
+        assert n == len(self.sequences), (
+            f"markets/sequences misaligned: {n} vs {len(self.sequences)}"
+        )
+
+        # Volume terciles — computed only on the filtered (valid) markets
+        volumes = np.array([float(m.get("volume_total", 0) or 0) for m in self.markets])
+        if len(volumes) > 2:
+            vol_t1, vol_t2 = np.percentile(volumes, [33, 67])
+        else:
+            vol_t1, vol_t2 = 0.0, 0.0
+
+        # Volatility median — pre-compute for regime classification
+        all_stds = [float(np.std(s[:, 0])) for s in self.sequences if len(s) > 0]
+        vol_median = float(np.median(all_stds)) if all_stds else 0.0
 
         labels = []
         for i, m in enumerate(self.markets):
-            if i >= len(self.sequences):
-                break
-
             winning = m.get("winning_outcome", "")
             outcomes = m.get("outcomes", [])
 
@@ -455,7 +469,7 @@ class TemporalMarketDataset(Dataset):
                 dur_bucket = "long"
 
             # Volume bucket
-            v = m.get("volume_total", 0)
+            v = float(m.get("volume_total", 0) or 0)
             if v < vol_t1:
                 vol_bucket = "low"
             elif v < vol_t2:
@@ -463,12 +477,10 @@ class TemporalMarketDataset(Dataset):
             else:
                 vol_bucket = "high"
 
-            # Volatility regime from price std
+            # Volatility regime from log-returns std
             seq = self.sequences[i]
-            price_std = np.std(seq[:, 0]) if len(seq) > 0 else 0  # log returns std
-            vol_regime = "high" if price_std > np.median(
-                [np.std(s[:, 0]) for s in self.sequences if len(s) > 0]
-            ) else "low"
+            price_std = float(np.std(seq[:, 0])) if len(seq) > 0 else 0.0
+            vol_regime = "high" if price_std > vol_median else "low"
 
             labels.append({
                 "winning_outcome": winning,

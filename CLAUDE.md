@@ -239,7 +239,7 @@ New tables: `arbitrage_opportunities`, `wallet_clusters`, `insider_scores`, `com
 
 Dashboard `/analytics` page with 5 stats cards (open arbitrages, wallet clusters, insider alerts, markets scored, avg confidence) and 4 tabbed views (Composite Scores, Arbitrage, Clusters, Insider). `/signals` page enhanced with Composite tab. Sidebar navigation includes Analytics link.
 
-**System totals:** 14 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3 + 3 Phase 4), 7 schema files (18 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components, 6 network visualizations, GNN model with graph builder + generic dataset, embedding PoC (autoencoder + 5 linear probes + disentanglement analysis).
+**System totals:** 14 pipeline jobs (4 Phase 1 + 4 Phase 2 + 3 Phase 3 + 3 Phase 4), 7 schema files (18 tables + 4 materialized views), 4 dashboard pages (/, /signals, /whales, /analytics), 27 query functions, 29 TypeScript types, 25 components, 6 network visualizations, GNN model with graph builder + generic dataset, embedding module (autoencoder + transformer + cross-attention fusion + 8 probes + disentanglement analysis).
 
 ## Research & Planning
 
@@ -423,11 +423,13 @@ Temporal Graph Neural Network for market prediction, following Anastasiia's 12-f
 **Embedding PoC (network/embedding/) — Research Module:**
 Autoencoder-based market embedding with linear probe framework. Proves that neural embeddings disentangle interpretable market concepts into linearly separable directions. Trained on 2,099 resolved Polymarket markets.
 
-- `config.py` — 4 dataclasses: `EmbeddingFeatureConfig` (27 features, min_volume, lifetime_cutoff_ratio), `AutoencoderConfig` (latent_dim=64, encoder/decoder hidden, VAE option), `ProbeConfig` (CV folds, permutation tests, PCA components), `EmbeddingConfig` (aggregates all + ClickHouse settings)
+- `config.py` — 5 dataclasses: `EmbeddingFeatureConfig` (27 features, min_volume, lifetime_cutoff_ratio), `AutoencoderConfig` (latent_dim=64, encoder/decoder hidden, VAE option), `ProbeConfig` (CV folds, permutation tests, PCA components), `TransformerConfig` (patch_size=24, d_model=64, n_heads=4, n_layers=3, MPP pre-training, min_bars=24, fusion_method), `EmbeddingConfig` (aggregates all + ClickHouse settings)
 - `data.py` — `ResolvedMarketDataset`: ClickHouse → 27 summary features per resolved market lifecycle. Discovers resolved markets via `markets FINAL` JOIN `market_trades`. Six feature groups: price (7), volume (5), liquidity (4, mostly zero — pipeline only polls active markets), participation (4, zero — no holder data for resolved), temporal (3), structure (4). Supports `lifetime_cutoff_ratio` (0.8 = leakage-safe first 80%, 1.0 = full). Z-score normalization. Extracts labels: winning_outcome, category, duration_bucket, volume_bucket, volatility_regime.
+- `temporal_dataset.py` — `TemporalMarketDataset`: ClickHouse → variable-length hourly bar sequences (n_bars, 12). Two modes: pretrain (all markets, min_vol=100) and finetune (resolved only, min_vol=1000). Batched SQL queries (2000 CIDs/chunk). Z-score normalization. min_bars=24 (1 day minimum). Labels aligned with sequences via index tracking.
 - `model.py` — Two architectures: `MarketAutoencoder` (Linear→BN→GELU→Dropout per layer, deterministic bottleneck) and `VariationalAutoencoder` (mu+log_var, reparameterization trick, KL+recon loss). Factory: `create_autoencoder(input_dim, cfg)`.
-- `train.py` — `EmbeddingTrainer`: AdamW + CosineAnnealingLR + early stopping. Saves checkpoint, embeddings.npy, probe_results.json, normalization params. CLI: `python -m network.embedding.train --mode full --latent-dim 32 --epochs 150 --min-volume 5000`
-- `probes.py` — `LinearProbe`: sklearn LogisticRegression/Ridge on frozen embeddings. 5-fold stratified CV + permutation test (N=200). Probes: winning_outcome (binary), category, duration_bucket, volume_bucket, volatility_regime. Returns sorted `ProbeResult` with accuracy, baseline, p-value, coefficients.
+- `transformer_model.py` — Patch-based encoder-only transformer: `PatchEmbedding` (24h patches), `RelativePositionalEncoding` (lifetime fraction), `PreNormEncoderLayer`, `MarketTransformer` (CLS token → d_model embedding), `MarketTransformerForPretraining` (masked patch prediction), `CrossAttentionFusion` (bidirectional cross-attention with learnable gate for AE+TF fusion).
+- `train.py` — `EmbeddingTrainer` (AE) + `TransformerTrainer` (TF). Modes: train/analyze/full (AE), pretrain/finetune/fuse (TF). Fusion supports both concat and cross-attention (`--fusion-method`). Temporal probes run during finetune and fuse modes. CLI: `python -m network.embedding.train --mode full --latent-dim 32 --epochs 150 --min-volume 5000`
+- `probes.py` — `LinearProbe`: sklearn LogisticRegression/Ridge on frozen embeddings. 5 standard probes (winning_outcome, category, duration_bucket, volume_bucket, volatility_regime) + 3 temporal probes (trajectory_shape, momentum_profile, volume_pattern). 5-fold stratified CV + permutation test. Returns sorted `ProbeResult` with accuracy, baseline, p-value, coefficients.
 - `analysis.py` — `DisentanglementAnalyzer`: PCA variance analysis, novel direction search (PCA components with low max|r| to input features), orthogonality test (cosine similarity of probe weight vectors), temporal stability, cluster validation (silhouette scores), t-SNE coordinates.
 - `interpret.py` — `FeatureInterpreter`: Jacobian-based input attribution (d(encoder)/dx), correlation-based fallback, plain-language report generation. Links probe directions to input features.
 
@@ -443,7 +445,18 @@ Autoencoder-based market embedding with linear probe framework. Proves that neur
 
 All 5/5 probes significant. Cutoff=0.8 slightly outperforms cutoff=1.0 (resolution tail adds noise). Duration and category probes show weak input correlations — genuinely emergent encodings, not passthrough. 7 novel PCA directions found (max|r|<0.15 to any input).
 
-**Embedding Tests:** 31 tests (model forward pass, VAE reparameterization, gradient flow, training convergence, probe correctness, config validation) in `network/tests/test_embedding.py`.
+**Temporal Probes (transformer-specific):**
+| Probe | Classification | Labels |
+|-------|---------------|--------|
+| trajectory_shape | Price path shape | monotonic_up, monotonic_down, v_recovery, mean_reverting |
+| momentum_profile | Acceleration pattern | accelerating, decelerating, steady |
+| volume_pattern | Volume distribution | front_loaded, back_loaded, uniform |
+
+**Fusion Methods:**
+- `concat`: Simple concatenation of AE (d_ae) + TF (d_tf) → (d_ae + d_tf). CLI: `--fusion-method concat`
+- `cross_attention`: Bidirectional cross-attention with learnable gate. AE queries TF, TF queries AE, sigmoid gate balances branches → (d_fused). Trained with dual reconstruction loss. CLI: `--fusion-method cross_attention`
+
+**Embedding Tests:** 31 AE tests + 47 transformer tests (model, fusion, temporal probes, collation, config) in `network/tests/test_embedding.py` + `network/tests/test_transformer_embedding.py`.
 
 ## Known Issues
 - WebSocket connections 0-3 reconnect every ~10s (Polymarket server-side idle timeout)

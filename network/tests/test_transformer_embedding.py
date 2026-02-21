@@ -28,7 +28,9 @@ from network.embedding.transformer_model import (
     MarketTransformer,
     MaskedPatchPredictionHead,
     MarketTransformerForPretraining,
+    CrossAttentionFusion,
 )
+from network.embedding.probes import LinearProbe
 
 
 # ============================================================
@@ -377,3 +379,186 @@ class TestCollation:
             relative_positions=collated["relative_positions"],
         )
         assert emb.shape == (2, 32)
+
+
+# ============================================================
+# Cross-Attention Fusion
+# ============================================================
+
+class TestCrossAttentionFusion:
+    def setup_method(self):
+        self.fusion = CrossAttentionFusion(
+            d_ae=64, d_tf=64, d_fused=64, n_heads=4, dropout=0.1,
+        )
+
+    def test_output_shape(self):
+        """Fusion produces correct (B, d_fused) shape."""
+        ae = torch.randn(4, 64)
+        tf = torch.randn(4, 64)
+        fused = self.fusion(ae, tf)
+        assert fused.shape == (4, 64)
+
+    def test_different_input_dims(self):
+        """Fusion works with different AE and TF dimensions."""
+        fusion = CrossAttentionFusion(d_ae=32, d_tf=64, d_fused=48, n_heads=4)
+        ae = torch.randn(4, 32)
+        tf = torch.randn(4, 64)
+        fused = fusion(ae, tf)
+        assert fused.shape == (4, 48)
+
+    def test_gradient_flow(self):
+        """Gradients flow through both branches."""
+        ae = torch.randn(4, 64, requires_grad=True)
+        tf = torch.randn(4, 64, requires_grad=True)
+        fused = self.fusion(ae, tf)
+        loss = fused.pow(2).sum()
+        loss.backward()
+        assert ae.grad is not None and ae.grad.abs().sum() > 0
+        assert tf.grad is not None and tf.grad.abs().sum() > 0
+
+    def test_gate_bounded(self):
+        """Gate values are in [0, 1] (sigmoid output)."""
+        ae = torch.randn(8, 64)
+        tf = torch.randn(8, 64)
+        # Access gate directly
+        ae_proj = self.fusion.proj_ae(ae).unsqueeze(1)
+        tf_proj = self.fusion.proj_tf(tf).unsqueeze(1)
+        gate_input = torch.cat([ae_proj.squeeze(1), tf_proj.squeeze(1)], dim=-1)
+        g = self.fusion.gate(gate_input)
+        assert g.min() >= 0.0 and g.max() <= 1.0
+
+    def test_deterministic_eval(self):
+        """Same input produces same output in eval mode."""
+        self.fusion.eval()
+        ae = torch.randn(2, 64)
+        tf = torch.randn(2, 64)
+        out1 = self.fusion(ae, tf)
+        out2 = self.fusion(ae, tf)
+        assert torch.allclose(out1, out2)
+
+    def test_parameter_count(self):
+        """Fusion model has reasonable parameter count."""
+        n_params = sum(p.numel() for p in self.fusion.parameters())
+        # Projections + attention + gate + norms: should be ~30K-100K
+        assert 5_000 < n_params < 200_000, f"Unexpected param count: {n_params}"
+
+    def test_single_sample(self):
+        """Works with batch size 1."""
+        ae = torch.randn(1, 64)
+        tf = torch.randn(1, 64)
+        fused = self.fusion(ae, tf)
+        assert fused.shape == (1, 64)
+
+
+# ============================================================
+# Temporal Probes
+# ============================================================
+
+class TestTemporalProbes:
+    def test_trajectory_monotonic_up(self):
+        """Positive cumulative returns classified as monotonic_up."""
+        # Steady upward trend
+        seq = np.zeros((100, 12))
+        seq[:, 0] = 0.01  # constant positive log returns
+        label = LinearProbe._classify_trajectory(seq)
+        assert label == 0, f"Expected 0 (monotonic_up), got {label}"
+
+    def test_trajectory_monotonic_down(self):
+        """Negative cumulative returns classified as monotonic_down."""
+        seq = np.zeros((100, 12))
+        seq[:, 0] = -0.01
+        label = LinearProbe._classify_trajectory(seq)
+        assert label == 1, f"Expected 1 (monotonic_down), got {label}"
+
+    def test_trajectory_mean_reverting(self):
+        """Oscillating returns near zero classified as mean_reverting."""
+        seq = np.zeros((100, 12))
+        # Oscillate: up then down repeatedly, ending near zero
+        for i in range(100):
+            seq[i, 0] = 0.05 * (1 if i % 2 == 0 else -1)
+        label = LinearProbe._classify_trajectory(seq)
+        assert label == 3, f"Expected 3 (mean_reverting), got {label}"
+
+    def test_trajectory_short_sequence(self):
+        """Short sequences return -1 (invalid)."""
+        seq = np.zeros((5, 12))
+        label = LinearProbe._classify_trajectory(seq)
+        assert label == -1
+
+    def test_momentum_accelerating(self):
+        """Larger returns in second half classified as accelerating."""
+        seq = np.zeros((100, 12))
+        seq[:50, 0] = 0.01   # small moves first half
+        seq[50:, 0] = 0.05   # large moves second half
+        label = LinearProbe._classify_momentum(seq)
+        assert label == 0, f"Expected 0 (accelerating), got {label}"
+
+    def test_momentum_decelerating(self):
+        """Larger returns in first half classified as decelerating."""
+        seq = np.zeros((100, 12))
+        seq[:50, 0] = 0.05
+        seq[50:, 0] = 0.01
+        label = LinearProbe._classify_momentum(seq)
+        assert label == 1, f"Expected 1 (decelerating), got {label}"
+
+    def test_momentum_steady(self):
+        """Equal returns both halves classified as steady."""
+        seq = np.zeros((100, 12))
+        seq[:, 0] = 0.02
+        label = LinearProbe._classify_momentum(seq)
+        assert label == 2, f"Expected 2 (steady), got {label}"
+
+    def test_volume_front_loaded(self):
+        """Higher volume delta in first third classified as front_loaded."""
+        seq = np.zeros((90, 12))
+        seq[:30, 6] = 5.0   # high volume delta first third
+        seq[60:, 6] = 0.5   # low volume delta last third
+        label = LinearProbe._classify_volume_pattern(seq)
+        assert label == 0, f"Expected 0 (front_loaded), got {label}"
+
+    def test_volume_back_loaded(self):
+        """Higher volume delta in last third classified as back_loaded."""
+        seq = np.zeros((90, 12))
+        seq[:30, 6] = 0.5
+        seq[60:, 6] = 5.0
+        label = LinearProbe._classify_volume_pattern(seq)
+        assert label == 1, f"Expected 1 (back_loaded), got {label}"
+
+    def test_volume_uniform(self):
+        """Equal volume across thirds classified as uniform."""
+        seq = np.zeros((90, 12))
+        seq[:, 6] = 1.0
+        label = LinearProbe._classify_volume_pattern(seq)
+        assert label == 2, f"Expected 2 (uniform), got {label}"
+
+    def test_run_temporal_probes_synthetic(self):
+        """Temporal probes run on synthetic separable data."""
+        from network.embedding.config import ProbeConfig
+
+        n = 200
+        d = 32
+        rng = np.random.RandomState(42)
+        embeddings = rng.randn(n, d).astype(np.float32)
+
+        # Create sequences with clear trajectory patterns embedded in features
+        sequences = []
+        for i in range(n):
+            length = 100
+            seq = np.zeros((length, 12))
+            if i < n // 2:
+                seq[:, 0] = 0.01  # monotonic up
+            else:
+                seq[:, 0] = -0.01  # monotonic down
+            # Also make embeddings separable along the same axis
+            embeddings[i, 0] = 1.0 if i < n // 2 else -1.0
+            sequences.append(seq)
+
+        labels = [{"dummy": True}] * n
+
+        probe = LinearProbe(ProbeConfig(n_permutation_tests=10))
+        results = probe.run_temporal_probes(embeddings, sequences, labels)
+        assert len(results) > 0
+        # trajectory_shape should be trivially separable
+        traj_result = [r for r in results if r.concept_name == "trajectory_shape"]
+        assert len(traj_result) == 1
+        assert traj_result[0].accuracy > 0.8
