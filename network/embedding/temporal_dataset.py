@@ -513,21 +513,15 @@ def collate_temporal_batch(batch: list[dict]) -> dict:
       - labels: dict of lists
     """
     max_bars = max(b["features"].shape[0] for b in batch)
-    # Round up to multiple of patch_size for clean patching
-    patch_size = batch[0]["features"].shape[0]  # just need any to get n_features
     n_features = batch[0]["features"].shape[1]
+    ps = 24  # patch_size
 
-    # Determine patch_size from config (all items share it)
-    # We'll pad to multiple of 24 (default patch_size)
-    ps = 24  # default, overridden if we can detect
-    if batch[0]["relative_positions"].shape[0] > 0:
-        n_bars_0 = batch[0]["features"].shape[0]
-        n_patches_0 = batch[0]["relative_positions"].shape[0]
-        if n_patches_0 > 0:
-            ps = n_bars_0 // n_patches_0
+    # Compute max_patches directly from batch items — don't estimate from bar count,
+    # because n_bars // n_patches gives wrong ps when n_bars isn't a multiple of 24.
+    max_patches = max(b["relative_positions"].shape[0] for b in batch)
 
-    max_bars_padded = ((max_bars + ps - 1) // ps) * ps
-    max_patches = max_bars_padded // ps
+    # Pad bars to cover both the longest sequence and all patches
+    max_bars_padded = max(((max_bars + ps - 1) // ps) * ps, max_patches * ps)
 
     B = len(batch)
     features = torch.zeros(B, max_bars_padded, n_features)
