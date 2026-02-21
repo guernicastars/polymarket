@@ -78,7 +78,7 @@ class ProbeConfig:
     """Linear probe hyperparameters."""
 
     learning_rate: float = 1e-2
-    epochs: int = 100
+    max_iter: int = 5000
     cv_folds: int = 5
 
     # Statistical significance

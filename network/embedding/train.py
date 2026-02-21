@@ -44,6 +44,10 @@ def get_clickhouse_client(cfg: EmbeddingConfig):
     password = os.environ.get("CLICKHOUSE_PASSWORD", cfg.clickhouse_password)
     database = os.environ.get("CLICKHOUSE_DATABASE", cfg.clickhouse_database)
 
+    pw_source = "env" if "CLICKHOUSE_PASSWORD" in os.environ else "config"
+    logger.info("ClickHouse: host=%s port=%d user=%s db=%s (password from %s: %s...%s)",
+                host, port, user, database, pw_source, password[:3], password[-3:])
+
     return clickhouse_connect.get_client(
         host=host,
         port=port,
@@ -51,6 +55,7 @@ def get_clickhouse_client(cfg: EmbeddingConfig):
         password=password,
         database=database,
         secure=True,
+        send_receive_timeout=300,
     )
 
 

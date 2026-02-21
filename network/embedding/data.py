@@ -2,7 +2,8 @@
 
 Each resolved Polymarket contract becomes a single data point with ~27 summary
 statistics computed over its full (or cutoff) price/trade/holder history.
-Batched SQL queries keep ClickHouse round-trips to ~6 regardless of market count.
+SQL queries are batched in chunks of 2000 condition IDs to stay within
+ClickHouse's max_query_size (~256KB).
 """
 
 from __future__ import annotations
@@ -261,6 +262,19 @@ class ResolvedMarketDataset(Dataset):
         """Build a safe IN clause for condition_ids."""
         return ", ".join(f"'{c}'" for c in cids)
 
+    def _batched_query(self, sql_template: str, cids: list[str], batch_size: int = 2000) -> list:
+        """Run a query in batches to avoid ClickHouse max_query_size (~256KB).
+
+        sql_template must contain ``{in_clause}`` placeholder.
+        """
+        all_rows: list = []
+        for i in range(0, len(cids), batch_size):
+            batch = cids[i:i + batch_size]
+            in_clause = self._in_clause(batch)
+            sql = sql_template.format(in_clause=in_clause)
+            all_rows.extend(self._safe_query(sql))
+        return all_rows
+
     def _fill_price_features(
         self, features: np.ndarray, offset: int,
         cids: list[str], cid_to_idx: dict, start_map: dict, cutoff_map: dict,
@@ -270,10 +284,7 @@ class ResolvedMarketDataset(Dataset):
         Uses market_trades (available for resolved markets) since market_prices
         only covers actively-polled markets and drops resolved ones.
         """
-        in_clause = self._in_clause(cids)
-
-        # Batch query: per-market VWAP-based price stats from trades
-        sql = f"""
+        sql_template = """
             SELECT
                 condition_id,
                 argMin(price, timestamp) AS start_price,
@@ -286,7 +297,7 @@ class ResolvedMarketDataset(Dataset):
             WHERE condition_id IN ({in_clause})
             GROUP BY condition_id
         """
-        rows = self._safe_query(sql)
+        rows = self._batched_query(sql_template, cids)
 
         price_data: dict[str, dict] = {}
         for row in rows:
@@ -355,10 +366,7 @@ class ResolvedMarketDataset(Dataset):
         cids: list[str], cid_to_idx: dict, start_map: dict, cutoff_map: dict,
     ) -> None:
         """Volume: total, daily avg, peak daily, gini, trend slope."""
-        in_clause = self._in_clause(cids)
-
-        # Daily volume breakdown per market
-        sql = f"""
+        sql_template = """
             SELECT
                 condition_id,
                 toDate(timestamp) AS dt,
@@ -368,7 +376,7 @@ class ResolvedMarketDataset(Dataset):
             GROUP BY condition_id, dt
             ORDER BY condition_id, dt
         """
-        rows = self._safe_query(sql)
+        rows = self._batched_query(sql_template, cids)
 
         # Aggregate per market
         vol_series: dict[str, list[float]] = {cid: [] for cid in cids}
@@ -403,9 +411,7 @@ class ResolvedMarketDataset(Dataset):
         cids: list[str], cid_to_idx: dict, start_map: dict, cutoff_map: dict,
     ) -> None:
         """Liquidity: avg spread, spread vol, avg OBI, avg depth. Zero if no orderbook."""
-        in_clause = self._in_clause(cids)
-
-        sql = f"""
+        sql_template = """
             SELECT
                 condition_id,
                 avg(if(length(ask_prices) > 0 AND length(bid_prices) > 0,
@@ -420,7 +426,7 @@ class ResolvedMarketDataset(Dataset):
             WHERE condition_id IN ({in_clause})
             GROUP BY condition_id
         """
-        rows = self._safe_query(sql)
+        rows = self._batched_query(sql_template, cids)
 
         for row in rows:
             cid = row[0]
@@ -437,9 +443,7 @@ class ResolvedMarketDataset(Dataset):
         cids: list[str], cid_to_idx: dict,
     ) -> None:
         """Participation: unique holders, top5 concentration, gini, max single holder."""
-        in_clause = self._in_clause(cids)
-
-        sql = f"""
+        sql_template = """
             SELECT
                 condition_id,
                 proxy_wallet,
@@ -449,7 +453,7 @@ class ResolvedMarketDataset(Dataset):
             GROUP BY condition_id, proxy_wallet
             ORDER BY condition_id, total_amount DESC
         """
-        rows = self._safe_query(sql)
+        rows = self._batched_query(sql_template, cids)
 
         # Aggregate per market
         holder_amounts: dict[str, list[float]] = {cid: [] for cid in cids}
@@ -480,10 +484,7 @@ class ResolvedMarketDataset(Dataset):
         cids: list[str], cid_to_idx: dict, start_map: dict, cutoff_map: dict,
     ) -> None:
         """Temporal: duration days, active trading days ratio, time to peak volume."""
-        in_clause = self._in_clause(cids)
-
-        # Active trading days
-        sql = f"""
+        sql_active = """
             SELECT
                 condition_id,
                 count(DISTINCT toDate(timestamp)) AS active_days
@@ -491,11 +492,10 @@ class ResolvedMarketDataset(Dataset):
             WHERE condition_id IN ({in_clause})
             GROUP BY condition_id
         """
-        rows = self._safe_query(sql)
+        rows = self._batched_query(sql_active, cids)
         active_days_map = {row[0]: row[1] for row in rows}
 
-        # Peak volume day offset
-        sql2 = f"""
+        sql_peak = """
             SELECT condition_id, dt, daily_vol FROM (
                 SELECT
                     condition_id,
@@ -507,7 +507,7 @@ class ResolvedMarketDataset(Dataset):
                 GROUP BY condition_id, dt
             ) WHERE rn = 1
         """
-        peak_rows = self._safe_query(sql2)
+        peak_rows = self._batched_query(sql_peak, cids)
         peak_day_map = {row[0]: row[1] for row in peak_rows}
 
         for cid in cids:

@@ -82,7 +82,7 @@ class LinearProbe:
         n_folds = max(n_folds, 2)
         cv = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
 
-        clf = LogisticRegression(max_iter=self.cfg.epochs, solver="lbfgs")
+        clf = LogisticRegression(max_iter=self.cfg.max_iter, solver="lbfgs")
 
         scores = cross_val_score(clf, X, y, cv=cv, scoring="accuracy")
         mean_acc = float(np.mean(scores))
@@ -168,6 +168,7 @@ class LinearProbe:
         feature_names: list[str],
     ) -> list[ProbeResult]:
         """Run all configured probes and return sorted results."""
+        logger.info("Running linear probes (%d permutations each)...", self.cfg.n_permutation_tests)
         results = []
 
         # Extract label arrays
@@ -224,7 +225,9 @@ class LinearProbe:
         n_permutations = self.cfg.n_permutation_tests
         count_ge = 0
 
-        for _ in range(n_permutations):
+        for perm_i in range(n_permutations):
+            if perm_i % 50 == 0:
+                logger.info("  permutation %d/%d", perm_i, n_permutations)
             y_perm = rng.permutation(y)
 
             if task_type == "classification":
@@ -234,7 +237,7 @@ class LinearProbe:
                 n_folds = min(self.cfg.cv_folds, min(np.bincount(y_perm.astype(int))))
                 n_folds = max(n_folds, 2)
                 cv = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
-                clf = LogisticRegression(max_iter=self.cfg.epochs, solver="lbfgs")
+                clf = LogisticRegression(max_iter=self.cfg.max_iter, solver="lbfgs")
                 scores = cross_val_score(clf, X, y_perm, cv=cv, scoring="accuracy")
             else:
                 n_folds = min(self.cfg.cv_folds, len(X))
