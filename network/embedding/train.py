@@ -1,9 +1,14 @@
-"""Training loop, embedding extraction, and CLI for the embedding PoC.
+"""Training loop, embedding extraction, and CLI for the embedding module.
 
-Usage:
+Autoencoder modes (summary features):
     python -m network.embedding.train --mode full --latent-dim 64 --epochs 200
     python -m network.embedding.train --mode train --variational --kl-weight 0.005
     python -m network.embedding.train --mode analyze --checkpoint checkpoints/best.pt
+
+Transformer modes (temporal sequences):
+    python -m network.embedding.train --mode pretrain --arch transformer --epochs 100
+    python -m network.embedding.train --mode finetune --arch transformer --checkpoint checkpoints/transformer_pretrained.pt
+    python -m network.embedding.train --mode fuse --ae-checkpoint checkpoints/best.pt --tf-checkpoint checkpoints/transformer_best.pt
 """
 
 from __future__ import annotations
@@ -270,12 +275,269 @@ class EmbeddingTrainer:
 
 
 # ============================================================
+# Transformer Trainer
+# ============================================================
+
+class TransformerTrainer:
+    """Trains the transformer encoder via masked patch prediction and fine-tuning.
+
+    Two-phase training:
+      1. Pre-train: MPP on all markets (active + resolved), self-supervised
+      2. Fine-tune: optional supervised objective on resolved markets
+      3. Fuse: concatenate with autoencoder embeddings, run probes
+    """
+
+    def __init__(self, cfg: Optional[EmbeddingConfig] = None):
+        self.cfg = cfg or EmbeddingConfig()
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
+        logger.info("Transformer trainer using device: %s", self.device)
+
+    def pretrain(
+        self,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+    ) -> tuple[nn.Module, list[float], list[float]]:
+        """Pre-train transformer via masked patch prediction.
+
+        Returns (pretrained_model, train_losses, val_losses).
+        The returned model is the MarketTransformerForPretraining wrapper;
+        use .transformer to get the encoder for embedding extraction.
+        """
+        from .transformer_model import MarketTransformerForPretraining
+
+        tc = self.cfg.transformer
+        model = MarketTransformerForPretraining(tc).to(self.device)
+
+        n_params = sum(p.numel() for p in model.parameters())
+        logger.info("Transformer pre-training: %d params, d_model=%d, %d layers, %d heads",
+                     n_params, tc.d_model, tc.n_layers, tc.n_heads)
+
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=tc.pretrain_lr, weight_decay=tc.pretrain_weight_decay,
+        )
+
+        # Linear warmup + cosine decay
+        total_steps = tc.pretrain_epochs * len(train_loader)
+        warmup_steps = min(tc.pretrain_warmup_steps, total_steps // 5)
+
+        def lr_lambda(step):
+            if step < warmup_steps:
+                return step / max(warmup_steps, 1)
+            progress = (step - warmup_steps) / max(total_steps - warmup_steps, 1)
+            return 0.5 * (1 + np.cos(np.pi * progress))
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+        checkpoint_dir = PROJECT_ROOT / self.cfg.model_save_dir
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        best_val_loss = float("inf")
+        patience_counter = 0
+        train_losses, val_losses = [], []
+        global_step = 0
+
+        for epoch in range(tc.pretrain_epochs):
+            model.train()
+            epoch_loss = 0.0
+            n_batches = 0
+
+            for batch in train_loader:
+                features = batch["features"].to(self.device)
+                padding_mask = batch["padding_mask"].to(self.device)
+                rel_pos = batch["relative_positions"].to(self.device)
+
+                optimizer.zero_grad()
+                loss, embedding, predictions = model(
+                    features, padding_mask=padding_mask,
+                    relative_positions=rel_pos,
+                )
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), tc.grad_clip)
+                optimizer.step()
+                scheduler.step()
+                global_step += 1
+
+                epoch_loss += loss.item()
+                n_batches += 1
+
+            train_loss = epoch_loss / max(n_batches, 1)
+            train_losses.append(train_loss)
+
+            # Validation
+            val_loss = self._evaluate_pretrain(model, val_loader)
+            val_losses.append(val_loss)
+
+            if (epoch + 1) % 5 == 0 or epoch == 0:
+                logger.info(
+                    "[Pretrain] Epoch %d/%d  train=%.6f  val=%.6f  lr=%.2e",
+                    epoch + 1, tc.pretrain_epochs, train_loss, val_loss,
+                    optimizer.param_groups[0]["lr"],
+                )
+
+            # Early stopping
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+                torch.save(model.state_dict(), checkpoint_dir / "transformer_pretrained.pt")
+            else:
+                patience_counter += 1
+                if patience_counter >= tc.pretrain_patience:
+                    logger.info("Pre-training early stop at epoch %d (best val=%.6f)",
+                                epoch + 1, best_val_loss)
+                    break
+
+        # Load best
+        model.load_state_dict(
+            torch.load(checkpoint_dir / "transformer_pretrained.pt",
+                        weights_only=True, map_location=self.device)
+        )
+        logger.info("Pre-training complete. Best val loss: %.6f", best_val_loss)
+        return model, train_losses, val_losses
+
+    def extract_embeddings(
+        self,
+        model: nn.Module,
+        dataset,
+    ) -> np.ndarray:
+        """Extract CLS embeddings from transformer encoder.
+
+        Accepts either MarketTransformerForPretraining or MarketTransformer.
+        """
+        from .transformer_model import MarketTransformerForPretraining, MarketTransformer
+        from .temporal_dataset import collate_temporal_batch
+
+        # Get the base transformer encoder
+        if isinstance(model, MarketTransformerForPretraining):
+            encoder = model.transformer
+        elif isinstance(model, MarketTransformer):
+            encoder = model
+        else:
+            raise TypeError(f"Expected MarketTransformer*, got {type(model)}")
+
+        encoder.eval()
+        encoder.to(self.device)
+
+        loader = DataLoader(dataset, batch_size=64, shuffle=False, collate_fn=collate_temporal_batch)
+        all_embeddings = []
+
+        with torch.no_grad():
+            for batch in loader:
+                features = batch["features"].to(self.device)
+                padding_mask = batch["padding_mask"].to(self.device)
+                rel_pos = batch["relative_positions"].to(self.device)
+
+                embedding = encoder.encode(
+                    features, padding_mask=padding_mask,
+                    relative_positions=rel_pos,
+                )
+                all_embeddings.append(embedding.cpu().numpy())
+
+        return np.concatenate(all_embeddings, axis=0)
+
+    def run_probes(
+        self,
+        embeddings: np.ndarray,
+        labels: list[dict],
+        feature_names: list[str],
+    ) -> list:
+        """Run linear probes on transformer embeddings."""
+        from .probes import LinearProbe
+        probe = LinearProbe(self.cfg.probe)
+        return probe.run_all_probes(embeddings, labels, feature_names)
+
+    def save_results(
+        self,
+        embeddings: np.ndarray,
+        probe_results: list,
+        dataset,
+        train_losses: list[float],
+        val_losses: list[float],
+        prefix: str = "transformer",
+    ) -> None:
+        """Save transformer embedding results."""
+        results_dir = PROJECT_ROOT / self.cfg.results_dir
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        np.save(results_dir / f"{prefix}_embeddings.npy", embeddings)
+
+        probe_dicts = []
+        for pr in probe_results:
+            probe_dicts.append({
+                "concept_name": pr.concept_name,
+                "task_type": pr.task_type,
+                "accuracy": pr.accuracy,
+                "accuracy_std": pr.accuracy_std,
+                "baseline_accuracy": pr.baseline_accuracy,
+                "p_value": pr.p_value,
+                "is_significant": pr.is_significant,
+                "cv_scores": pr.cv_scores,
+            })
+        with open(results_dir / f"{prefix}_probe_results.json", "w") as f:
+            json.dump(probe_dicts, f, indent=2)
+
+        with open(results_dir / f"{prefix}_training_curves.json", "w") as f:
+            json.dump({"train": train_losses, "val": val_losses}, f)
+
+        # Config snapshot
+        with open(results_dir / f"{prefix}_config.json", "w") as f:
+            import dataclasses
+            json.dump(dataclasses.asdict(self.cfg.transformer), f, indent=2)
+
+        logger.info("Transformer results saved to %s", results_dir)
+
+    def _evaluate_pretrain(self, model: nn.Module, loader: DataLoader) -> float:
+        model.eval()
+        total_loss = 0.0
+        n = 0
+        with torch.no_grad():
+            for batch in loader:
+                features = batch["features"].to(self.device)
+                padding_mask = batch["padding_mask"].to(self.device)
+                rel_pos = batch["relative_positions"].to(self.device)
+                loss, _, _ = model(
+                    features, padding_mask=padding_mask,
+                    relative_positions=rel_pos,
+                )
+                total_loss += loss.item()
+                n += 1
+        return total_loss / max(n, 1)
+
+
+def _print_probe_results(probe_results: list, alpha: float) -> None:
+    """Print probe results table."""
+    print("\n" + "=" * 70)
+    print("LINEAR PROBE RESULTS")
+    print("=" * 70)
+    for pr in probe_results:
+        sig = "*" if pr.is_significant else " "
+        print(
+            f"  {sig} {pr.concept_name:<25} {pr.task_type:<15} "
+            f"acc={pr.accuracy:.3f}\u00b1{pr.accuracy_std:.3f}  "
+            f"baseline={pr.baseline_accuracy:.3f}  p={pr.p_value:.4f}"
+        )
+    print("=" * 70)
+    print(f"  Significant probes (p<{alpha}): "
+          f"{sum(1 for pr in probe_results if pr.is_significant)}/{len(probe_results)}")
+
+
+# ============================================================
 # CLI
 # ============================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Embedding PoC: autoencoder + linear probes")
-    parser.add_argument("--mode", choices=["train", "analyze", "full"], default="full")
+    parser = argparse.ArgumentParser(description="Embedding module: autoencoder + transformer + probes")
+    parser.add_argument("--mode", choices=[
+        "train", "analyze", "full",           # autoencoder modes
+        "pretrain", "finetune", "fuse",       # transformer modes
+    ], default="full")
+    parser.add_argument("--arch", choices=["autoencoder", "transformer"], default="autoencoder")
+
+    # Autoencoder args
     parser.add_argument("--latent-dim", type=int, default=64)
     parser.add_argument("--variational", action="store_true")
     parser.add_argument("--kl-weight", type=float, default=0.001)
@@ -283,9 +545,22 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--min-volume", type=float, default=1000.0)
-    parser.add_argument("--cutoff", type=float, default=0.8, help="Lifetime cutoff ratio (0.8=safe, 1.0=full)")
+    parser.add_argument("--cutoff", type=float, default=0.8)
     parser.add_argument("--max-markets", type=int, default=0)
     parser.add_argument("--checkpoint", type=str, default=None)
+
+    # Transformer args
+    parser.add_argument("--d-model", type=int, default=64)
+    parser.add_argument("--n-layers", type=int, default=3)
+    parser.add_argument("--n-heads", type=int, default=4)
+    parser.add_argument("--patch-size", type=int, default=24)
+    parser.add_argument("--mask-ratio", type=float, default=0.30)
+    parser.add_argument("--pretrain-epochs", type=int, default=100)
+
+    # Fusion args
+    parser.add_argument("--ae-checkpoint", type=str, default=None)
+    parser.add_argument("--tf-checkpoint", type=str, default=None)
+
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
 
@@ -294,8 +569,9 @@ def main():
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
 
-    # Build config
     cfg = EmbeddingConfig()
+
+    # Apply autoencoder overrides
     cfg.autoencoder.latent_dim = args.latent_dim
     cfg.autoencoder.variational = args.variational
     cfg.autoencoder.kl_weight = args.kl_weight
@@ -306,11 +582,164 @@ def main():
     cfg.features.lifetime_cutoff_ratio = args.cutoff
     cfg.features.max_markets = args.max_markets
 
-    # Connect to ClickHouse
+    # Apply transformer overrides
+    cfg.transformer.d_model = args.d_model
+    cfg.transformer.n_layers = args.n_layers
+    cfg.transformer.n_heads = args.n_heads
+    cfg.transformer.patch_size = args.patch_size
+    cfg.transformer.mask_ratio = args.mask_ratio
+    cfg.transformer.pretrain_epochs = args.pretrain_epochs
+
     logger.info("Connecting to ClickHouse...")
     client = get_clickhouse_client(cfg)
 
-    # Build dataset
+    # ---- Transformer modes ----
+    if args.mode in ("pretrain", "finetune", "fuse"):
+        from .temporal_dataset import TemporalMarketDataset, collate_temporal_batch
+        from .transformer_model import MarketTransformerForPretraining, MarketTransformer
+
+        tf_trainer = TransformerTrainer(cfg)
+
+        if args.mode == "pretrain":
+            logger.info("Building temporal dataset for pre-training (all markets)...")
+            dataset = TemporalMarketDataset(client, cfg.transformer, mode="pretrain")
+            if len(dataset) < 20:
+                logger.error("Not enough markets: %d found.", len(dataset))
+                return
+
+            logger.info("Pre-training dataset: %d markets", len(dataset))
+
+            # Split 85/15 for pre-training
+            n = len(dataset)
+            n_val = max(int(n * 0.15), 1)
+            n_train = n - n_val
+            train_ds, val_ds = random_split(dataset, [n_train, n_val])
+
+            train_loader = DataLoader(
+                train_ds, batch_size=cfg.transformer.pretrain_batch_size,
+                shuffle=True, collate_fn=collate_temporal_batch,
+            )
+            val_loader = DataLoader(
+                val_ds, batch_size=cfg.transformer.pretrain_batch_size,
+                shuffle=False, collate_fn=collate_temporal_batch,
+            )
+
+            model, train_losses, val_losses = tf_trainer.pretrain(train_loader, val_loader)
+
+            # Extract embeddings for monitoring
+            embeddings = tf_trainer.extract_embeddings(model, dataset)
+            logger.info("Pre-trained embeddings: shape %s", embeddings.shape)
+            tf_trainer.save_results(embeddings, [], dataset, train_losses, val_losses, prefix="transformer_pretrain")
+
+        elif args.mode == "finetune":
+            logger.info("Building temporal dataset for fine-tuning (resolved markets)...")
+            dataset = TemporalMarketDataset(client, cfg.transformer, mode="finetune")
+            if len(dataset) < 20:
+                logger.error("Not enough resolved markets: %d found.", len(dataset))
+                return
+
+            logger.info("Fine-tune dataset: %d markets", len(dataset))
+
+            # Load pre-trained model
+            model_wrapper = MarketTransformerForPretraining(cfg.transformer)
+            if args.checkpoint:
+                model_wrapper.load_state_dict(
+                    torch.load(args.checkpoint, weights_only=True, map_location=tf_trainer.device)
+                )
+                logger.info("Loaded pre-trained checkpoint: %s", args.checkpoint)
+
+            # Extract embeddings + run probes
+            embeddings = tf_trainer.extract_embeddings(model_wrapper, dataset)
+            probe_results = tf_trainer.run_probes(embeddings, dataset.labels, dataset.feature_names)
+            _print_probe_results(probe_results, cfg.probe.alpha)
+            tf_trainer.save_results(embeddings, probe_results, dataset, [], [], prefix="transformer_finetune")
+
+        elif args.mode == "fuse":
+            if not args.ae_checkpoint or not args.tf_checkpoint:
+                logger.error("--ae-checkpoint and --tf-checkpoint required for fuse mode")
+                return
+
+            # Load autoencoder embeddings
+            logger.info("Loading autoencoder for fusion...")
+            ae_dataset = ResolvedMarketDataset(client, cfg.features)
+            input_dim = ae_dataset.features.shape[1]
+            ae_model = create_autoencoder(input_dim, cfg.autoencoder)
+            ae_model.load_state_dict(
+                torch.load(args.ae_checkpoint, weights_only=True, map_location=tf_trainer.device)
+            )
+            ae_trainer = EmbeddingTrainer(cfg)
+            ae_embeddings = ae_trainer.extract_embeddings(ae_model, ae_dataset)
+
+            # Load transformer embeddings
+            logger.info("Loading transformer for fusion...")
+            tf_dataset = TemporalMarketDataset(client, cfg.transformer, mode="finetune")
+            tf_model = MarketTransformerForPretraining(cfg.transformer)
+            tf_model.load_state_dict(
+                torch.load(args.tf_checkpoint, weights_only=True, map_location=tf_trainer.device)
+            )
+            tf_embeddings = tf_trainer.extract_embeddings(tf_model, tf_dataset)
+
+            # Match markets by condition_id
+            ae_cids = {m["condition_id"]: i for i, m in enumerate(ae_dataset.markets)}
+            tf_cids = {m["condition_id"]: i for i, m in enumerate(tf_dataset.markets)}
+            common_cids = sorted(set(ae_cids.keys()) & set(tf_cids.keys()))
+
+            logger.info("Fusion: %d AE markets, %d TF markets, %d in common",
+                        len(ae_cids), len(tf_cids), len(common_cids))
+
+            if len(common_cids) < 20:
+                logger.error("Not enough common markets for fusion: %d", len(common_cids))
+                return
+
+            # Build fused embeddings
+            ae_matched = np.array([ae_embeddings[ae_cids[c]] for c in common_cids])
+            tf_matched = np.array([tf_embeddings[tf_cids[c]] for c in common_cids])
+            fused = np.concatenate([ae_matched, tf_matched], axis=1)
+
+            # Build matching labels
+            fused_labels = [ae_dataset.labels[ae_cids[c]] for c in common_cids]
+
+            logger.info("Fused embedding: shape %s (AE=%d + TF=%d)",
+                        fused.shape, ae_matched.shape[1], tf_matched.shape[1])
+
+            # Run probes on all three: AE-only, TF-only, fused
+            print("\n--- Autoencoder Only ---")
+            ae_probes = tf_trainer.run_probes(ae_matched, fused_labels, ae_dataset.feature_names)
+            _print_probe_results(ae_probes, cfg.probe.alpha)
+
+            print("\n--- Transformer Only ---")
+            tf_probes = tf_trainer.run_probes(tf_matched, fused_labels, tf_dataset.feature_names)
+            _print_probe_results(tf_probes, cfg.probe.alpha)
+
+            print("\n--- Fused (AE + Transformer) ---")
+            fused_probes = tf_trainer.run_probes(
+                fused, fused_labels,
+                ae_dataset.feature_names + [f"tf_{n}" for n in tf_dataset.feature_names],
+            )
+            _print_probe_results(fused_probes, cfg.probe.alpha)
+
+            # Save fused results
+            results_dir = PROJECT_ROOT / cfg.results_dir
+            results_dir.mkdir(parents=True, exist_ok=True)
+            np.save(results_dir / "fused_embeddings.npy", fused)
+
+            probe_dicts = []
+            for pr in fused_probes:
+                probe_dicts.append({
+                    "concept_name": pr.concept_name,
+                    "accuracy": pr.accuracy,
+                    "baseline_accuracy": pr.baseline_accuracy,
+                    "p_value": pr.p_value,
+                    "is_significant": pr.is_significant,
+                })
+            with open(results_dir / "fused_probe_results.json", "w") as f:
+                json.dump(probe_dicts, f, indent=2)
+
+            logger.info("Fusion results saved to %s", results_dir)
+
+        return
+
+    # ---- Autoencoder modes (original) ----
     logger.info("Building resolved market dataset (cutoff=%.1f)...", args.cutoff)
     dataset = ResolvedMarketDataset(client, cfg.features)
 
@@ -328,7 +757,6 @@ def main():
     trainer = EmbeddingTrainer(cfg)
 
     if args.mode in ("train", "full"):
-        # Split
         n = len(dataset)
         ac = cfg.autoencoder
         n_train = int(n * ac.train_ratio)
@@ -344,41 +772,21 @@ def main():
             val_ds, batch_size=ac.batch_size, shuffle=False, collate_fn=collate_embedding_batch
         )
 
-        # Build model
         input_dim = dataset.features.shape[1]
         model = create_autoencoder(input_dim, cfg.autoencoder)
 
         n_params = sum(p.numel() for p in model.parameters())
         logger.info("Model: %s, %d parameters, latent_dim=%d", type(model).__name__, n_params, cfg.autoencoder.latent_dim)
 
-        # Train
         model, train_losses, val_losses = trainer.train_autoencoder(train_loader, val_loader, model)
-
-        # Extract embeddings on full dataset
         embeddings = trainer.extract_embeddings(model, dataset)
         logger.info("Extracted embeddings: shape %s", embeddings.shape)
 
         if args.mode == "full":
-            # Run probes
             logger.info("Running linear probes...")
             probe_results = trainer.run_probes(embeddings, dataset)
+            _print_probe_results(probe_results, cfg.probe.alpha)
 
-            # Print summary
-            print("\n" + "=" * 70)
-            print("LINEAR PROBE RESULTS")
-            print("=" * 70)
-            for pr in probe_results:
-                sig = "*" if pr.is_significant else " "
-                print(
-                    f"  {sig} {pr.concept_name:<25} {pr.task_type:<15} "
-                    f"acc={pr.accuracy:.3f}±{pr.accuracy_std:.3f}  "
-                    f"baseline={pr.baseline_accuracy:.3f}  p={pr.p_value:.4f}"
-                )
-            print("=" * 70)
-            print(f"  Significant probes (p<{cfg.probe.alpha}): "
-                  f"{sum(1 for pr in probe_results if pr.is_significant)}/{len(probe_results)}")
-
-            # Run disentanglement analysis
             logger.info("Running disentanglement analysis...")
             from .analysis import DisentanglementAnalyzer
             analyzer = DisentanglementAnalyzer(cfg.probe)
@@ -394,7 +802,6 @@ def main():
                     print(f"    PC{nd.direction_idx}: var={nd.variance_explained:.3f} "
                           f"- {nd.description}")
 
-            # Save
             trainer.save_results(embeddings, probe_results, dataset, model, train_losses, val_losses)
         else:
             trainer.save_results(embeddings, [], dataset, model, train_losses, val_losses)
@@ -417,7 +824,7 @@ def main():
             sig = "*" if pr.is_significant else " "
             print(
                 f"  {sig} {pr.concept_name:<25} {pr.task_type:<15} "
-                f"acc={pr.accuracy:.3f}±{pr.accuracy_std:.3f}  "
+                f"acc={pr.accuracy:.3f}\u00b1{pr.accuracy_std:.3f}  "
                 f"baseline={pr.baseline_accuracy:.3f}  p={pr.p_value:.4f}"
             )
 
