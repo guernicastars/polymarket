@@ -82,8 +82,7 @@ class LinearProbe:
         n_folds = max(n_folds, 2)
         cv = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
 
-        multi = "multinomial" if n_classes > 2 else "auto"
-        clf = LogisticRegression(max_iter=self.cfg.epochs, solver="lbfgs", multi_class=multi)
+        clf = LogisticRegression(max_iter=self.cfg.epochs, solver="lbfgs")
 
         scores = cross_val_score(clf, X, y, cv=cv, scoring="accuracy")
         mean_acc = float(np.mean(scores))
