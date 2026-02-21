@@ -8,8 +8,8 @@ Supports two modes:
   - Pre-training: ALL markets (active + resolved), no labels needed, lower volume filter
   - Fine-tuning: resolved markets only, with labels for probe evaluation
 
-SQL queries are batched to minimize ClickHouse round-trips (~4 queries total
-regardless of market count).
+SQL queries are batched in chunks of 2000 condition IDs to stay within
+ClickHouse's max_query_size (~256KB). Each chunk runs 4 queries.
 """
 
 from __future__ import annotations
@@ -209,20 +209,23 @@ class TemporalMarketDataset(Dataset):
 
         # Pre-allocate: dict of condition_id → list of (bar_time, 12-feature vector)
         market_bars: dict[str, dict[datetime, list[float]]] = {cid: {} for cid in cids}
+        expiry_map: dict[str, datetime] = {}
 
-        in_clause = ", ".join(f"'{cid}'" for cid in cids)
+        # Batch condition IDs to avoid exceeding ClickHouse max_query_size (~256KB).
+        # Each hex condition_id is ~66 chars; 2000 * 69 bytes ≈ 138KB, well within limit.
+        batch_size = 2000
+        for batch_start in range(0, n, batch_size):
+            batch_cids = cids[batch_start:batch_start + batch_size]
+            in_clause = ", ".join(f"'{cid}'" for cid in batch_cids)
+            logger.info(
+                "Fetching bars for markets %d-%d of %d...",
+                batch_start, min(batch_start + batch_size, n), n,
+            )
 
-        # --- Query 1: Price features from trades (F1-F3) ---
-        self._fetch_price_bars(in_clause, market_bars)
-
-        # --- Query 2: Orderbook features (F4-F6) ---
-        self._fetch_orderbook_bars(in_clause, market_bars)
-
-        # --- Query 3: Volume features (F7, F10) ---
-        self._fetch_volume_bars(in_clause, market_bars)
-
-        # --- Query 4: Expiry info for F11 ---
-        expiry_map = self._fetch_expiries(in_clause)
+            self._fetch_price_bars(in_clause, market_bars)
+            self._fetch_orderbook_bars(in_clause, market_bars)
+            self._fetch_volume_bars(in_clause, market_bars)
+            expiry_map.update(self._fetch_expiries(in_clause))
 
         # --- Compute derived features and assemble arrays ---
         sequences = []
