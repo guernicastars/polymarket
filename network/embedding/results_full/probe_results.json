@@ -1,0 +1,47 @@
+[
+  {
+    "concept_name": "volatility_regime",
+    "task_type": "classification",
+    "accuracy": 0.9591629048417782,
+    "accuracy_std": 0.007870240504412835,
+    "baseline_accuracy": 0.5,
+    "p_value": 0.004975124378109453,
+    "is_significant": true
+  },
+  {
+    "concept_name": "duration_bucket",
+    "task_type": "classification",
+    "accuracy": 0.8499487791424165,
+    "accuracy_std": 0.015161992032459205,
+    "baseline_accuracy": 0.5270655270655271,
+    "p_value": 0.004975124378109453,
+    "is_significant": true
+  },
+  {
+    "concept_name": "winning_outcome",
+    "task_type": "classification",
+    "accuracy": 0.6747385484796975,
+    "accuracy_std": 0.0078121139576988324,
+    "baseline_accuracy": 0.644349477682811,
+    "p_value": 0.004975124378109453,
+    "is_significant": true
+  },
+  {
+    "concept_name": "category",
+    "task_type": "classification",
+    "accuracy": 0.6699905033238367,
+    "accuracy_std": 0.001424501424501401,
+    "baseline_accuracy": 0.27635327635327633,
+    "p_value": 0.004975124378109453,
+    "is_significant": true
+  },
+  {
+    "concept_name": "volume_bucket",
+    "task_type": "classification",
+    "accuracy": 0.5954295234771646,
+    "accuracy_std": 0.023590926078596117,
+    "baseline_accuracy": 0.33998100664767333,
+    "p_value": 0.004975124378109453,
+    "is_significant": true
+  }
+]

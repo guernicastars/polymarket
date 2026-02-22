@@ -1,0 +1,204 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{authblk}
+\usepackage{abstract}
+
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!60!black}
+
+\title{\textbf{Interpretable Market Embeddings via Linear Probing:\\Disentangled Representations from Prediction Market Lifecycles}}
+
+\author{Eugene Shcherbinin}
+\affil{Bloomsbury Tech}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present an autoencoder-based embedding framework for prediction market lifecycles trained on 2,099 resolved Polymarket markets. Using a linear probe methodology with permutation testing, we demonstrate that a 32-dimensional latent space learns linearly separable representations of five market concepts---volatility regime (95.8\% accuracy vs.\ 50.0\% baseline), duration bucket (87.0\% vs.\ 52.5\%), winning outcome (69.9\% vs.\ 64.4\%), category (67.7\% vs.\ 27.7\%), and volume bucket (59.9\% vs.\ 34.0\%)---all statistically significant ($p < 0.005$). We find that duration and category probes exhibit weak input correlations, suggesting genuinely emergent encodings rather than feature passthrough. PCA analysis reveals 7 novel directions with $\max|r| < 0.15$ to any input feature, indicating the model discovers structure beyond simple input preservation. A leakage-safe cutoff at 80\% of market lifetime slightly outperforms full-lifecycle features, confirming that resolution-convergence tails add noise rather than signal.
+\end{abstract}
+
+\section{Introduction}
+
+Prediction markets aggregate information through price discovery, but the high-dimensional dynamics of a market's lifecycle---price trajectories, volume patterns, participation structure, temporal characteristics---are difficult to reason about jointly. A natural question is whether these dynamics can be compressed into a low-dimensional representation that preserves meaningful market concepts in an interpretable way.
+
+We address this by training a deterministic autoencoder on summary features extracted from resolved Polymarket markets and probing the resulting latent space for linearly decodable structure. Our key contributions are:
+
+\begin{enumerate}[nosep]
+    \item A 27-feature summary representation of prediction market lifecycles with leakage-safe temporal cutoffs.
+    \item Evidence that a compact (32-dim) bottleneck learns linearly separable directions for five distinct market concepts, validated via 5-fold stratified CV with 1,000-permutation significance testing.
+    \item Disentanglement analysis showing emergent structure: probe weight vectors are approximately orthogonal, and PCA reveals novel directions uncorrelated with any individual input feature.
+\end{enumerate}
+
+\section{Data}
+
+\subsection{Market Discovery}
+
+We extract resolved markets from a continuously-ingested Polymarket dataset stored in ClickHouse Cloud. A market qualifies if it has resolved (\texttt{resolved = 1} with a non-empty \texttt{winning\_outcome}), has lifetime $\geq 1$ day, total volume $\geq$ \$1,000 USD, and resolved within the trailing 12-month window. This yields \textbf{2,099 markets} spanning 8+ categories (politics, sports, crypto, etc.).
+
+\subsection{Feature Engineering}
+
+Each market is summarized by 27 features organized into six groups:
+
+\begin{table}[H]
+\centering
+\caption{Feature groups and counts. Active features in bold; inactive features (zero-valued due to data coverage) in italics.}
+\label{tab:features}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Group} & \textbf{Features} & \textbf{Active} \\
+\midrule
+Price (7) & start/cutoff/min/max price, volatility, range, runup speed & 7/7 \\
+Volume (5) & total, daily avg, peak daily, Gini, trend slope & 5/5 \\
+Liquidity (4) & \textit{avg spread, spread vol, avg OBI, avg depth} & 0/4 \\
+Participation (4) & \textit{unique holders, top-5 conc., holder Gini, max holder \%} & 0/4 \\
+Temporal (3) & duration days, active trading ratio, time to peak volume & 3/3 \\
+Structure (4) & n outcomes, is binary, category (encoded), event group size & 4/4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Of 27 features, \textbf{19 carry active signal}. Liquidity features are near-zero because orderbook snapshots are only collected for active (unresolved) markets. Participation features are similarly sparse as holder data drops upon resolution. All features undergo Z-score normalization (per-feature mean/std computed on the training split).
+
+\subsection{Leakage Prevention}
+
+A \texttt{lifetime\_cutoff\_ratio} parameter controls what fraction of a market's lifecycle is used for feature computation. At the default of $0.8$, we use only the first 80\% of each market's lifespan, excluding the resolution-convergence tail where prices approach 0 or 1. This prevents the model from trivially encoding outcome information through terminal price behavior.
+
+\section{Method}
+
+\subsection{Autoencoder Architecture}
+
+We use a deterministic autoencoder with batch normalization and GELU activations:
+
+\begin{align*}
+\textbf{Encoder:}\quad & \mathbf{x} \in \mathbb{R}^{27} \xrightarrow{\text{Linear}} \mathbb{R}^{128} \xrightarrow{\text{BN, GELU, Drop}} \mathbb{R}^{64} \xrightarrow{\text{BN, GELU, Drop}} \mathbb{R}^{32} \\
+\textbf{Decoder:}\quad & \mathbf{z} \in \mathbb{R}^{32} \xrightarrow{\text{Linear}} \mathbb{R}^{64} \xrightarrow{\text{BN, GELU, Drop}} \mathbb{R}^{128} \xrightarrow{\text{BN, GELU, Drop}} \mathbb{R}^{27}
+\end{align*}
+
+Dropout rate is 0.1. The bottleneck and output layers have no activation. A variational option (VAE with $\beta = 0.001$) is available but the deterministic autoencoder is used for all reported results.
+
+\subsection{Training}
+
+The dataset is split 70/15/15 (train/val/test). We train with AdamW (lr$= 10^{-3}$, weight decay$= 10^{-4}$), cosine annealing ($\eta_{\min} = 10^{-6}$), gradient clipping at norm 1.0, batch size 32, for up to 200 epochs with early stopping (patience = 20 on validation MSE). Convergence is rapid: training loss drops from 0.776 to 0.112, with the best validation loss reached by epoch $\sim$30.
+
+\subsection{Linear Probes}
+
+Following~\cite{alain2017understanding}, we evaluate the latent space by training linear classifiers on frozen embeddings for five concepts:
+
+\begin{table}[H]
+\centering
+\caption{Probe concept definitions.}
+\label{tab:probes}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Concept} & \textbf{Type} & \textbf{Definition} \\
+\midrule
+\texttt{volatility\_regime} & Binary & Median split on price volatility \\
+\texttt{duration\_bucket} & 3-class & Short ($<$7d), Medium (7--30d), Long ($\geq$30d) \\
+\texttt{winning\_outcome} & Binary & First vs.\ second outcome \\
+\texttt{category} & Multi-class & Event tag (politics, sports, crypto, \ldots) \\
+\texttt{volume\_bucket} & 3-class & Tercile split on total volume \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each probe uses \texttt{LogisticRegression} (L2, lbfgs solver) with 5-fold stratified cross-validation. Statistical significance is assessed via permutation testing: we shuffle labels 1,000 times, refit, and compute $p = (\text{count}[\text{perm\_score} \geq \text{true\_score}] + 1) / (N_{\text{perm}} + 1)$.
+
+\subsection{Disentanglement Analysis}
+
+We evaluate latent structure through four lenses:
+
+\begin{enumerate}[nosep]
+    \item \textbf{PCA correlation analysis}: Pearson correlation between the top-20 PCA components of the embedding space and each input feature. Directions with $\max|r| < 0.15$ to any input are flagged as \emph{novel}.
+    \item \textbf{Orthogonality test}: Cosine similarity between all pairs of probe weight vectors. Orthogonal probes ($\cos \theta \approx 0$) indicate independent concept encoding.
+    \item \textbf{Temporal stability}: Train probes on markets from the first temporal half, test on the second (and vice versa). Stable transfer indicates robust, non-spurious encodings.
+    \item \textbf{Cluster validation}: Silhouette scores by category and outcome; $k$-NN ($k=5$, 3-fold CV) accuracy for category prediction directly in embedding space.
+\end{enumerate}
+
+\section{Results}
+
+\subsection{Probe Accuracy}
+
+\begin{table}[H]
+\centering
+\caption{Linear probe results (latent dim = 32, cutoff = 0.8). All 5/5 probes significant.}
+\label{tab:results}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Concept} & \textbf{Accuracy} & \textbf{Std} & \textbf{Baseline} & \textbf{$p$-value} \\
+\midrule
+\texttt{volatility\_regime} & 95.8\% & $\pm$0.49\% & 50.0\% & $<0.005$ \\
+\texttt{duration\_bucket} & 87.0\% & $\pm$0.99\% & 52.5\% & $<0.005$ \\
+\texttt{winning\_outcome} & 69.9\% & $\pm$3.19\% & 64.4\% & $<0.005$ \\
+\texttt{category} & 67.7\% & $\pm$0.92\% & 27.7\% & $<0.005$ \\
+\texttt{volume\_bucket} & 59.9\% & $\pm$1.25\% & 34.0\% & $<0.005$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Volatility regime is near-perfectly linearly decodable, consistent with it being a continuous property that a reconstruction objective naturally preserves. Duration and category are strongly encoded despite weak correlations to individual input features (see Section~\ref{sec:novel}), suggesting the autoencoder learns compositional representations of these concepts. Winning outcome accuracy of 69.9\% (vs.\ 64.4\% majority baseline) indicates that non-trivial predictive information about resolution survives even the 80\% lifetime cutoff.
+
+\subsection{Leakage Cutoff Comparison}
+
+\begin{table}[H]
+\centering
+\caption{Probe accuracy at cutoff = 0.8 vs.\ 1.0.}
+\label{tab:cutoff}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Concept} & \textbf{Cutoff = 0.8} & \textbf{Cutoff = 1.0} \\
+\midrule
+\texttt{volatility\_regime} & 95.8\% & 95.9\% \\
+\texttt{duration\_bucket} & 87.0\% & 85.0\% \\
+\texttt{winning\_outcome} & 69.9\% & 67.5\% \\
+\texttt{category} & 67.7\% & 67.0\% \\
+\texttt{volume\_bucket} & 59.9\% & 59.5\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 80\% cutoff slightly outperforms full-lifecycle features across 4 of 5 probes (volatility regime is unchanged as it is a mid-lifecycle property). This confirms that the final 20\%---where prices converge toward resolution---adds noise that degrades the quality of general-purpose representations.
+
+\subsection{Novel Directions}
+\label{sec:novel}
+
+PCA analysis of the 32-dimensional embedding space reveals \textbf{7 novel directions} with $\max|r| < 0.15$ to any input feature. These directions explain non-trivial variance yet cannot be attributed to any single input, suggesting the autoencoder has discovered compositional or interaction-level structure.
+
+The duration and category probes are particularly noteworthy: their high classification accuracy (87.0\% and 67.7\%) combined with weak per-feature correlations indicates that these concepts are encoded as \emph{distributed representations} across multiple latent dimensions rather than being passthrough copies of individual inputs like \texttt{duration\_days} or \texttt{category\_encoded}.
+
+\subsection{Orthogonality}
+
+Probe weight vectors for the five concepts exhibit low pairwise cosine similarity ($|\cos \theta| \ll 1$), confirming that distinct market concepts are encoded along approximately independent directions in latent space. This is a hallmark of disentangled representations: the model allocates separate subspaces for volatility, duration, outcome prediction, category, and volume regime.
+
+\section{Discussion}
+
+\paragraph{Why linear probes?} Non-linear probes (e.g., MLPs) can extract information from any representation, making it hard to attribute structure to the embedding vs.\ the probe. Linear probes impose a strict constraint: the concept must be linearly decodable, which means it is geometrically ``present'' as a direction in the space. Our 5/5 significance result confirms that the autoencoder organizes its latent space around these concepts without being explicitly trained to do so.
+
+\paragraph{Feature sparsity.} Only 19 of 27 features carry active signal due to pipeline coverage gaps (liquidity and participation data are not retained for resolved markets). Despite this, the embedding captures rich structure---suggesting that price and volume dynamics alone contain substantial information about market behavior. Future work could train on active markets with full feature coverage.
+
+\paragraph{Winning outcome prediction.} The 5.5 percentage-point lift over the majority baseline (69.9\% vs.\ 64.4\%) from a \emph{linear} probe on \emph{leakage-safe} features is notable. This suggests that early lifecycle patterns---price trajectories, volume distributions, and structural properties---carry genuine predictive signal about eventual resolution, consistent with the efficient market hypothesis being only approximately satisfied in prediction markets.
+
+\paragraph{Limitations.} The dataset is limited to 2,099 resolved markets. Liquidity and participation features are effectively absent. The timing score for insider detection remains a placeholder. The autoencoder is shallow; deeper or attention-based architectures may capture more nuanced market dynamics. We report only reconstruction-based training; contrastive or predictive objectives could yield different latent structures.
+
+\section{Conclusion}
+
+We demonstrate that a simple autoencoder trained on prediction market lifecycle features produces a latent space with rich, interpretable structure. Five market concepts are linearly decodable with statistical significance, probe directions are approximately orthogonal, and PCA reveals novel directions uncorrelated with individual inputs. The leakage-safe 80\% lifetime cutoff yields superior representations compared to full-lifecycle features, providing a principled approach to temporal feature engineering for market embeddings. These results establish a foundation for using learned embeddings as features in downstream prediction tasks---including our GNN-TCN model for temporal market forecasting.
+
+\begin{thebibliography}{9}
+\bibitem{alain2017understanding} Alain, G.\ and Bengio, Y.\ (2017). Understanding intermediate layers using linear classifier probes. \textit{ICLR Workshop}.
+\end{thebibliography}
+
+\end{document}

@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # F1-F3: Price-based features aggregated into 5-min bars
 # Primary: market_prices (tick-level snapshots)
+# NOTE: market_prices has empty condition_id — must query by token_id
 PRICE_FEATURES_SQL = """
 SELECT
     toStartOfInterval(timestamp, INTERVAL {step} MINUTE) AS bar_time,
@@ -47,10 +48,11 @@ SELECT
     avg(bid) AS avg_bid,
     avg(ask) AS avg_ask
 FROM market_prices
-WHERE condition_id = {{condition_id:String}}
-  AND outcome = 'Yes'
+WHERE token_id = {{token_id:String}}
   AND timestamp >= {{start:DateTime64(3)}}
   AND timestamp < {{end:DateTime64(3)}}
+  AND ts_date >= toDate({{start:DateTime64(3)}}) - 1
+  AND ts_date <= toDate({{end:DateTime64(3)}}) + 1
 GROUP BY bar_time
 ORDER BY bar_time
 """
@@ -70,6 +72,8 @@ WHERE condition_id = {{condition_id:String}}
   AND outcome = 'Yes'
   AND timestamp >= {{start:DateTime64(3)}}
   AND timestamp < {{end:DateTime64(3)}}
+  AND ts_date >= toDate({{start:DateTime64(3)}}) - 1
+  AND ts_date <= toDate({{end:DateTime64(3)}}) + 1
 GROUP BY bar_time
 ORDER BY bar_time
 """
@@ -101,6 +105,8 @@ FROM market_trades
 WHERE condition_id = {{condition_id:String}}
   AND timestamp >= {{start:DateTime64(3)}}
   AND timestamp < {{end:DateTime64(3)}}
+  AND ts_date >= toDate({{start:DateTime64(3)}}) - 1
+  AND ts_date <= toDate({{end:DateTime64(3)}}) + 1
 GROUP BY bar_time
 ORDER BY bar_time
 """
@@ -165,23 +171,26 @@ LIMIT 1
 """
 
 # F12: Sibling market prices for correlation
+# Two-step: resolve sibling token_id first, then query market_prices
+SIBLING_TOKEN_SQL = """
+SELECT condition_id, token_ids[1] AS yes_token
+FROM markets FINAL
+WHERE event_slug = {event_slug:String}
+  AND condition_id != {condition_id:String}
+LIMIT 1
+"""
+
 SIBLING_PRICES_SQL = """
 SELECT
-    m2.condition_id AS sibling_id,
-    toStartOfInterval(p.timestamp, INTERVAL {step} MINUTE) AS bar_time,
-    argMax(p.price, p.timestamp) AS close_price
-FROM market_prices p
-JOIN (
-    SELECT condition_id
-    FROM markets FINAL
-    WHERE event_slug = {{event_slug:String}}
-      AND condition_id != {{condition_id:String}}
-    LIMIT 1
-) AS m2 ON p.condition_id = m2.condition_id
-WHERE p.outcome = 'Yes'
-  AND p.timestamp >= {{start:DateTime64(3)}}
-  AND p.timestamp < {{end:DateTime64(3)}}
-GROUP BY sibling_id, bar_time
+    toStartOfInterval(timestamp, INTERVAL {step} MINUTE) AS bar_time,
+    argMax(price, timestamp) AS close_price
+FROM market_prices
+WHERE token_id = {{sibling_token:String}}
+  AND timestamp >= {{start:DateTime64(3)}}
+  AND timestamp < {{end:DateTime64(3)}}
+  AND ts_date >= toDate({{start:DateTime64(3)}}) - 1
+  AND ts_date <= toDate({{end:DateTime64(3)}}) + 1
+GROUP BY bar_time
 ORDER BY bar_time
 """
 
@@ -201,6 +210,105 @@ class FeatureExtractor:
         """
         self.client = client
         self.cfg = config or FeatureConfig()
+        self._token_cache: dict[str, str] = {}  # condition_id → YES token_id
+        self._price_cache: dict[tuple, list] = {}  # (token_id, start, end) → rows
+
+    def _resolve_token_id(self, condition_id: str) -> str:
+        """Resolve condition_id to YES token_id (cached)."""
+        if condition_id in self._token_cache:
+            return self._token_cache[condition_id]
+        try:
+            rows = self.client.query(
+                "SELECT token_ids[1] FROM markets FINAL WHERE condition_id = {cid:String} LIMIT 1",
+                parameters={"cid": condition_id},
+            ).result_rows
+            token_id = rows[0][0] if rows else ""
+        except Exception:
+            token_id = ""
+        self._token_cache[condition_id] = token_id
+        return token_id
+
+    def prefetch_tokens(self, condition_ids: list[str]) -> None:
+        """Batch-resolve condition_ids to YES token_ids."""
+        missing = [c for c in condition_ids if c not in self._token_cache]
+        if not missing:
+            return
+        try:
+            placeholders = ", ".join(f"'{c}'" for c in missing)
+            rows = self.client.query(f"""
+                SELECT condition_id, token_ids[1]
+                FROM markets FINAL
+                WHERE condition_id IN ({placeholders})
+            """).result_rows
+            for cid, tid in rows:
+                self._token_cache[cid] = tid or ""
+            # Mark any not found
+            for c in missing:
+                if c not in self._token_cache:
+                    self._token_cache[c] = ""
+        except Exception as e:
+            logger.warning("Batch token resolve failed: %s", e)
+
+    def prefetch_prices(self, condition_ids: list[str], start: datetime, end: datetime) -> None:
+        """Batch-fetch OHLC prices for all tokens in one query.
+
+        Populates _price_cache so individual extract() calls don't need to query.
+        """
+        from collections import defaultdict
+
+        # Resolve all token_ids first
+        self.prefetch_tokens(condition_ids)
+        token_ids = [self._token_cache.get(c, "") for c in condition_ids]
+        token_ids = [t for t in token_ids if t]
+        if not token_ids:
+            return
+
+        cache_key_base = (start.isoformat(), end.isoformat())
+        step = self.cfg.step_minutes
+        sql = f"""
+        SELECT
+            token_id,
+            toStartOfInterval(timestamp, INTERVAL {step} MINUTE) AS bar_time,
+            argMin(price, timestamp) AS open_price,
+            max(price) AS high_price,
+            min(price) AS low_price,
+            argMax(price, timestamp) AS close_price,
+            avg(bid) AS avg_bid,
+            avg(ask) AS avg_ask
+        FROM market_prices
+        WHERE token_id IN {{tids:Array(String)}}
+          AND timestamp >= {{start:DateTime64(3)}}
+          AND timestamp < {{end:DateTime64(3)}}
+          AND ts_date >= toDate({{start:DateTime64(3)}}) - 1
+          AND ts_date <= toDate({{end:DateTime64(3)}}) + 1
+        GROUP BY token_id, bar_time
+        ORDER BY token_id, bar_time
+        """
+
+        try:
+            rows = self.client.query(
+                sql, parameters={"tids": token_ids, "start": start, "end": end}
+            ).result_rows
+
+            # Group by token_id
+            by_token: dict[str, list] = defaultdict(list)
+            for row in rows:
+                tid = row[0]
+                by_token[tid].append(row[1:])  # (bar_time, o, h, l, c, bid, ask)
+
+            # Store in cache keyed by (token_id, start_iso, end_iso)
+            for tid, price_rows in by_token.items():
+                self._price_cache[(tid, cache_key_base[0], cache_key_base[1])] = price_rows
+
+            # Mark empty tokens
+            for tid in token_ids:
+                key = (tid, cache_key_base[0], cache_key_base[1])
+                if key not in self._price_cache:
+                    self._price_cache[key] = []
+
+            logger.debug("Prefetched prices: %d rows for %d tokens", len(rows), len(by_token))
+        except Exception as e:
+            logger.warning("Batch price prefetch failed: %s", e)
 
     def extract(
         self,
@@ -240,8 +348,9 @@ class FeatureExtractor:
         volumes = self._fetch_volumes(condition_id, start_time, end_time)
         sentiment = self._fetch_sentiment(condition_id)
         end_date = self._fetch_expiry(condition_id)
-        sibling_prices = self._fetch_sibling_prices(
-            condition_id, event_slug, start_time, end_time
+        sibling_prices = (
+            self._fetch_sibling_prices(condition_id, event_slug, start_time, end_time)
+            if not self.cfg.skip_sibling else []
         )
         news_sentiment = self._fetch_news_sentiment(settlement_id, start_time, end_time) if settlement_id else []
         news_velocity = self._fetch_news_velocity(condition_id, start_time, end_time)
@@ -355,16 +464,36 @@ class FeatureExtractor:
     # ------------------------------------------------------------------
 
     def _fetch_prices(self, cid, start, end):
+        # market_prices uses token_id, not condition_id
+        token_id = self._resolve_token_id(cid)
+        if not token_id:
+            return self._fetch_prices_from_trades(cid, start, end)
+
+        # Check batch cache first
+        cache_key = (token_id, start.isoformat(), end.isoformat())
+        if cache_key in self._price_cache:
+            rows = self._price_cache[cache_key]
+            if rows:
+                return rows
+            return self._fetch_prices_from_trades(cid, start, end)
+
+        # Single-market query fallback
         sql = PRICE_FEATURES_SQL.format(step=self.cfg.step_minutes)
         try:
             rows = self.client.query(
                 sql,
-                parameters={"condition_id": cid, "start": start, "end": end},
+                parameters={"token_id": token_id, "start": start, "end": end},
             ).result_rows
             if rows:
                 return rows
-            # Fallback: derive price bars from market_trades
-            sql_trades = PRICE_FROM_TRADES_SQL.format(step=self.cfg.step_minutes)
+            return self._fetch_prices_from_trades(cid, start, end)
+        except Exception as e:
+            logger.warning("price fetch failed for %s: %s", cid, e)
+            return self._fetch_prices_from_trades(cid, start, end)
+
+    def _fetch_prices_from_trades(self, cid, start, end):
+        sql_trades = PRICE_FROM_TRADES_SQL.format(step=self.cfg.step_minutes)
+        try:
             rows = self.client.query(
                 sql_trades,
                 parameters={"condition_id": cid, "start": start, "end": end},
@@ -373,7 +502,7 @@ class FeatureExtractor:
                 logger.debug("Using trade-derived prices for %s (%d bars)", cid, len(rows))
             return rows
         except Exception as e:
-            logger.warning("price fetch failed for %s: %s", cid, e)
+            logger.warning("trade-price fetch failed for %s: %s", cid, e)
             return []
 
     def _fetch_orderbooks(self, cid, start, end):
@@ -419,17 +548,25 @@ class FeatureExtractor:
     def _fetch_sibling_prices(self, cid, event_slug, start, end):
         if not event_slug:
             return []
-        sql = SIBLING_PRICES_SQL.format(step=self.cfg.step_minutes)
         try:
-            return self.client.query(
-                sql,
-                parameters={
-                    "condition_id": cid,
-                    "event_slug": event_slug,
-                    "start": start,
-                    "end": end,
-                },
+            # Step 1: resolve sibling token_id (small query on markets table)
+            sib_rows = self.client.query(
+                SIBLING_TOKEN_SQL,
+                parameters={"condition_id": cid, "event_slug": event_slug},
             ).result_rows
+            if not sib_rows or not sib_rows[0][1]:
+                return []
+            sibling_cid = sib_rows[0][0]
+            sibling_token = sib_rows[0][1]
+
+            # Step 2: fetch prices by token_id
+            sql = SIBLING_PRICES_SQL.format(step=self.cfg.step_minutes)
+            rows = self.client.query(
+                sql,
+                parameters={"sibling_token": sibling_token, "start": start, "end": end},
+            ).result_rows
+            # Re-add sibling_id to match expected format: (sibling_id, bar_time, close)
+            return [(sibling_cid, row[0], row[1]) for row in rows]
         except Exception as e:
             logger.warning("sibling fetch failed for %s: %s", cid, e)
             return []

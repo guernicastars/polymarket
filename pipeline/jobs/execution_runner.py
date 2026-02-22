@@ -34,10 +34,16 @@ from pipeline.config import (
     CLICKHOUSE_PASSWORD,
     CLICKHOUSE_PORT,
     CLICKHOUSE_USER,
+    DIRECT_BASE_FRACTION,
+    DIRECT_MIN_CONFIDENCE,
+    DIRECT_MIN_SCORE,
+    DIRECT_PRICE_BAND_HIGH,
+    DIRECT_PRICE_BAND_LOW,
     EXECUTION_DRY_RUN,
     EXECUTION_FUNDER_ADDRESS,
     EXECUTION_INITIAL_CAPITAL,
     EXECUTION_PRIVATE_KEY,
+    EXECUTION_SIGNAL_MODE,
     RISK_KELLY_FRACTION,
     RISK_MIN_EDGE,
 )
@@ -146,7 +152,7 @@ async def run_execution_cycle() -> None:
                 cs.concentration_score,
                 cs.arbitrage_flag,
                 cs.insider_activity,
-                m.last_trade_price,
+                m.outcome_prices[1] AS last_trade_price,
                 m.volume_24h,
                 m.liquidity
             FROM composite_signals cs
@@ -158,7 +164,7 @@ async def run_execution_cycle() -> None:
             ) latest ON cs.condition_id = latest.condition_id
                 AND cs.computed_at = latest.latest
             INNER JOIN (
-                SELECT condition_id, last_trade_price, volume_24h, liquidity
+                SELECT condition_id, outcome_prices, volume_24h, liquidity
                 FROM markets FINAL
                 WHERE active = 1 AND closed = 0
             ) m ON cs.condition_id = m.condition_id
@@ -300,42 +306,101 @@ async def run_execution_cycle() -> None:
                 model_prob = bayesian["prob"]
                 edge = bayesian["edge"]
                 signal_source = "bayesian"
+                # Direction and token selection
+                if edge > 0:
+                    side = "BUY"
+                    token_id = tokens["yes_token"]
+                    price = market_price
+                else:
+                    side = "BUY"
+                    token_id = tokens["no_token"]
+                    price = 1.0 - market_price
+                    model_prob = 1.0 - model_prob
+                # Kelly sizing
+                kf = bayesian["kelly"] if bayesian["kelly"] > 0 else _kelly_fraction(model_prob, price)
+                if kf <= 0:
+                    continue
+                size_usd = pm.capital * kf
+
             elif gnn and gnn["confidence"] > 0.3:
                 # Fallback: raw GNN prediction
                 model_prob = gnn["prob"]
                 edge = gnn["edge"]
                 signal_source = "gnn"
+                if edge > 0:
+                    side = "BUY"
+                    token_id = tokens["yes_token"]
+                    price = market_price
+                else:
+                    side = "BUY"
+                    token_id = tokens["no_token"]
+                    price = 1.0 - market_price
+                    model_prob = 1.0 - model_prob
+                kf = _kelly_fraction(model_prob, price)
+                if kf <= 0:
+                    continue
+                size_usd = pm.capital * kf
+
+            elif EXECUTION_SIGNAL_MODE == "direct":
+                # ----- DIRECT COMPOSITE SIGNAL MODE -----
+                # Use signal direction + strength directly instead of
+                # converting to probability. Trades when composite signal
+                # is strong enough, sized proportionally to signal strength.
+                signal_source = "composite_direct"
+
+                # Filter: need minimum score and confidence
+                if abs(composite_score) < DIRECT_MIN_SCORE:
+                    continue
+                if confidence < DIRECT_MIN_CONFIDENCE:
+                    continue
+
+                # Skip near-resolved markets (price too extreme)
+                if market_price < DIRECT_PRICE_BAND_LOW or market_price > DIRECT_PRICE_BAND_HIGH:
+                    continue
+
+                # Direction from signal
+                if composite_score > 0:
+                    side = "BUY"
+                    token_id = tokens["yes_token"]
+                    price = market_price
+                else:
+                    side = "BUY"
+                    token_id = tokens["no_token"]
+                    price = 1.0 - market_price
+
+                # Edge proxy: signal strength scaled by confidence
+                # Score of 30 with confidence 0.67 → edge ~ 0.30 * 0.67 = 0.20
+                edge = (abs(composite_score) / 100.0) * confidence
+
+                # Size: base fraction scaled linearly by signal strength
+                # At score=100, conf=1.0 → DIRECT_BASE_FRACTION of capital
+                # At score=20, conf=0.5 → 0.2 * 0.5 * DIRECT_BASE_FRACTION
+                strength = (abs(composite_score) / 100.0) * confidence
+                size_usd = pm.capital * DIRECT_BASE_FRACTION * strength
+                model_prob = 0.5 + (composite_score / 100.0) * 0.5 * confidence
+
             else:
-                # Fallback: composite signal only
+                # Probability mode (original): composite signal → probability → edge
                 model_prob = _composite_to_prob(composite_score, market_price)
                 edge = model_prob - market_price
                 signal_source = "composite"
-
-            abs_edge = abs(edge)
-
-            if abs_edge < RISK_MIN_EDGE:
-                continue
-
-            # Direction and token selection
-            if edge > 0:
-                side = "BUY"
-                token_id = tokens["yes_token"]
-                price = market_price
-            else:
-                side = "BUY"
-                token_id = tokens["no_token"]
-                price = 1.0 - market_price
-                model_prob = 1.0 - model_prob
-
-            # Kelly sizing — use Bayesian kelly if available
-            if bayesian and signal_source == "bayesian" and bayesian["kelly"] > 0:
-                kf = bayesian["kelly"]
-            else:
+                abs_edge = abs(edge)
+                if abs_edge < RISK_MIN_EDGE:
+                    continue
+                if edge > 0:
+                    side = "BUY"
+                    token_id = tokens["yes_token"]
+                    price = market_price
+                else:
+                    side = "BUY"
+                    token_id = tokens["no_token"]
+                    price = 1.0 - market_price
+                    model_prob = 1.0 - model_prob
                 kf = _kelly_fraction(model_prob, price)
-            if kf <= 0:
-                continue
+                if kf <= 0:
+                    continue
+                size_usd = pm.capital * kf
 
-            size_usd = pm.capital * kf
             size_tokens = size_usd / price if price > 0 else 0
 
             if size_usd < 5.0:  # minimum $5 order
@@ -416,7 +481,7 @@ async def run_execution_cycle() -> None:
             price_result = await asyncio.to_thread(
                 client.query,
                 f"""
-                SELECT condition_id, last_trade_price
+                SELECT condition_id, outcome_prices[1] AS last_trade_price
                 FROM markets FINAL
                 WHERE condition_id IN ({','.join(f"'{c}'" for c in pos_cids)})
                 """,

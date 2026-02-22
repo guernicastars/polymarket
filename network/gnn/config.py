@@ -31,6 +31,10 @@ class FeatureConfig:
     # Number of features per node per timestep
     n_features: int = 12
 
+    # Skip sibling market correlation feature (F12) — avoids expensive
+    # `markets FINAL` scans that blow ClickHouse 3GB memory limit
+    skip_sibling: bool = False
+
     # Feature names (ordered, matching tensor columns)
     feature_names: list[str] = field(default_factory=lambda: [
         "log_returns",            # F1: ln(price_t / price_{t-1})

@@ -8,6 +8,7 @@ data. It takes a list of Polymarket condition IDs and an adjacency matrix
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -120,6 +121,12 @@ class GenericMarketDataset(Dataset):
             dtype=np.float32,
         )
 
+        # Batch-prefetch prices for all nodes (single query instead of N)
+        total_minutes = self.cfg.features.window_size * self.cfg.features.step_minutes
+        start_time = end_time - timedelta(minutes=total_minutes)
+        self.extractor._price_cache.clear()  # clear stale cache from previous sample
+        self.extractor.prefetch_prices(self.node_ids, start_time, end_time)
+
         for cid in self.node_ids:
             node_idx = self.node_to_idx[cid]
             info = self.market_info.get(cid, {})
@@ -170,7 +177,7 @@ class GenericMarketDataset(Dataset):
     def _fetch_next_prices(self, end_time: datetime) -> np.ndarray:
         """Fetch next-step price for each target (supervised label).
 
-        Tries market_prices first, falls back to market_trades.
+        Tries market_prices (by token_id) first, falls back to market_trades.
         """
         step_min = self.cfg.features.step_minutes
         next_time = end_time + timedelta(minutes=step_min)
@@ -178,24 +185,25 @@ class GenericMarketDataset(Dataset):
 
         for i, cid in enumerate(self.target_ids):
             try:
-                # Try market_prices
-                rows = self.client.query("""
-                    SELECT price FROM market_prices
-                    WHERE condition_id = {cid:String}
-                      AND outcome = 'Yes'
-                      AND timestamp >= {start:DateTime64(3)}
-                      AND timestamp < {end:DateTime64(3)}
-                    ORDER BY timestamp ASC LIMIT 1
-                """, parameters={
-                    "cid": cid, "start": end_time,
-                    "end": next_time + timedelta(minutes=step_min),
-                }).result_rows
+                # Resolve to token_id for market_prices
+                token_id = self.extractor._resolve_token_id(cid)
+                if token_id:
+                    rows = self.client.query("""
+                        SELECT price FROM market_prices
+                        WHERE token_id = {tid:String}
+                          AND timestamp >= {start:DateTime64(3)}
+                          AND timestamp < {end:DateTime64(3)}
+                        ORDER BY timestamp ASC LIMIT 1
+                    """, parameters={
+                        "tid": token_id, "start": end_time,
+                        "end": next_time + timedelta(minutes=step_min),
+                    }).result_rows
 
-                if rows:
-                    y[i] = rows[0][0]
-                    continue
+                    if rows:
+                        y[i] = rows[0][0]
+                        continue
 
-                # Fallback: market_trades
+                # Fallback: market_trades (has condition_id populated)
                 rows = self.client.query("""
                     SELECT price FROM market_trades
                     WHERE condition_id = {cid:String}
@@ -214,6 +222,104 @@ class GenericMarketDataset(Dataset):
                 pass
 
         return y
+
+
+class CachedMarketDataset(Dataset):
+    """In-memory dataset loaded from pre-extracted .npz cache.
+
+    This avoids hitting ClickHouse thousands of times during training.
+    Use ``cache_dataset()`` to build the cache first.
+    """
+
+    def __init__(self, cache_path: str, config: Optional[GNNConfig] = None):
+        import pathlib
+        self.cfg = config or GNNConfig()
+        p = pathlib.Path(cache_path)
+
+        data = np.load(p / "features.npz")
+        self._x = data["x"]  # (n_samples, n_nodes, window, n_features)
+        self._y = data["y"]  # (n_samples, n_targets)
+        self.adj = data["adj"]  # (n_nodes, n_nodes)
+
+        meta = json.loads((p / "meta.json").read_text())
+        self.node_ids = meta["node_ids"]
+        self.target_ids = meta["target_ids"]
+        self.target_indices = meta["target_indices"]
+        self.n_nodes = len(self.node_ids)
+        self.cfg.model.n_targets = len(self.target_ids)
+
+        logger.info(
+            "CachedMarketDataset: %d samples, %d nodes, %d targets",
+            len(self._x), self.n_nodes, len(self.target_ids),
+        )
+
+    def __len__(self) -> int:
+        return len(self._x)
+
+    def __getitem__(self, idx: int) -> dict:
+        return {
+            "x": torch.tensor(self._x[idx], dtype=torch.float32),
+            "adj": torch.tensor(self.adj, dtype=torch.float32),
+            "y": torch.tensor(self._y[idx], dtype=torch.float32),
+            "target_indices": self.target_indices,
+            "timestamp": "",
+        }
+
+
+def cache_dataset(
+    client: Any,
+    config: GNNConfig,
+    cache_dir: str,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    stride_minutes: int = 30,
+) -> str:
+    """Pre-extract all features to disk, returning cache directory path.
+
+    Extracts features sequentially with rate limiting to stay within
+    ClickHouse memory limits.
+    """
+    import pathlib, json, time as _time
+
+    ds = create_dataset(client, config, start_date, end_date, stride_minutes)
+
+    p = pathlib.Path(cache_dir)
+    p.mkdir(parents=True, exist_ok=True)
+
+    n = len(ds)
+    x_all = np.zeros(
+        (n, ds.n_nodes, config.features.window_size, config.features.n_features),
+        dtype=np.float32,
+    )
+    y_all = np.zeros((n, len(ds.target_ids)), dtype=np.float32)
+
+    logger.info("Caching %d samples to %s ...", n, cache_dir)
+    for i in range(n):
+        t0 = _time.time()
+        sample = ds[i]
+        x_all[i] = sample["x"].numpy()
+        y_all[i] = sample["y"].numpy()
+        elapsed = _time.time() - t0
+        if (i + 1) % 5 == 0 or i == 0:
+            logger.info(
+                "  Cached %d/%d (%.1fs/sample, ETA %.0fmin)",
+                i + 1, n, elapsed,
+                elapsed * (n - i - 1) / 60,
+            )
+
+    np.savez_compressed(
+        p / "features.npz", x=x_all, y=y_all, adj=ds.adj,
+    )
+    meta = {
+        "node_ids": ds.node_ids,
+        "target_ids": ds.target_ids,
+        "target_indices": ds.target_indices,
+        "n_samples": n,
+        "n_nodes": ds.n_nodes,
+    }
+    (p / "meta.json").write_text(json.dumps(meta))
+    logger.info("Cache complete: %s", cache_dir)
+    return cache_dir
 
 
 def create_dataset(

@@ -140,6 +140,7 @@ EXECUTION_CHAIN_ID = int(os.environ.get("EXECUTION_CHAIN_ID", "137"))  # Polygon
 EXECUTION_SIGNATURE_TYPE = int(os.environ.get("EXECUTION_SIGNATURE_TYPE", "0"))  # 0=EOA
 EXECUTION_INTERVAL = 120               # 2 minutes — execution cycle
 EXECUTION_INITIAL_CAPITAL = float(os.environ.get("EXECUTION_INITIAL_CAPITAL", "1000"))
+EXECUTION_SIGNAL_MODE = os.environ.get("EXECUTION_SIGNAL_MODE", "direct")  # "direct" or "probability"
 
 # Risk management
 RISK_MAX_DRAWDOWN_PCT = 0.15            # Halt trading at 15% drawdown from HWM
@@ -150,6 +151,13 @@ RISK_MIN_EDGE = 0.03                    # Min 3% edge to trade (after spread)
 RISK_MIN_LIQUIDITY = 5_000.0            # Min $5K market liquidity
 RISK_DAILY_LOSS_LIMIT_PCT = 0.05        # Halt after 5% daily loss
 RISK_KELLY_FRACTION = 0.25              # Quarter Kelly for safety
+
+# Direct signal mode parameters
+DIRECT_MIN_SCORE = float(os.environ.get("DIRECT_MIN_SCORE", "15"))    # Min |score| to trade
+DIRECT_MIN_CONFIDENCE = float(os.environ.get("DIRECT_MIN_CONFIDENCE", "0.5"))  # Min confidence
+DIRECT_BASE_FRACTION = float(os.environ.get("DIRECT_BASE_FRACTION", "0.05"))   # 5% of capital at score=100
+DIRECT_PRICE_BAND_LOW = float(os.environ.get("DIRECT_PRICE_BAND_LOW", "0.10"))   # Skip prices below
+DIRECT_PRICE_BAND_HIGH = float(os.environ.get("DIRECT_PRICE_BAND_HIGH", "0.90"))  # Skip prices above
 
 # ---------------------------------------------------------------------------
 # Phase 6: Bayesian prediction layer (two-layer architecture)

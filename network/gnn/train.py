@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader, random_split
 from .config import GNNConfig
 from .model import GNNTCN, PlattScaling
 from .dataset import DonbasTemporalDataset, collate_graph_batch
-from .generic_dataset import create_dataset
+from .generic_dataset import create_dataset, CachedMarketDataset, cache_dataset
 from .backtest import BacktestEngine, kelly_criterion
 
 logger = logging.getLogger(__name__)
@@ -268,6 +268,10 @@ def main():
                         help="Similarity method for market graphs (event/whale/correlation/signal/combined)")
     parser.add_argument("--top-markets", type=int, default=200,
                         help="Max markets for market-type graph")
+    parser.add_argument("--skip-sibling", action="store_true",
+                        help="Skip sibling market feature F12 (avoids expensive markets FINAL scans)")
+    parser.add_argument("--cache-dir", type=str, default=None,
+                        help="Cache features to disk (first run extracts, subsequent runs load)")
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
 
@@ -281,6 +285,7 @@ def main():
     cfg.model.window_size = args.window
     cfg.features.window_size = args.window
     cfg.features.step_minutes = args.step_minutes
+    cfg.features.skip_sibling = args.skip_sibling
     cfg.graph_type = args.graph_type
     cfg.graph.method = args.graph_method
     cfg.graph.top_markets = args.top_markets
@@ -289,18 +294,28 @@ def main():
     logger.info("Connecting to ClickHouse...")
     client = get_clickhouse_client(cfg)
 
-    # Build dataset
+    # Build dataset (cached or live)
     end_date = datetime.now(tz=None)  # naive UTC
     start_date = end_date - timedelta(days=args.days_back)
 
-    logger.info("Building %s dataset from %s to %s...", cfg.graph_type, start_date, end_date)
-    dataset = create_dataset(
-        client=client,
-        config=cfg,
-        start_date=start_date,
-        end_date=end_date,
-        stride_minutes=args.stride,
-    )
+    if args.cache_dir:
+        cache_path = pathlib.Path(args.cache_dir)
+        if (cache_path / "features.npz").exists():
+            logger.info("Loading cached dataset from %s", args.cache_dir)
+            dataset = CachedMarketDataset(args.cache_dir, cfg)
+        else:
+            logger.info("Caching dataset to %s (one-time extraction)...", args.cache_dir)
+            cache_dataset(client, cfg, args.cache_dir, start_date, end_date, args.stride)
+            dataset = CachedMarketDataset(args.cache_dir, cfg)
+    else:
+        logger.info("Building %s dataset from %s to %s...", cfg.graph_type, start_date, end_date)
+        dataset = create_dataset(
+            client=client,
+            config=cfg,
+            start_date=start_date,
+            end_date=end_date,
+            stride_minutes=args.stride,
+        )
 
     if len(dataset) < 10:
         logger.error("Not enough data: only %d samples. Need at least 10.", len(dataset))
