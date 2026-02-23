@@ -417,3 +417,110 @@ class MarketTransformerForPretraining(nn.Module):
         loss = F.mse_loss(predictions, masked_targets)
 
         return loss, embedding, predictions
+
+
+# ============================================================
+# Cross-Attention Fusion
+# ============================================================
+
+class CrossAttentionFusion(nn.Module):
+    """Fuse autoencoder and transformer embeddings via cross-attention.
+
+    Instead of naive concatenation (which doubles dimensionality and dilutes
+    signal when one modality is noisy), cross-attention lets each embedding
+    attend to the other, learning which dimensions are complementary.
+
+    Architecture:
+      - AE embedding (d_ae) → project to d_fused
+      - TF embedding (d_tf) → project to d_fused
+      - Cross-attention: AE queries TF keys/values (and vice versa)
+      - Gated combination: learnable gate balances the two modalities
+      - Output: (B, d_fused)
+    """
+
+    def __init__(
+        self,
+        d_ae: int = 64,
+        d_tf: int = 64,
+        d_fused: int = 64,
+        n_heads: int = 4,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.d_fused = d_fused
+
+        # Project both embeddings to the same dimension
+        self.proj_ae = nn.Linear(d_ae, d_fused)
+        self.proj_tf = nn.Linear(d_tf, d_fused)
+
+        # Cross-attention: AE attends to TF
+        self.cross_attn_ae = nn.MultiheadAttention(
+            d_fused, n_heads, dropout=dropout, batch_first=True,
+        )
+        # Cross-attention: TF attends to AE
+        self.cross_attn_tf = nn.MultiheadAttention(
+            d_fused, n_heads, dropout=dropout, batch_first=True,
+        )
+
+        # Layer norms (pre-norm style)
+        self.norm_ae = nn.LayerNorm(d_fused)
+        self.norm_tf = nn.LayerNorm(d_fused)
+
+        # Learnable gate: sigmoid output in [0, 1] balances the two branches
+        self.gate = nn.Sequential(
+            nn.Linear(d_fused * 2, d_fused),
+            nn.GELU(),
+            nn.Linear(d_fused, d_fused),
+            nn.Sigmoid(),
+        )
+
+        # Final projection
+        self.output_norm = nn.LayerNorm(d_fused)
+        self.dropout = nn.Dropout(dropout)
+
+        self._init_weights()
+
+    def _init_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+    def forward(
+        self,
+        ae_emb: torch.Tensor,
+        tf_emb: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            ae_emb: (B, d_ae) autoencoder embeddings
+            tf_emb: (B, d_tf) transformer embeddings
+
+        Returns:
+            fused: (B, d_fused) fused embedding
+        """
+        # Project to common dimension and add sequence dim for attention
+        ae = self.proj_ae(ae_emb).unsqueeze(1)  # (B, 1, d_fused)
+        tf = self.proj_tf(tf_emb).unsqueeze(1)  # (B, 1, d_fused)
+
+        # Cross-attention: AE queries TF
+        ae_norm = self.norm_ae(ae)
+        ae_cross, _ = self.cross_attn_ae(ae_norm, tf, tf)
+        ae_out = ae + self.dropout(ae_cross)  # (B, 1, d_fused)
+
+        # Cross-attention: TF queries AE
+        tf_norm = self.norm_tf(tf)
+        tf_cross, _ = self.cross_attn_tf(tf_norm, ae, ae)
+        tf_out = tf + self.dropout(tf_cross)  # (B, 1, d_fused)
+
+        # Remove sequence dim
+        ae_out = ae_out.squeeze(1)  # (B, d_fused)
+        tf_out = tf_out.squeeze(1)  # (B, d_fused)
+
+        # Gated combination
+        gate_input = torch.cat([ae_out, tf_out], dim=-1)  # (B, 2*d_fused)
+        g = self.gate(gate_input)  # (B, d_fused) — values in [0, 1]
+        fused = g * ae_out + (1 - g) * tf_out
+
+        return self.output_norm(fused)

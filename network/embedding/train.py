@@ -23,6 +23,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 
 from .config import EmbeddingConfig
@@ -455,6 +456,127 @@ class TransformerTrainer:
         probe = LinearProbe(self.cfg.probe)
         return probe.run_all_probes(embeddings, labels, feature_names)
 
+    def run_temporal_probes(
+        self,
+        embeddings: np.ndarray,
+        dataset,
+    ) -> list:
+        """Run temporal-specific probes that test time-series dynamics."""
+        from .probes import LinearProbe
+        probe = LinearProbe(self.cfg.probe)
+        return probe.run_temporal_probes(
+            embeddings, dataset.sequences, dataset.labels,
+        )
+
+    def run_temporal_probes_from_sequences(
+        self,
+        embeddings: np.ndarray,
+        sequences: list[np.ndarray],
+        labels: list[dict],
+    ) -> list:
+        """Run temporal probes given pre-matched sequences (for fusion mode)."""
+        from .probes import LinearProbe
+        probe = LinearProbe(self.cfg.probe)
+        return probe.run_temporal_probes(embeddings, sequences, labels)
+
+    def train_cross_attention_fusion(
+        self,
+        ae_embeddings: np.ndarray,
+        tf_embeddings: np.ndarray,
+        labels: list[dict],
+        feature_names: list[str],
+    ) -> tuple[nn.Module, np.ndarray, list]:
+        """Train cross-attention fusion and run probes on fused embeddings.
+
+        Returns (fusion_model, fused_embeddings, probe_results).
+        """
+        from .transformer_model import CrossAttentionFusion
+
+        d_ae = ae_embeddings.shape[1]
+        d_tf = tf_embeddings.shape[1]
+        d_fused = max(d_ae, d_tf)
+
+        fusion = CrossAttentionFusion(
+            d_ae=d_ae, d_tf=d_tf, d_fused=d_fused,
+            n_heads=4, dropout=0.1,
+        ).to(self.device)
+
+        # Train the fusion model with a reconstruction objective:
+        # the fused embedding should reconstruct both inputs.
+        ae_tensor = torch.tensor(ae_embeddings, dtype=torch.float32).to(self.device)
+        tf_tensor = torch.tensor(tf_embeddings, dtype=torch.float32).to(self.device)
+
+        # Reconstruction heads
+        recon_ae = nn.Linear(d_fused, d_ae).to(self.device)
+        recon_tf = nn.Linear(d_fused, d_tf).to(self.device)
+
+        all_params = list(fusion.parameters()) + list(recon_ae.parameters()) + list(recon_tf.parameters())
+        optimizer = torch.optim.AdamW(all_params, lr=1e-3, weight_decay=1e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)
+
+        n = len(ae_embeddings)
+        batch_size = min(64, n)
+        best_loss = float("inf")
+        patience = 0
+
+        logger.info("Training cross-attention fusion: %d samples, d_ae=%d, d_tf=%d → d_fused=%d",
+                     n, d_ae, d_tf, d_fused)
+
+        for epoch in range(100):
+            fusion.train()
+            recon_ae.train()
+            recon_tf.train()
+
+            # Shuffle indices
+            perm = torch.randperm(n, device=self.device)
+            epoch_loss = 0.0
+            n_batches = 0
+
+            for start in range(0, n, batch_size):
+                idx = perm[start:start + batch_size]
+                ae_batch = ae_tensor[idx]
+                tf_batch = tf_tensor[idx]
+
+                optimizer.zero_grad()
+                fused = fusion(ae_batch, tf_batch)
+
+                # Dual reconstruction loss
+                ae_recon = recon_ae(fused)
+                tf_recon = recon_tf(fused)
+                loss = F.mse_loss(ae_recon, ae_batch) + F.mse_loss(tf_recon, tf_batch)
+
+                loss.backward()
+                nn.utils.clip_grad_norm_(all_params, 1.0)
+                optimizer.step()
+
+                epoch_loss += loss.item()
+                n_batches += 1
+
+            scheduler.step()
+            avg_loss = epoch_loss / max(n_batches, 1)
+
+            if (epoch + 1) % 20 == 0:
+                logger.info("[Fusion] Epoch %d/100  loss=%.6f", epoch + 1, avg_loss)
+
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                patience = 0
+            else:
+                patience += 1
+                if patience >= 15:
+                    logger.info("Fusion early stop at epoch %d", epoch + 1)
+                    break
+
+        # Extract fused embeddings
+        fusion.eval()
+        with torch.no_grad():
+            fused_embeddings = fusion(ae_tensor, tf_tensor).cpu().numpy()
+
+        # Run probes
+        probe_results = self.run_probes(fused_embeddings, labels, feature_names)
+
+        return fusion, fused_embeddings, probe_results
+
     def save_results(
         self,
         embeddings: np.ndarray,
@@ -565,6 +687,7 @@ def main():
     # Fusion args
     parser.add_argument("--ae-checkpoint", type=str, default=None)
     parser.add_argument("--tf-checkpoint", type=str, default=None)
+    parser.add_argument("--fusion-method", choices=["concat", "cross_attention"], default="concat")
 
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
@@ -594,6 +717,7 @@ def main():
     cfg.transformer.patch_size = args.patch_size
     cfg.transformer.mask_ratio = args.mask_ratio
     cfg.transformer.pretrain_epochs = args.pretrain_epochs
+    cfg.transformer.fusion_method = args.fusion_method
 
     logger.info("Connecting to ClickHouse...")
     client = get_clickhouse_client(cfg)
@@ -656,7 +780,17 @@ def main():
             # Extract embeddings + run probes
             embeddings = tf_trainer.extract_embeddings(model_wrapper, dataset)
             probe_results = tf_trainer.run_probes(embeddings, dataset.labels, dataset.feature_names)
+
+            print("\n--- Standard Probes ---")
             _print_probe_results(probe_results, cfg.probe.alpha)
+
+            # Temporal-specific probes
+            temporal_probes = tf_trainer.run_temporal_probes(embeddings, dataset)
+            if temporal_probes:
+                print("\n--- Temporal Probes ---")
+                _print_probe_results(temporal_probes, cfg.probe.alpha)
+                probe_results.extend(temporal_probes)
+
             tf_trainer.save_results(embeddings, probe_results, dataset, [], [], prefix="transformer_finetune")
 
         elif args.mode == "fuse":
@@ -696,18 +830,15 @@ def main():
                 logger.error("Not enough common markets for fusion: %d", len(common_cids))
                 return
 
-            # Build fused embeddings
+            # Build matched embeddings
             ae_matched = np.array([ae_embeddings[ae_cids[c]] for c in common_cids])
             tf_matched = np.array([tf_embeddings[tf_cids[c]] for c in common_cids])
-            fused = np.concatenate([ae_matched, tf_matched], axis=1)
 
-            # Build matching labels
+            # Build matching labels + sequences for temporal probes
             fused_labels = [ae_dataset.labels[ae_cids[c]] for c in common_cids]
+            tf_sequences = [tf_dataset.sequences[tf_cids[c]] for c in common_cids]
 
-            logger.info("Fused embedding: shape %s (AE=%d + TF=%d)",
-                        fused.shape, ae_matched.shape[1], tf_matched.shape[1])
-
-            # Run probes on all three: AE-only, TF-only, fused
+            # --- Standard probes on each modality ---
             print("\n--- Autoencoder Only ---")
             ae_probes = tf_trainer.run_probes(ae_matched, fused_labels, ae_dataset.feature_names)
             _print_probe_results(ae_probes, cfg.probe.alpha)
@@ -716,23 +847,59 @@ def main():
             tf_probes = tf_trainer.run_probes(tf_matched, fused_labels, tf_dataset.feature_names)
             _print_probe_results(tf_probes, cfg.probe.alpha)
 
-            print("\n--- Fused (AE + Transformer) ---")
-            fused_probes = tf_trainer.run_probes(
-                fused, fused_labels,
-                ae_dataset.feature_names + [f"tf_{n}" for n in tf_dataset.feature_names],
+            # --- Fusion (concat vs cross-attention) ---
+            use_cross_attention = cfg.transformer.fusion_method == "cross_attention"
+
+            if use_cross_attention:
+                print("\n--- Fused (Cross-Attention) ---")
+                fusion_model, fused, fused_probes = tf_trainer.train_cross_attention_fusion(
+                    ae_matched, tf_matched, fused_labels,
+                    ae_dataset.feature_names + [f"tf_{n}" for n in tf_dataset.feature_names],
+                )
+                _print_probe_results(fused_probes, cfg.probe.alpha)
+            else:
+                print("\n--- Fused (Concatenation) ---")
+                fused = np.concatenate([ae_matched, tf_matched], axis=1)
+                fused_probes = tf_trainer.run_probes(
+                    fused, fused_labels,
+                    ae_dataset.feature_names + [f"tf_{n}" for n in tf_dataset.feature_names],
+                )
+                _print_probe_results(fused_probes, cfg.probe.alpha)
+
+            logger.info("Fused embedding: shape %s (method=%s)",
+                        fused.shape, cfg.transformer.fusion_method)
+
+            # --- Temporal probes (on TF and fused) ---
+            print("\n--- Temporal Probes (Transformer Only) ---")
+            tf_temporal = tf_trainer.run_temporal_probes_from_sequences(
+                tf_matched, tf_sequences, fused_labels,
             )
-            _print_probe_results(fused_probes, cfg.probe.alpha)
+            if tf_temporal:
+                _print_probe_results(tf_temporal, cfg.probe.alpha)
+            else:
+                print("  (no temporal probes — too few samples or classes)")
+
+            print("\n--- Temporal Probes (Fused) ---")
+            fused_temporal = tf_trainer.run_temporal_probes_from_sequences(
+                fused, tf_sequences, fused_labels,
+            )
+            if fused_temporal:
+                _print_probe_results(fused_temporal, cfg.probe.alpha)
+            else:
+                print("  (no temporal probes — too few samples or classes)")
 
             # Save fused results
             results_dir = PROJECT_ROOT / cfg.results_dir
             results_dir.mkdir(parents=True, exist_ok=True)
             np.save(results_dir / "fused_embeddings.npy", fused)
 
+            all_probes = fused_probes + tf_temporal + fused_temporal
             probe_dicts = []
-            for pr in fused_probes:
+            for pr in all_probes:
                 probe_dicts.append({
                     "concept_name": pr.concept_name,
                     "accuracy": pr.accuracy,
+                    "accuracy_std": getattr(pr, "accuracy_std", 0.0),
                     "baseline_accuracy": pr.baseline_accuracy,
                     "p_value": pr.p_value,
                     "is_significant": pr.is_significant,
