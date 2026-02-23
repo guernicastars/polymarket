@@ -105,7 +105,7 @@ async def run_bayesian_update() -> None:
         gnn_preds = await asyncio.to_thread(
             client.query,
             f"""SELECT condition_id, calibrated_prob, confidence, market_price
-                FROM gnn_predictions FINAL
+                FROM gnn_predictions
                 WHERE predicted_at > now() - INTERVAL 10 MINUTE
                 ORDER BY predicted_at DESC
                 LIMIT 1 BY condition_id""",

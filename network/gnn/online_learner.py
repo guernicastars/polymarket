@@ -156,6 +156,22 @@ class OnlineLearner:
                     self.optimizer.load_state_dict(
                         torch.load(opt_path, map_location=self.device, weights_only=True)
                     )
+                # Load Platt scaling if exists (handle n_targets mismatch)
+                online_platt_path = self.checkpoint_dir / "online_platt.pt"
+                if online_platt_path.exists():
+                    platt_data = torch.load(
+                        online_platt_path, map_location=self.device, weights_only=True
+                    )
+                    saved_n = platt_data["a"].shape[0]
+                    current_n = self.platt.a.shape[0]
+                    if saved_n == current_n:
+                        self.platt.a.data = platt_data["a"]
+                        self.platt.b.data = platt_data["b"]
+                    else:
+                        logger.warning(
+                            "Online Platt n_targets=%d != current %d — using defaults",
+                            saved_n, current_n,
+                        )
                 self.is_warm = True
                 logger.info("Resumed online state (n_updates=%d)", self.n_updates)
                 return True
@@ -389,14 +405,22 @@ class OnlineLearner:
         self.live_model.load_state_dict(state)
         self.ema_model.load_state_dict(state)
 
-        # Load Platt scaling if available
+        # Load Platt scaling if available (handle n_targets mismatch)
         platt_path = self.checkpoint_dir / "platt.pt"
         if platt_path.exists():
             platt_data = torch.load(
                 platt_path, map_location=self.device, weights_only=True
             )
-            self.platt.a.data = platt_data["a"]
-            self.platt.b.data = platt_data["b"]
+            saved_n = platt_data["a"].shape[0]
+            current_n = self.platt.a.shape[0]
+            if saved_n == current_n:
+                self.platt.a.data = platt_data["a"]
+                self.platt.b.data = platt_data["b"]
+            else:
+                logger.warning(
+                    "Platt checkpoint n_targets=%d != current %d — using defaults (a=1, b=0)",
+                    saved_n, current_n,
+                )
 
         self._init_optimizer()
         self.n_updates = 0

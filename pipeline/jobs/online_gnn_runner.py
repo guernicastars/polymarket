@@ -153,6 +153,9 @@ async def _initialize() -> None:
     _learner.warm_start()
 
     _extractor = FeatureExtractor(client, cfg.features)
+    # Prefetch token IDs for target markets to avoid N+1 queries
+    if _target_cids:
+        _extractor.prefetch_tokens(_target_cids)
     _initialized = True
 
     logger.info(
