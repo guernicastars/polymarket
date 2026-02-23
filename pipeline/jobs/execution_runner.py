@@ -262,7 +262,7 @@ async def run_execution_cycle() -> None:
         token_result = await asyncio.to_thread(
             client.query,
             f"""
-            SELECT condition_id, tokens_yes_id, tokens_no_id, tick_size, neg_risk
+            SELECT condition_id, token_ids[1] AS yes_token, token_ids[2] AS no_token, neg_risk
             FROM markets FINAL
             WHERE condition_id IN ({','.join(f"'{c}'" for c in all_cids)})
             """,
@@ -273,8 +273,8 @@ async def run_execution_cycle() -> None:
             token_map[row[0]] = {
                 "yes_token": row[1] if row[1] else "",
                 "no_token": row[2] if row[2] else "",
-                "tick_size": str(row[3]) if row[3] else "0.01",
-                "neg_risk": bool(row[4]) if row[4] else False,
+                "tick_size": "0.01",
+                "neg_risk": bool(row[3]) if row[3] else False,
             }
 
         # ---------------------------------------------------------------
@@ -377,6 +377,7 @@ async def run_execution_cycle() -> None:
                 # At score=20, conf=0.5 → 0.2 * 0.5 * DIRECT_BASE_FRACTION
                 strength = (abs(composite_score) / 100.0) * confidence
                 size_usd = pm.capital * DIRECT_BASE_FRACTION * strength
+                kf = DIRECT_BASE_FRACTION * strength
                 model_prob = 0.5 + (composite_score / 100.0) * 0.5 * confidence
 
             else:
