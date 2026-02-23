@@ -40,7 +40,7 @@ class TestModelForward:
     def setup_method(self):
         self.cfg = ModelConfig()
         self.n_nodes = 40
-        self.target_indices = [0, 1, 2, 3, 4, 5, 6]
+        self.target_indices = list(range(self.cfg.n_targets))
         self.model = GNNTCN(self.cfg, self.n_nodes, self.target_indices)
 
     def test_forward_shape(self):
@@ -50,13 +50,14 @@ class TestModelForward:
         adj = (adj > 0.5).float()
 
         logits = self.model(x, adj)
-        assert logits.shape == (B, 7), f"Expected (4, 7), got {logits.shape}"
+        n_t = self.cfg.n_targets
+        assert logits.shape == (B, n_t), f"Expected (4, {n_t}), got {logits.shape}"
 
     def test_forward_single_sample(self):
         x = torch.randn(1, 40, 64, 12)
         adj = torch.eye(40)
         logits = self.model(x, adj)
-        assert logits.shape == (1, 7)
+        assert logits.shape == (1, self.cfg.n_targets)
 
     def test_gradient_flow(self):
         x = torch.randn(2, 40, 64, 12, requires_grad=True)
@@ -173,8 +174,8 @@ class TestGraphAttention:
 
 class TestPlattScaling:
     def test_output_range(self):
-        platt = PlattScaling(n_targets=7)
-        logits = torch.randn(10, 7)
+        platt = PlattScaling(n_targets=10)
+        logits = torch.randn(10, 10)
         probs = platt(logits)
         assert (probs >= 0).all() and (probs <= 1).all(), "Probabilities out of [0,1]"
 
@@ -360,7 +361,7 @@ class TestIntegration:
         # Synthetic batch
         x = torch.randn(4, 40, 64, 12)
         adj = torch.eye(40)
-        y = torch.rand(4, 7)
+        y = torch.rand(4, 10)
 
         # Forward
         model.train()
@@ -402,7 +403,7 @@ class TestIntegration:
             logits = model(x, adj)
             probs = platt(logits)
 
-        assert probs.shape == (2, 7)
+        assert probs.shape == (2, 10)
         assert (probs >= 0).all() and (probs <= 1).all()
 
 

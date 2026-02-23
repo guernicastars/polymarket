@@ -46,8 +46,8 @@ def get_clickhouse_client(cfg: EmbeddingConfig):
     database = os.environ.get("CLICKHOUSE_DATABASE", cfg.clickhouse_database)
 
     pw_source = "env" if "CLICKHOUSE_PASSWORD" in os.environ else "config"
-    logger.info("ClickHouse: host=%s port=%d user=%s db=%s (password from %s: %s...%s)",
-                host, port, user, database, pw_source, password[:3], password[-3:])
+    logger.info("ClickHouse: host=%s port=%d user=%s db=%s (password source: %s)",
+                host, port, user, database, pw_source)
 
     return clickhouse_connect.get_client(
         host=host,

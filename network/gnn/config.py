@@ -157,7 +157,7 @@ class GNNConfig:
     clickhouse_host: str = "ch.bloomsburytech.com"
     clickhouse_port: int = 443
     clickhouse_user: str = "default"
-    clickhouse_password: str = "clickhouse_admin_2026"
+    clickhouse_password: str = ""
     clickhouse_database: str = "polymarket"
 
     # Paths
