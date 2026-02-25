@@ -16,6 +16,7 @@ import { TradesTable } from "@/components/trades-table";
 import { TopHoldersTable } from "@/components/top-holders-table";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 interface MarketPageProps {
   params: Promise<{ id: string }>;

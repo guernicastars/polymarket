@@ -14,6 +14,7 @@ import {
 import { AnalyticsTabs } from "@/components/analytics-tabs";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 async function AnalyticsStatsSection() {
   const stats = await getAnalyticsOverview();

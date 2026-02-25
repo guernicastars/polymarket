@@ -128,9 +128,19 @@ async def run_arbitrage_scanner() -> None:
 
             # For multi-outcome events (e.g., "Who wins the election?"),
             # YES prices across all markets should sum to ~1.0.
+            # BUT: many events have INDEPENDENT outcomes (e.g., "Which states
+            # will Trump visit?" — he can visit multiple). Those sums will be
+            # way above 1.0 and are NOT arbitrage opportunities.
+            # Heuristic: only flag if the sum is within a plausible range for
+            # mutually exclusive outcomes (0.5 to 2.0). Sums far above 1.0
+            # indicate independent markets, not mispricing.
             total = sum(p for p in yes_prices if p > 0)
+            # Strict filter: for mutually exclusive events, sum should be near 1.0.
+            # Events with >10 outcomes summing far above 1.0 are almost always
+            # independent (non-exclusive) markets, NOT arbitrage opportunities.
+            max_plausible_sum = min(1.5 + 0.02 * len(yes_prices), 2.5)  # hard cap at 2.5
 
-            if len(yes_prices) >= 3 and total > 0:
+            if len(yes_prices) >= 3 and total > 0 and total < max_plausible_sum:
                 spread = abs(total - 1.0)
                 if spread > ARB_RELATED_MARKET_THRESHOLD:
                     primary_id = condition_ids[0]

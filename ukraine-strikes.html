@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Signals — Ukraine Air Strike Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: #080c1a;
+            color: #e0e6ff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        #map {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+        .leaflet-container { background: #080c1a !important; }
+
+        /* Canvas overlay — sits above the map tiles */
+        #strike-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 450;
+            pointer-events: none;
+        }
+
+        /* ===== INFO PANEL (top-left) ===== */
+        .info-panel {
+            position: absolute; top: 16px; left: 16px;
+            background: rgba(8, 12, 26, 0.94);
+            border: 1px solid rgba(255,107,53,0.6);
+            border-radius: 10px;
+            padding: 18px 20px;
+            width: 290px;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(255,107,53,0.15), inset 0 0 30px rgba(255,107,53,0.03);
+            backdrop-filter: blur(12px);
+        }
+        .info-panel h2 {
+            font-size: 11px; color: #ff9500;
+            text-transform: uppercase; letter-spacing: 2px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,107,53,0.25);
+        }
+        .stat-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 5px 0; font-size: 13px;
+        }
+        .stat-label { color: #7a84b0; }
+        .stat-value {
+            color: #ff9500; font-weight: 700;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .stat-divider {
+            border: none; border-top: 1px solid rgba(255,107,53,0.15);
+            margin: 10px 0;
+        }
+
+        /* ===== STRIKE LOG (top-right) ===== */
+        .log-panel {
+            position: absolute; top: 16px; right: 16px;
+            background: rgba(8, 12, 26, 0.94);
+            border: 1px solid rgba(124,58,237,0.5);
+            border-radius: 10px;
+            padding: 16px;
+            width: 310px; max-height: 500px;
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(124,58,237,0.12);
+            backdrop-filter: blur(12px);
+        }
+        .log-panel h2 {
+            font-size: 11px; color: #a78bfa;
+            text-transform: uppercase; letter-spacing: 2px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(124,58,237,0.25);
+        }
+        .log-entry {
+            font-size: 12px; margin-bottom: 8px; padding: 8px 10px;
+            border-left: 3px solid; border-radius: 0 6px 6px 0;
+            background: rgba(124,58,237,0.06);
+            animation: logSlide 0.35s ease-out;
+        }
+        .log-entry.cruise  { border-color: #fbbf24; }
+        .log-entry.ballistic { border-color: #60a5fa; }
+        .log-entry.drone   { border-color: #fb7185; }
+        .log-src { color: #ef4444; font-weight: 600; }
+        .log-tgt { color: #4ade80; font-weight: 600; }
+        .log-type {
+            display: inline-block; font-size: 10px;
+            padding: 1px 6px; border-radius: 3px; margin-top: 3px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .log-type.cruise  { background: rgba(251,191,36,0.2); color: #fbbf24; }
+        .log-type.ballistic { background: rgba(96,165,250,0.2); color: #60a5fa; }
+        .log-type.drone   { background: rgba(251,113,133,0.2); color: #fb7185; }
+        .log-time { font-size: 10px; color: #555b80; margin-top: 2px; }
+
+        @keyframes logSlide {
+            from { opacity: 0; transform: translateX(16px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .log-panel::-webkit-scrollbar { width: 4px; }
+        .log-panel::-webkit-scrollbar-track { background: transparent; }
+        .log-panel::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 2px; }
+
+        /* ===== TIMELINE (bottom-center) ===== */
+        .timeline-bar {
+            position: absolute; bottom: 16px;
+            left: 50%; transform: translateX(-50%);
+            background: rgba(8,12,26,0.94);
+            border: 1px solid rgba(74,222,128,0.4);
+            border-radius: 10px;
+            padding: 14px 20px;
+            width: min(620px, 80vw);
+            z-index: 1000;
+            box-shadow: 0 0 24px rgba(74,222,128,0.1);
+            backdrop-filter: blur(12px);
+        }
+        .tl-label {
+            font-size: 10px; color: #4ade80;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;
+        }
+        .tl-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 4px;
+            background: rgba(74,222,128,0.15);
+            border-radius: 2px; outline: none;
+        }
+        .tl-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #4ade80; cursor: pointer;
+            box-shadow: 0 0 8px rgba(74,222,128,0.5);
+        }
+        .tl-slider::-moz-range-thumb {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #4ade80; cursor: pointer; border: none;
+        }
+        .tl-meta {
+            display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px;
+        }
+        .tl-date { color: #60a5fa; font-family: 'Courier New', monospace; }
+        .tl-event { color: #7a84b0; max-width: 60%; text-align: right; }
+
+        /* ===== TITLE CARD (bottom-left) ===== */
+        .title-card {
+            position: absolute; bottom: 16px; left: 16px;
+            background: rgba(8,12,26,0.94);
+            border: 1px solid rgba(255,107,53,0.4);
+            border-radius: 10px;
+            padding: 12px 16px;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+        }
+        .title-card h1 {
+            font-size: 13px; color: #ff9500;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;
+        }
+        .title-card .subtitle { font-size: 10px; color: #555b80; }
+        .title-card .brand { font-size: 11px; color: #a78bfa; margin-top: 4px; }
+
+        /* ===== LEGEND (bottom-right) ===== */
+        .legend {
+            position: absolute; bottom: 90px; right: 16px;
+            background: rgba(8,12,26,0.94);
+            border: 1px solid rgba(245,158,11,0.35);
+            border-radius: 10px;
+            padding: 12px 14px;
+            z-index: 1000;
+            font-size: 11px;
+            backdrop-filter: blur(12px);
+        }
+        .legend-title {
+            font-size: 10px; color: #f59e0b;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 8px;
+        }
+        .lg-item { display: flex; align-items: center; margin: 5px 0; }
+        .lg-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            margin-right: 8px; flex-shrink: 0;
+        }
+        .lg-line {
+            width: 18px; height: 3px; border-radius: 2px;
+            margin-right: 8px; flex-shrink: 0;
+        }
+        .lg-text { color: #b0b8e8; }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #080c1a;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 0.6s;
+        }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loading-spinner {
+            width: 44px; height: 44px;
+            border: 3px solid rgba(255,107,53,0.15);
+            border-top-color: #ff6b35;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: #ff9500; font-size: 13px; letter-spacing: 1px; }
+
+        /* Pulse keyframe for launch zones */
+        @keyframes pulseGlow {
+            0%,100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.6); opacity: 0.2; }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<canvas id="strike-canvas"></canvas>
+
+<div class="loading-overlay" id="loader">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">INITIALIZING STRIKE TRACKER...</div>
+</div>
+
+<!-- Info panel -->
+<div class="info-panel">
+    <h2>Strike Statistics</h2>
+    <div class="stat-row"><span class="stat-label">Current Wave</span><span class="stat-value" id="s-wave">0</span></div>
+    <div class="stat-row"><span class="stat-label">Active Tracks</span><span class="stat-value" id="s-active">0</span></div>
+    <div class="stat-row"><span class="stat-label">Targets Hit</span><span class="stat-value" id="s-hits">0</span></div>
+    <hr class="stat-divider">
+    <div class="stat-row"><span class="stat-label">Cruise Missiles</span><span class="stat-value" id="s-cruise">0</span></div>
+    <div class="stat-row"><span class="stat-label">Ballistic</span><span class="stat-value" id="s-ball">0</span></div>
+    <div class="stat-row"><span class="stat-label">Shahed Drones</span><span class="stat-value" id="s-drone">0</span></div>
+    <hr class="stat-divider">
+    <div class="stat-row"><span class="stat-label">Network Nodes</span><span class="stat-value">67</span></div>
+    <div class="stat-row"><span class="stat-label">PM Targets</span><span class="stat-value">7</span></div>
+    <hr class="stat-divider">
+    <div style="font-size:10px;color:#555b80;line-height:1.4">
+        Simulated strike patterns based on known Russian launch zones and Ukrainian target cities.
+        Slider changes settlement control to match historical timeline.
+        Will connect to live news tracker pipeline for real-time data.
+    </div>
+</div>
+
+<!-- Strike log -->
+<div class="log-panel">
+    <h2>Strike Log</h2>
+    <div id="log-container"></div>
+</div>
+
+<!-- Timeline -->
+<div class="timeline-bar">
+    <div class="tl-label">Conflict Timeline</div>
+    <input type="range" class="tl-slider" id="tl-slider" min="0" max="18" value="18">
+    <div class="tl-meta">
+        <span class="tl-date" id="tl-date">2025-02-01</span>
+        <span class="tl-event" id="tl-event">Current situation (early 2025)</span>
+    </div>
+</div>
+
+<!-- Title -->
+<div class="title-card">
+    <h1>Polymarket Signals</h1>
+    <div class="subtitle">Settlement Network + OSINT Intelligence</div>
+    <div class="brand">Air Strike Tracker</div>
+    <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,107,53,0.2)">
+        <span style="font-size:10px;color:#ef4444;background:rgba(239,68,68,0.15);padding:2px 6px;border-radius:3px;letter-spacing:1px">SIMULATED</span>
+        <span style="font-size:9px;color:#555b80;margin-left:6px">Realistic patterns, not live data</span>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <div class="legend-title">Legend</div>
+    <div class="lg-item"><div class="lg-dot" style="background:#3b82f6"></div><span class="lg-text">UA Control</span></div>
+    <div class="lg-item"><div class="lg-dot" style="background:#ef4444"></div><span class="lg-text">RU Control</span></div>
+    <div class="lg-item"><div class="lg-dot" style="background:#f59e0b"></div><span class="lg-text">Contested</span></div>
+    <div class="lg-item"><div class="lg-dot" style="background:#a855f7;border:2px solid #7c3aed;width:12px;height:12px"></div><span class="lg-text">PM Target</span></div>
+    <div style="border-top:1px solid rgba(245,158,11,0.2);margin:6px 0"></div>
+    <div class="lg-item"><div class="lg-line" style="background:#fbbf24"></div><span class="lg-text">Cruise Missile</span></div>
+    <div class="lg-item"><div class="lg-line" style="background:#60a5fa"></div><span class="lg-text">Ballistic</span></div>
+    <div class="lg-item"><div class="lg-line" style="background:#fb7185"></div><span class="lg-text">Shahed Drone</span></div>
+    <div style="border-top:1px solid rgba(245,158,11,0.2);margin:6px 0"></div>
+    <div class="lg-item"><div class="lg-line" style="background:#ef4444;height:2px;border-top:1px dashed #ef4444"></div><span class="lg-text">Frontline</span></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ==============================================================
+//  DATA
+// ==============================================================
+const settlements=[
+{id:"pokrovsk",name:"Pokrovsk",lat:48.2833,lng:37.1833,control:"UA",pop:60000,pm:true,tags:["logistics_hub","rail_junction"]},
+{id:"chasiv_yar",name:"Chasiv Yar",lat:48.6,lng:37.85,control:"UA",pop:12000,pm:true,tags:["high_ground","canal_defense"]},
+{id:"toretsk",name:"Toretsk",lat:48.3956,lng:37.8464,control:"UA",pop:32000,pm:true,tags:["urban"]},
+{id:"kupiansk",name:"Kupiansk",lat:49.7133,lng:37.6167,control:"UA",pop:27000,pm:true,tags:["rail_junction"]},
+{id:"zaporizhzhia",name:"Zaporizhzhia",lat:47.8388,lng:35.1396,control:"UA",pop:710000,pm:true,tags:["regional_capital"]},
+{id:"orikhiv",name:"Orikhiv",lat:47.5667,lng:35.7833,control:"UA",pop:14000,pm:true,tags:["southern_front"]},
+{id:"hryshyne",name:"Hryshyne",lat:48.15,lng:37.0333,control:"CONTESTED",pop:800,pm:true,tags:["pokrovsk_approach"]},
+{id:"kramatorsk",name:"Kramatorsk",lat:48.7356,lng:37.5856,control:"UA",pop:150000,tags:["ua_hq_donbas"]},
+{id:"sloviansk",name:"Sloviansk",lat:48.8511,lng:37.6167,control:"UA",pop:106000,tags:["hilltop_defense"]},
+{id:"kostiantynivka",name:"Kostiantynivka",lat:48.5297,lng:37.7081,control:"UA",pop:68000,tags:["supply_node"]},
+{id:"druzhkivka",name:"Druzhkivka",lat:48.6181,lng:37.5286,control:"UA",pop:55000,tags:["supply_node"]},
+{id:"bakhmut",name:"Bakhmut",lat:48.5953,lng:38.0003,control:"RU",pop:73000,tags:["fallen_2023"]},
+{id:"siversk",name:"Siversk",lat:48.8667,lng:38.1,control:"UA",pop:11000,tags:["donets_river"]},
+{id:"lyman",name:"Lyman",lat:48.9833,lng:37.8167,control:"UA",pop:20000,tags:["recaptured"]},
+{id:"avdiivka",name:"Avdiivka",lat:48.1397,lng:37.7472,control:"RU",pop:31000,tags:["fallen_2024"]},
+{id:"marinka",name:"Marinka",lat:47.9422,lng:37.5058,control:"RU",pop:9000,tags:["fallen_2023"]},
+{id:"vuhledar",name:"Vuhledar",lat:47.7833,lng:37.25,control:"RU",pop:14000,tags:["fallen_2024"]},
+{id:"kurakhove",name:"Kurakhove",lat:47.9833,lng:37.3,control:"RU",pop:20000,tags:["fallen_2024"]},
+{id:"selydove",name:"Selydove",lat:48.15,lng:37.3,control:"RU",pop:21000,tags:["fallen_2024"]},
+{id:"myrnohrad",name:"Myrnohrad",lat:48.3,lng:37.2667,control:"CONTESTED",pop:50000,tags:["pokrovsk_defense"]},
+{id:"ocheretyne",name:"Ocheretyne",lat:48.2,lng:37.5333,control:"RU",pop:3000,tags:["fallen_2024"]},
+{id:"pavlohrad",name:"Pavlohrad",lat:48.5333,lng:35.8667,control:"UA",pop:104000,tags:["rear_logistics"]},
+{id:"dnipro",name:"Dnipro",lat:48.4647,lng:35.0462,control:"UA",pop:980000,tags:["major_city","supply_origin","strike_target"]},
+{id:"nikopol",name:"Nikopol",lat:47.5719,lng:34.3978,control:"UA",pop:108000,tags:["shelling_target"]},
+{id:"izium",name:"Izium",lat:49.2156,lng:37.2611,control:"UA",pop:46000,tags:["recaptured"]},
+{id:"borova",name:"Borova",lat:49.05,lng:37.6667,control:"UA",pop:5000,tags:[]},
+{id:"oskil",name:"Oskil",lat:49.5333,lng:37.3333,control:"UA",pop:3000,tags:[]},
+{id:"donetsk_city",name:"Donetsk",lat:48.0159,lng:37.8028,control:"RU",pop:905000,tags:["ru_hq"]},
+{id:"horlivka",name:"Horlivka",lat:48.3069,lng:38.0525,control:"RU",pop:240000,tags:[]},
+{id:"makiivka",name:"Makiivka",lat:48.0453,lng:37.9653,control:"RU",pop:340000,tags:[]},
+{id:"luhansk_city",name:"Luhansk",lat:48.574,lng:39.3078,control:"RU",pop:400000,tags:["ru_hq"]},
+{id:"severodonetsk",name:"Severodonetsk",lat:48.9483,lng:38.4933,control:"RU",pop:100000,tags:["fallen_2022"]},
+{id:"lysychansk",name:"Lysychansk",lat:48.9042,lng:38.4375,control:"RU",pop:95000,tags:["fallen_2022"]},
+{id:"kreminna",name:"Kreminna",lat:49.05,lng:38.2167,control:"RU",pop:18000,tags:["forest"]},
+{id:"svatove",name:"Svatove",lat:49.4083,lng:38.1583,control:"RU",pop:16000,tags:[]},
+{id:"hulyaipole",name:"Hulyaipole",lat:47.6667,lng:36.25,control:"UA",pop:13000,tags:[]},
+{id:"polohy",name:"Polohy",lat:47.4833,lng:36.25,control:"RU",pop:18000,tags:[]},
+{id:"tokmak",name:"Tokmak",lat:47.25,lng:35.7,control:"RU",pop:30000,tags:["ru_logistics"]},
+{id:"melitopol",name:"Melitopol",lat:46.8489,lng:35.3653,control:"RU",pop:150000,tags:["ru_admin"]},
+{id:"enerhodar",name:"Enerhodar",lat:47.4989,lng:34.6536,control:"RU",pop:52000,tags:["nuclear_plant"]},
+{id:"kyiv",name:"Kyiv",lat:50.4501,lng:30.5234,control:"UA",pop:2962000,tags:["capital","strike_target"]},
+{id:"kharkiv",name:"Kharkiv",lat:49.9935,lng:36.2304,control:"UA",pop:1430000,tags:["strike_target"]},
+{id:"odesa",name:"Odesa",lat:46.4825,lng:30.7233,control:"UA",pop:1010000,tags:["strike_target","port"]},
+{id:"mykolaiv",name:"Mykolaiv",lat:46.975,lng:32.0,control:"UA",pop:476000,tags:["strike_target"]},
+{id:"kherson_city",name:"Kherson",lat:46.6354,lng:32.6169,control:"UA",pop:280000,tags:["strike_target"]},
+{id:"sumy",name:"Sumy",lat:50.9077,lng:34.7981,control:"UA",pop:259000,tags:["strike_target"]},
+{id:"poltava",name:"Poltava",lat:49.5883,lng:34.5514,control:"UA",pop:284000,tags:["strike_target"]},
+{id:"vinnytsia",name:"Vinnytsia",lat:49.2331,lng:28.4682,control:"UA",pop:370000,tags:["strike_target"]},
+{id:"lviv",name:"Lviv",lat:49.8397,lng:24.0297,control:"UA",pop:717000,tags:["strike_target"]},
+{id:"ivano_frankivsk",name:"Ivano-Frankivsk",lat:48.9226,lng:24.7111,control:"UA",pop:237000,tags:["strike_target"]},
+{id:"chernihiv",name:"Chernihiv",lat:51.4982,lng:31.2893,control:"UA",pop:286000,tags:["strike_target"]},
+{id:"zhytomyr",name:"Zhytomyr",lat:50.2547,lng:28.6587,control:"UA",pop:263000,tags:["strike_target"]},
+{id:"kryvyi_rih",name:"Kryvyi Rih",lat:47.9085,lng:33.3431,control:"UA",pop:612000,tags:["strike_target"]},
+{id:"kropyvnytskyi",name:"Kropyvnytskyi",lat:48.5079,lng:32.2623,control:"UA",pop:222000,tags:["air_base"]},
+{id:"uman",name:"Uman",lat:48.7475,lng:30.2218,control:"UA",pop:82000,tags:["strike_target"]},
+{id:"starokostiantyniv",name:"Starokostiantyniv",lat:49.75,lng:27.2167,control:"UA",pop:34000,tags:["air_base","strike_target"]},
+{id:"belgorod",name:"Belgorod",lat:50.5997,lng:36.5876,control:"RU",pop:391000,tags:["ru_staging"]},
+{id:"kursk_city",name:"Kursk",lat:51.7373,lng:36.1874,control:"RU",pop:449000,tags:["ru_logistics"]},
+{id:"rostov",name:"Rostov-on-Don",lat:47.2357,lng:39.7015,control:"RU",pop:1130000,tags:["ru_southern_hq"]},
+{id:"voronezh",name:"Voronezh",lat:51.672,lng:39.1843,control:"RU",pop:1047000,tags:["ru_logistics"]},
+{id:"bryansk",name:"Bryansk",lat:53.2521,lng:34.3717,control:"RU",pop:402000,tags:["ru_logistics"]},
+{id:"crimea_simferopol",name:"Simferopol",lat:44.9521,lng:34.1024,control:"RU",pop:340000,tags:[]},
+{id:"crimea_sevastopol",name:"Sevastopol",lat:44.6166,lng:33.5254,control:"RU",pop:393000,tags:["ru_naval_base"]},
+{id:"crimea_kerch",name:"Kerch",lat:45.3514,lng:36.4683,control:"RU",pop:149000,tags:["kerch_bridge"]},
+{id:"mariupol",name:"Mariupol",lat:47.0958,lng:37.5483,control:"RU",pop:431000,tags:["fallen_2022"]},
+{id:"berdyansk",name:"Berdyansk",lat:46.75,lng:36.7833,control:"RU",pop:113000,tags:[]},
+{id:"nova_kakhovka",name:"Nova Kakhovka",lat:46.7553,lng:33.375,control:"RU",pop:45000,tags:["dam_destroyed"]},
+{id:"henichesk",name:"Henichesk",lat:46.1756,lng:34.7981,control:"RU",pop:19000,tags:[]},
+{id:"valuyki",name:"Valuyki",lat:50.2094,lng:38.0972,control:"RU",pop:34000,tags:["ru_staging"]},
+{id:"shebekino",name:"Shebekino",lat:50.4064,lng:36.8917,control:"RU",pop:42000,tags:["ru_border"]},
+{id:"sudzha",name:"Sudzha",lat:51.1903,lng:35.2711,control:"UA",pop:5000,tags:["ua_incursion"]}
+];
+
+const timeline=[
+{date:"2022-02-24",label:"Full-scale invasion begins",changes:[
+  {id:"kyiv",control:"UA",assault:0.9},{id:"chernihiv",control:"UA",assault:0.8},
+  {id:"sumy",control:"UA",assault:0.7},{id:"kharkiv",control:"UA",assault:0.9},
+  {id:"kherson_city",control:"RU",assault:0},{id:"melitopol",control:"RU",assault:0},
+  {id:"berdyansk",control:"RU",assault:0},{id:"enerhodar",control:"RU",assault:0},
+  {id:"nova_kakhovka",control:"RU",assault:0}]},
+{date:"2022-03-25",label:"Siege of Mariupol intensifies",changes:[
+  {id:"mariupol",control:"UA",assault:0.95},{id:"izium",control:"RU",assault:0}]},
+{date:"2022-04-02",label:"Russia withdraws from Kyiv axis",changes:[
+  {id:"kyiv",control:"UA",assault:0},{id:"chernihiv",control:"UA",assault:0},
+  {id:"sumy",control:"UA",assault:0}]},
+{date:"2022-05-20",label:"Mariupol falls, Donbas push begins",changes:[
+  {id:"mariupol",control:"RU",assault:0},{id:"lyman",control:"RU",assault:0},
+  {id:"severodonetsk",control:"UA",assault:0.9}]},
+{date:"2022-06-25",label:"Fall of Severodonetsk-Lysychansk",changes:[
+  {id:"severodonetsk",control:"RU",assault:0},{id:"lysychansk",control:"RU",assault:0}]},
+{date:"2022-09-11",label:"Kharkiv counteroffensive",changes:[
+  {id:"izium",control:"UA",assault:0},{id:"kupiansk",control:"UA",assault:0},
+  {id:"lyman",control:"UA",assault:0},{id:"oskil",control:"UA",assault:0}]},
+{date:"2022-11-11",label:"Kherson liberation",changes:[
+  {id:"kherson_city",control:"UA",assault:0}]},
+{date:"2023-01-15",label:"Battle of Bakhmut begins",changes:[
+  {id:"bakhmut",control:"UA",assault:0.9}]},
+{date:"2023-05-25",label:"Bakhmut falls",changes:[
+  {id:"bakhmut",control:"RU",assault:0}]},
+{date:"2023-06-06",label:"Nova Kakhovka dam destroyed",changes:[
+  {id:"nova_kakhovka",control:"RU",assault:0}]},
+{date:"2023-06-08",label:"Ukrainian counteroffensive (south)",changes:[
+  {id:"orikhiv",control:"UA",assault:0.3},{id:"hulyaipole",control:"UA",assault:0.3}]},
+{date:"2023-09-01",label:"Counteroffensive stalls",changes:[
+  {id:"orikhiv",control:"UA",assault:0.1},{id:"tokmak",control:"RU",assault:0}]},
+{date:"2023-12-25",label:"Marinka falls",changes:[
+  {id:"marinka",control:"RU",assault:0}]},
+{date:"2024-02-17",label:"Avdiivka falls",changes:[
+  {id:"avdiivka",control:"RU",assault:0},{id:"toretsk",control:"UA",assault:0.4}]},
+{date:"2024-04-15",label:"Ocheretyne falls, Pokrovsk axis opens",changes:[
+  {id:"ocheretyne",control:"RU",assault:0},{id:"pokrovsk",control:"UA",assault:0.3}]},
+{date:"2024-08-06",label:"Kursk incursion begins",changes:[
+  {id:"sudzha",control:"UA",assault:0},{id:"kursk_city",control:"RU",assault:0.3}]},
+{date:"2024-10-01",label:"Vuhledar and Selydove fall",changes:[
+  {id:"vuhledar",control:"RU",assault:0},{id:"selydove",control:"RU",assault:0}]},
+{date:"2024-11-15",label:"Kurakhove falls",changes:[
+  {id:"kurakhove",control:"RU",assault:0},{id:"pokrovsk",control:"UA",assault:0.6},
+  {id:"hryshyne",control:"CONTESTED",assault:0.8},{id:"myrnohrad",control:"CONTESTED",assault:0.5}]},
+{date:"2025-02-01",label:"Current situation (early 2025)",changes:[
+  {id:"chasiv_yar",control:"UA",assault:0.7},{id:"toretsk",control:"UA",assault:0.6},
+  {id:"kupiansk",control:"UA",assault:0.4},{id:"pokrovsk",control:"UA",assault:0.7},
+  {id:"sudzha",control:"UA",assault:0.3}]}
+];
+
+// Pre-2022 baseline: settlements that were RU/occupied before invasion
+const prewarRU=new Set(["donetsk_city","horlivka","makiivka","luhansk_city","kreminna","svatove",
+  "polohy","tokmak","melitopol","crimea_simferopol","crimea_sevastopol","crimea_kerch",
+  "henichesk","belgorod","kursk_city","rostov","voronezh","bryansk","valuyki","shebekino"]);
+
+// Russian launch zones
+const launchZones=[
+{name:"Engels-2 (Saratov)",lat:51.48,lng:46.20,types:["cruise"],weapons:["Kh-101","Kh-555"]},
+{name:"Caspian Fleet",lat:42.5,lng:50.0,types:["cruise"],weapons:["Kalibr"]},
+{name:"Crimea",lat:45.1,lng:33.8,types:["ballistic","cruise"],weapons:["S-300","Iskander","Kalibr"]},
+{name:"Kursk / Voronezh",lat:51.7,lng:36.2,types:["drone"],weapons:["Shahed-136"]},
+{name:"Bryansk",lat:53.25,lng:34.37,types:["drone"],weapons:["Shahed-136"]},
+{name:"Rostov-on-Don",lat:47.24,lng:39.70,types:["cruise"],weapons:["Kalibr"]},
+{name:"Belarus (Mazyr)",lat:52.05,lng:29.27,types:["drone"],weapons:["Shahed-136"]}
+];
+
+// Targets = all UA settlements with "strike_target" tag
+const strikeTargets=settlements.filter(s=>s.control==="UA"&&s.tags.some(t=>t.includes("strike")));
+// Also add major cities that are common targets
+const majorTargets=settlements.filter(s=>s.control==="UA"&&s.pop>=200000);
+const allTargets=[...new Map([...strikeTargets,...majorTargets].map(s=>[s.id,s])).values()];
+
+// Frontline waypoints (south → north)
+const frontline=[
+[46.6,33.0],[47.0,34.0],[47.3,35.0],[47.5,36.0],[47.6,36.8],
+[47.8,37.2],[48.0,37.3],[48.15,37.1],[48.3,37.3],[48.4,37.6],
+[48.6,37.85],[48.7,38.0],[48.9,38.1],[49.0,38.0],[49.2,37.8],
+[49.5,37.5],[49.7,37.0],[50.0,36.5],[50.3,36.3]
+];
+
+// Occupied territory polygon
+const occupied=[
+[44.3,33.0],[44.3,36.8],[45.3,36.5],[46.2,36.8],[46.8,37.5],
+[47.0,37.6],[47.5,37.2],[48.0,37.3],[48.15,37.1],[48.3,37.3],
+[48.4,37.7],[48.6,38.0],[48.9,38.2],[49.0,38.2],[49.4,37.8],
+[49.7,37.2],[50.0,36.6],[50.4,36.9],[52.0,40.0],[47.0,40.0],
+[45.0,40.0],[44.3,36.8]
+];
+
+// ==============================================================
+//  STATE
+// ==============================================================
+const state={
+    wave:0, hits:0, activeCount:0,
+    counts:{cruise:0,ballistic:0,drone:0},
+    trajectories:[],   // active flight paths
+    explosions:[],      // active explosions
+    log:[],
+    frame:0
+};
+
+// ==============================================================
+//  MAP SETUP
+// ==============================================================
+let map, canvas, ctx;
+let settlementLayer=L.layerGroup(); // layer we can clear & redraw
+let assaultLayer=L.layerGroup();    // pulsing assault rings
+
+// Compute control state at a given timeline index
+function getControlState(timelineIdx){
+    // Start from pre-war: everything UA except prewarRU set
+    const ctrl={};
+    const assault={};
+    settlements.forEach(s=>{
+        ctrl[s.id]= prewarRU.has(s.id)?'RU':'UA';
+        assault[s.id]=0;
+    });
+    // Apply cumulative changes up to timelineIdx
+    for(let i=0;i<=timelineIdx;i++){
+        const ev=timeline[i];
+        if(!ev.changes) continue;
+        ev.changes.forEach(c=>{
+            ctrl[c.id]=c.control;
+            assault[c.id]=c.assault||0;
+        });
+    }
+    return {ctrl,assault};
+}
+
+function drawSettlementMarkers(timelineIdx){
+    settlementLayer.clearLayers();
+    assaultLayer.clearLayers();
+    const {ctrl,assault}=getControlState(timelineIdx);
+
+    settlements.forEach(s=>{
+        const control=ctrl[s.id]||s.control;
+        const col=control==='UA'?'#3b82f6':control==='RU'?'#ef4444':'#f59e0b';
+        const r=Math.max(3,Math.min(8,Math.log10(s.pop||1000)*2));
+
+        const marker=L.circleMarker([s.lat,s.lng],{
+            radius:r, fillColor:col, color:col, fillOpacity:0.85, weight:1, opacity:0.6
+        });
+        let tip=s.name;
+        const ai=assault[s.id]||0;
+        if(ai>0.3) tip+=` (assault: ${Math.round(ai*100)}%)`;
+        marker.bindTooltip(tip,{permanent:s.pop>300000,direction:'top',className:'city-label',offset:[0,-6]});
+        settlementLayer.addLayer(marker);
+
+        // PM target ring
+        if(s.pm){
+            settlementLayer.addLayer(L.circleMarker([s.lat,s.lng],{
+                radius:r+6,fillColor:'transparent',color:'#a855f7',
+                weight:2,opacity:0.7,dashArray:'4,3'
+            }));
+        }
+
+        // Assault intensity glow (pulsing orange ring for active combat)
+        if(ai>0.2){
+            const glowR=r+10+ai*15;
+            const el=document.createElement('div');
+            const sz=Math.round(glowR*2);
+            el.style.cssText=`width:${sz}px;height:${sz}px;position:relative;`;
+            el.innerHTML=`<div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,160,50,${ai*0.7});background:rgba(255,107,53,${ai*0.12});animation:pulseGlow ${2-ai}s infinite;"></div>`;
+            assaultLayer.addLayer(L.marker([s.lat,s.lng],{
+                icon:L.divIcon({html:el.outerHTML,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})
+            }));
+        }
+    });
+}
+
+function init(){
+    map=L.map('map',{center:[48.5,34.5],zoom:6,zoomControl:true,attributionControl:false});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+
+    // Occupied territory as Leaflet polygon (moves with map)
+    L.polygon(occupied.map(p=>[p[0],p[1]]),{
+        color:'rgba(220,38,38,0.35)',fillColor:'rgba(180,20,20,0.12)',
+        fillOpacity:1,weight:1.5,dashArray:'6,4'
+    }).addTo(map);
+
+    // Frontline as Leaflet polyline
+    L.polyline(frontline.map(p=>[p[0],p[1]]),{
+        color:'#ef4444',weight:2.5,dashArray:'8,6',opacity:0.7
+    }).addTo(map);
+
+    // Add dynamic layers
+    assaultLayer.addTo(map);
+    settlementLayer.addTo(map);
+
+    // Draw settlements at current timeline position (last = index 18)
+    drawSettlementMarkers(18);
+
+    // Launch zone markers (pulsing)
+    launchZones.forEach(z=>{
+        const el=document.createElement('div');
+        el.style.cssText='width:20px;height:20px;position:relative;';
+        el.innerHTML=`
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(239,68,68,0.6);animation:pulseGlow 2s infinite;"></div>
+            <div style="position:absolute;top:6px;left:6px;width:8px;height:8px;border-radius:50%;background:#ff6b35;"></div>
+        `;
+        L.marker([z.lat,z.lng],{icon:L.divIcon({html:el.outerHTML,className:'',iconSize:[20,20],iconAnchor:[10,10]})})
+         .bindTooltip(z.name,{direction:'top',offset:[0,-14]}).addTo(map);
+    });
+
+    // Canvas setup
+    canvas=document.getElementById('strike-canvas');
+    ctx=canvas.getContext('2d');
+    resizeCanvas();
+    window.addEventListener('resize',resizeCanvas);
+    map.on('move zoom',resizeCanvas);
+
+    // Hide loader
+    document.getElementById('loader').classList.add('hidden');
+
+    // Start animation
+    requestAnimationFrame(tick);
+    // First wave after 1.5s
+    setTimeout(launchWave,1500);
+}
+
+function resizeCanvas(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+}
+
+// ==============================================================
+//  BEZIER HELPERS
+// ==============================================================
+function latlngToPixel(lat,lng){
+    const p=map.latLngToContainerPoint([lat,lng]);
+    return {x:p.x,y:p.y};
+}
+
+function bezierPoint(p0,cp,p1,t){
+    const u=1-t;
+    return {
+        x: u*u*p0.x + 2*u*t*cp.x + t*t*p1.x,
+        y: u*u*p0.y + 2*u*t*cp.y + t*t*p1.y
+    };
+}
+
+// ==============================================================
+//  TRAJECTORY MANAGEMENT
+// ==============================================================
+function createTrajectory(launch,target,type){
+    // Seed the control point once so it doesn't jitter
+    const mx=(launch.lat+target.lat)/2;
+    const my=(launch.lng+target.lng)/2;
+    const dist=Math.sqrt((launch.lat-target.lat)**2+(launch.lng-target.lng)**2);
+
+    let arcFactor=0.3; // fraction of distance for arc height
+    if(type==='ballistic') arcFactor=0.5;
+    if(type==='drone') arcFactor=0.12;
+
+    // Control point is offset perpendicular to the line + random jitter
+    const dx=target.lng-launch.lng, dy=target.lat-launch.lat;
+    const perpX=-dy, perpY=dx;
+    const jitter=(Math.random()-0.5)*0.3;
+    const cpLat=mx+perpX*arcFactor*0.3+jitter;
+    const cpLng=my+perpY*arcFactor*0.3+jitter;
+
+    const duration=type==='drone'?9000:type==='ballistic'?3500:6000;
+    const weapon=launch.weapons[Math.floor(Math.random()*launch.weapons.length)];
+
+    return {
+        launch, target, type, weapon,
+        cpLat, cpLng,
+        startTime:Date.now()+(Math.random()*1500),
+        duration: duration + (Math.random()-0.5)*1500,
+        trail:[]  // store recent positions for comet tail
+    };
+}
+
+function launchWave(){
+    state.wave++;
+    const n=3+Math.floor(Math.random()*5); // 3-7 strikes
+
+    for(let i=0;i<n;i++){
+        const lz=launchZones[Math.floor(Math.random()*launchZones.length)];
+        const tgt=allTargets[Math.floor(Math.random()*allTargets.length)];
+        const type=lz.types[Math.floor(Math.random()*lz.types.length)];
+        state.trajectories.push(createTrajectory(lz,tgt,type));
+    }
+
+    // Schedule next wave
+    setTimeout(launchWave, 10000+Math.random()*5000);
+}
+
+// ==============================================================
+//  ANIMATION LOOP
+// ==============================================================
+function tick(){
+    state.frame++;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const now=Date.now();
+    let activeCount=0;
+
+    // --- Draw trajectories ---
+    for(let i=state.trajectories.length-1;i>=0;i--){
+        const t=state.trajectories[i];
+        const elapsed=now-t.startTime;
+        if(elapsed<0) continue; // not started yet
+
+        const progress=Math.min(elapsed/t.duration,1.0);
+
+        if(progress<1.0){
+            drawTrajectoryCanvas(t,progress);
+            activeCount++;
+        } else {
+            // Impact!
+            const px=latlngToPixel(t.target.lat,t.target.lng);
+            state.explosions.push({x:px.x,y:px.y,startTime:now,duration:1200});
+            state.hits++;
+            state.counts[t.type]=(state.counts[t.type]||0)+1;
+            addLogEntry(t);
+            state.trajectories.splice(i,1);
+        }
+    }
+
+    // --- Draw explosions ---
+    for(let i=state.explosions.length-1;i>=0;i--){
+        const ex=state.explosions[i];
+        const age=now-ex.startTime;
+        const p=age/ex.duration;
+        if(p>=1){ state.explosions.splice(i,1); continue; }
+        drawExplosion(ex.x,ex.y,p);
+    }
+
+    state.activeCount=activeCount;
+    updateUI();
+    requestAnimationFrame(tick);
+}
+
+// ==============================================================
+//  DRAWING
+// ==============================================================
+function drawTrajectoryCanvas(t,progress){
+    const p0=latlngToPixel(t.launch.lat,t.launch.lng);
+    const p1=latlngToPixel(t.target.lat,t.target.lng);
+    const cp=latlngToPixel(t.cpLat,t.cpLng);
+
+    // Color palette per type
+    let col,glow;
+    if(t.type==='cruise'){      col='251,191,36';  glow='rgba(251,191,36,0.35)'; }
+    else if(t.type==='ballistic'){ col='147,197,253'; glow='rgba(147,197,253,0.35)'; }
+    else{                        col='251,113,133'; glow='rgba(251,113,133,0.35)'; }
+
+    const lw=t.type==='drone'?2.5:2;
+
+    // Draw the trail with gradient opacity (comet-tail)
+    const trailStart=Math.max(0,progress-0.35);
+    const steps=60;
+
+    ctx.lineWidth=lw;
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    ctx.shadowBlur=12;
+    ctx.shadowColor=glow;
+
+    for(let s=0;s<steps;s++){
+        const tA=trailStart+(progress-trailStart)*(s/steps);
+        const tB=trailStart+(progress-trailStart)*((s+1)/steps);
+        if(tB>progress) break;
+
+        const alpha=((s/steps)**1.8)*0.85; // fade in toward head
+        const pA=bezierPoint(p0,cp,p1,tA);
+        const pB=bezierPoint(p0,cp,p1,tB);
+
+        ctx.strokeStyle=`rgba(${col},${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(pA.x,pA.y);
+        ctx.lineTo(pB.x,pB.y);
+        ctx.stroke();
+    }
+
+    // Draw the particle head
+    const head=bezierPoint(p0,cp,p1,progress);
+    ctx.shadowBlur=18;
+    ctx.shadowColor=`rgba(${col},0.8)`;
+    ctx.fillStyle=`rgba(${col},1)`;
+    ctx.beginPath();
+    ctx.arc(head.x,head.y,4,0,Math.PI*2);
+    ctx.fill();
+
+    // Bright inner core
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(head.x,head.y,1.5,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.shadowBlur=0;
+}
+
+function drawExplosion(x,y,p){
+    // Multiple expanding rings
+    for(let ring=0;ring<3;ring++){
+        const delay=ring*0.12;
+        const rp=Math.max(0,p-delay)/(1-delay);
+        if(rp<=0||rp>=1) continue;
+
+        const radius=15+35*rp*(ring+1)*0.5;
+        const alpha=(1-rp)*(0.7-ring*0.2);
+
+        ctx.strokeStyle=`rgba(255,${140-ring*40},${20+ring*10},${alpha})`;
+        ctx.lineWidth=3-ring;
+        ctx.beginPath();
+        ctx.arc(x,y,radius,0,Math.PI*2);
+        ctx.stroke();
+    }
+
+    // Central flash
+    if(p<0.3){
+        const fa=1-p/0.3;
+        const gr=ctx.createRadialGradient(x,y,0,x,y,25);
+        gr.addColorStop(0,`rgba(255,220,100,${fa*0.6})`);
+        gr.addColorStop(1,`rgba(255,107,53,0)`);
+        ctx.fillStyle=gr;
+        ctx.beginPath();
+        ctx.arc(x,y,25,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    // Glow halo
+    ctx.shadowBlur=30;
+    ctx.shadowColor=`rgba(255,107,53,${(1-p)*0.4})`;
+    ctx.fillStyle=`rgba(255,160,50,${(1-p)*0.12})`;
+    ctx.beginPath();
+    ctx.arc(x,y,50*p,0,Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur=0;
+}
+
+// ==============================================================
+//  UI UPDATES
+// ==============================================================
+function updateUI(){
+    if(state.frame%5!==0) return; // throttle DOM updates
+    document.getElementById('s-wave').textContent=state.wave;
+    document.getElementById('s-active').textContent=state.activeCount;
+    document.getElementById('s-hits').textContent=state.hits;
+    document.getElementById('s-cruise').textContent=state.counts.cruise||0;
+    document.getElementById('s-ball').textContent=state.counts.ballistic||0;
+    document.getElementById('s-drone').textContent=state.counts.drone||0;
+}
+
+function addLogEntry(t){
+    state.log.unshift({
+        src:t.launch.name, tgt:t.target.name,
+        type:t.type, weapon:t.weapon,
+        time:new Date().toLocaleTimeString()
+    });
+    if(state.log.length>15) state.log.length=15;
+    renderLog();
+}
+
+function renderLog(){
+    const c=document.getElementById('log-container');
+    c.innerHTML=state.log.map(e=>`
+        <div class="log-entry ${e.type}">
+            <div><span class="log-src">${e.src}</span> &rarr; <span class="log-tgt">${e.tgt}</span></div>
+            <span class="log-type ${e.type}">${e.weapon||e.type}</span>
+            <div class="log-time">${e.time}</div>
+        </div>
+    `).join('');
+}
+
+// Timeline slider — rebuilds settlement markers on change
+document.getElementById('tl-slider').addEventListener('input',e=>{
+    const idx=parseInt(e.target.value);
+    document.getElementById('tl-date').textContent=timeline[idx].date;
+    document.getElementById('tl-event').textContent=timeline[idx].label;
+    // Redraw settlements with control state at this point in the war
+    drawSettlementMarkers(idx);
+});
+
+// Custom tooltip style
+const style=document.createElement('style');
+style.textContent=`.city-label{background:rgba(8,12,26,0.85)!important;border:1px solid rgba(255,255,255,0.15)!important;color:#e0e6ff!important;font-size:11px!important;padding:2px 6px!important;border-radius:4px!important;box-shadow:none!important;}
+.city-label::before{border-top-color:rgba(8,12,26,0.85)!important;}`;
+document.head.appendChild(style);
+
+// Boot
+window.addEventListener('load',init);
+</script>
+</body>
+</html>

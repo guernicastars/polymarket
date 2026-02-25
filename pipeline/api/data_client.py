@@ -394,7 +394,7 @@ class DataClient:
             "condition_id": raw.get("conditionId", ""),
             "asset": raw.get("asset", ""),
             "outcome": raw.get("outcome", ""),
-            "outcome_index": int(raw.get("outcomeIndex", 0)),
+            "outcome_index": min(max(int(raw.get("outcomeIndex") or 0), 0), 255),
             "size": float(raw.get("size") or 0),
             "avg_price": float(raw.get("avgPrice") or 0),
             "initial_value": float(raw.get("initialValue") or 0),
@@ -424,7 +424,7 @@ class DataClient:
             "activity_type": raw.get("type", "TRADE"),
             "side": (raw.get("side") or "").upper(),
             "outcome": raw.get("outcome", ""),
-            "outcome_index": int(raw["outcomeIndex"]) if raw.get("outcomeIndex") is not None else 0,
+            "outcome_index": min(max(int(raw.get("outcomeIndex") or 0), 0), 255),
             "size": float(raw.get("size") or 0),
             "usdc_size": float(raw.get("usdcSize") or 0),
             "price": float(raw.get("price") or 0),
@@ -443,7 +443,7 @@ class DataClient:
             "proxy_wallet": raw.get("proxyWallet", ""),
             "pseudonym": raw.get("pseudonym", ""),
             "profile_image": raw.get("profileImage", ""),
-            "outcome_index": int(raw.get("outcomeIndex", 0)),
+            "outcome_index": min(max(int(raw.get("outcomeIndex") or 0), 0), 255),
             "amount": float(raw.get("amount") or 0),
         }
 

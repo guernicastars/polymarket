@@ -14,6 +14,7 @@ import {
 import { WhalesTabs } from "@/components/whales-tabs";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 async function WhalesStatsSection() {
   const stats = await getWhalesOverview();

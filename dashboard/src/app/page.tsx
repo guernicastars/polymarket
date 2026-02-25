@@ -14,6 +14,7 @@ import { TrendingMarkets } from "@/components/trending-markets";
 import { CategoryBreakdownList } from "@/components/category-breakdown";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 async function StatsSection() {
   const stats = await getOverviewStats();
