@@ -354,14 +354,15 @@ class TestIntegration:
     def test_full_training_step(self):
         """Simulate one training step: forward → loss → backward → optimizer step."""
         cfg = ModelConfig()
-        model = GNNTCN(cfg, n_nodes=40, target_indices=list(range(10)))
+        n_targets = 10
+        model = GNNTCN(cfg, n_nodes=40, target_indices=list(range(n_targets)))
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
         criterion = torch.nn.MSELoss()
 
         # Synthetic batch
         x = torch.randn(4, 40, 64, 12)
         adj = torch.eye(40)
-        y = torch.rand(4, 10)
+        y = torch.rand(4, n_targets)
 
         # Forward
         model.train()

@@ -1,0 +1,24 @@
+============================================================
+BACKTEST REPORT
+============================================================
+Total trades:     75
+Win rate:         24.0%
+Total return:     34.57%
+Sharpe ratio:     162.55
+Max drawdown:     0.82%
+Profit factor:    9.95
+Calmar ratio:     41.99
+Avg edge:         0.0755
+============================================================
+
+TOP 10 TRADES (by PnL):
+  2026-02-21T16:54  0x3488f31e6449f9803f99a8b5dd232c7ad883637f1c86e6953305a2ef19c77f20  SELL  edge=-0.327  size=$1982  pnl=$+1165.15
+  2026-02-21T02:54  0x8a38e9511fe17e13fa7c3fc65923983c22d4d494b69091fad0107637a7cd1e32  SELL  edge=-0.038  size=$1498  pnl=$+1057.62
+  2026-02-22T18:24  0xef6214c019510a68827c27357c034703e8f031f794fbbbb1cc68d6159e9fcfdc  SELL  edge=-0.276  size=$923  pnl=$+336.89
+  2026-02-23T03:54  0x6750969e33225085e74f03e0c72ef0e2f42094486800122b86a2dda56e9bd20a  SELL  edge=-0.054  size=$280  pnl=$+277.35
+  2026-02-22T18:24  0xbacee9b507994c14684a03197c14b09d2e85b2ffa1a370f6998bc5be3f292b36  SELL  edge=-0.161  size=$632  pnl=$+153.01
+  2026-02-23T01:24  0xd28191318521cbeda80d1ac1d406f5492d6dbbdb81e8a2c01730e927bedf7d88  BUY   edge=+0.082  size=$407  pnl=$+123.50
+  2026-02-21T07:24  0x8a38e9511fe17e13fa7c3fc65923983c22d4d494b69091fad0107637a7cd1e32  SELL  edge=-0.028  size=$259  pnl=$+88.64
+  2026-02-22T13:54  0x6750969e33225085e74f03e0c72ef0e2f42094486800122b86a2dda56e9bd20a  BUY   edge=+0.056  size=$305  pnl=$+80.08
+  2026-02-22T11:54  0x6750969e33225085e74f03e0c72ef0e2f42094486800122b86a2dda56e9bd20a  SELL  edge=-0.054  size=$364  pnl=$+74.97
+  2026-02-21T04:54  0x8a38e9511fe17e13fa7c3fc65923983c22d4d494b69091fad0107637a7cd1e32  SELL  edge=-0.028  size=$247  pnl=$+71.89
