@@ -11,11 +11,11 @@ interface InsiderStatsCardsProps {
 
 export function InsiderStatsCards({ stats }: InsiderStatsCardsProps) {
   const cards = [
-    { label: "Total Suspects", value: formatNumber(stats.total_suspects), icon: ShieldAlert, color: "text-amber-400" },
-    { label: "Critical Alerts", value: formatNumber(stats.critical_alerts), icon: AlertTriangle, color: "text-red-400" },
-    { label: "Pre-News Events", value: formatNumber(stats.pre_news_events), icon: Newspaper, color: "text-violet-400" },
-    { label: "Coordinated Groups", value: formatNumber(stats.coordinated_groups), icon: Network, color: "text-blue-400" },
-    { label: "Avg Suspicion", value: stats.avg_suspicion_score.toFixed(1), icon: Gauge, color: "text-emerald-400" },
+    { label: "Total Suspects", value: formatNumber(stats.total_suspects ?? 0), icon: ShieldAlert, color: "text-amber-400" },
+    { label: "Critical Alerts", value: formatNumber(stats.critical_alerts ?? 0), icon: AlertTriangle, color: "text-red-400" },
+    { label: "Pre-News Events", value: formatNumber(stats.pre_news_events ?? 0), icon: Newspaper, color: "text-violet-400" },
+    { label: "Coordinated Groups", value: formatNumber(stats.coordinated_groups ?? 0), icon: Network, color: "text-blue-400" },
+    { label: "Avg Suspicion", value: (stats.avg_suspicion_score ?? 0).toFixed(1), icon: Gauge, color: "text-emerald-400" },
   ];
 
   return (
