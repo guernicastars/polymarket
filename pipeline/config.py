@@ -82,6 +82,16 @@ INSIDER_FRESHNESS_DAYS = 30            # Wallet age below this is "fresh"
 INSIDER_WIN_RATE_THRESHOLD = 0.75      # Win rate above this in niche markets is suspicious
 COMPOSITE_TOP_MARKETS = 500            # Compute composite signals for top N markets by volume
 
+# Insider trading detection
+INSIDER_DETECT_INTERVAL = 900                   # 15 minutes
+INSIDER_DETECT_PRICE_MOVE_THRESHOLD = 0.20      # 20% price move in 1 hour = major event
+INSIDER_DETECT_LOOKBACK_HOURS = 24              # Look back 24 hours for events and trades
+INSIDER_DETECT_ZSCORE_THRESHOLD = 2.0           # Flag metrics exceeding 2 standard deviations
+INSIDER_DETECT_COORDINATION_WINDOW = 300        # 5 minutes (300 seconds) coordination window
+INSIDER_DETECT_COORDINATION_MIN_OVERLAP = 3     # Min shared markets for coordination check
+INSIDER_DETECT_LARGE_TRADE_USD = 1000           # Minimum trade size to flag as large
+INSIDER_DETECT_TOP_WALLETS = 300                # Cap pairwise coordination comparisons
+
 # Phase 4: Market similarity graph
 SIMILARITY_SCORER_INTERVAL = 3600      # 1 hour
 SIMILARITY_TOP_MARKETS = 500           # Top N markets for similarity computation

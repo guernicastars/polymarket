@@ -27,6 +27,11 @@ import type {
   InsiderAlert,
   CompositeSignal,
   AnalyticsOverview,
+  InsiderSuspect,
+  PreNewsEvent,
+  CoordinatedGroup,
+  InsiderTradeSignal,
+  InsiderOverview,
 } from "@/types/market";
 
 export async function getTopMarkets(limit = 50): Promise<MarketRow[]> {
@@ -758,5 +763,192 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     insider_alerts: 0,
     markets_scored: 0,
     avg_confidence: 0,
+  };
+}
+
+// --- Insider Trading Detection Queries ---
+
+export async function getInsiderSuspects(
+  limit = 50
+): Promise<InsiderSuspect[]> {
+  return query<InsiderSuspect>(
+    `SELECT
+      tsp.proxy_wallet,
+      tp.pseudonym,
+      tp.profile_image,
+      tsp.suspicion_score,
+      tsp.suspicion_tier,
+      tsp.pre_news_score,
+      tsp.statistical_score,
+      tsp.profitability_score,
+      tsp.coordination_score,
+      tsp.category_focus_score,
+      tsp.total_trades,
+      tsp.win_rate,
+      tsp.avg_roi,
+      tsp.mideast_trade_pct,
+      tsp.flagged_trade_count,
+      tsp.total_pnl,
+      tsp.computed_at
+    FROM (SELECT * FROM trader_suspicion_profiles FINAL) AS tsp
+    LEFT JOIN (
+      SELECT proxy_wallet, pseudonym, profile_image
+      FROM trader_profiles FINAL
+    ) AS tp ON tsp.proxy_wallet = tp.proxy_wallet
+    ORDER BY tsp.suspicion_score DESC
+    LIMIT {limit:UInt32}`,
+    { limit }
+  );
+}
+
+export async function getPreNewsTradeEvents(
+  limit = 50
+): Promise<PreNewsEvent[]> {
+  return query<PreNewsEvent>(
+    `SELECT
+      pne.event_id,
+      pne.condition_id,
+      pne.event_type,
+      pne.magnitude,
+      pne.direction,
+      pne.price_before,
+      pne.price_after,
+      pne.volume_during,
+      pne.category,
+      pne.question,
+      pne.window_start,
+      pne.window_end,
+      pne.detected_at,
+      count(its.trade_id) AS preceding_trades
+    FROM pre_news_events pne
+    LEFT JOIN insider_trade_signals its
+      ON pne.condition_id = its.condition_id
+      AND its.trade_timestamp >= pne.window_start
+      AND its.trade_timestamp < pne.window_end
+      AND its.composite_score >= 30
+    GROUP BY
+      pne.event_id,
+      pne.condition_id,
+      pne.event_type,
+      pne.magnitude,
+      pne.direction,
+      pne.price_before,
+      pne.price_after,
+      pne.volume_during,
+      pne.category,
+      pne.question,
+      pne.window_start,
+      pne.window_end,
+      pne.detected_at
+    ORDER BY pne.detected_at DESC
+    LIMIT {limit:UInt32}`,
+    { limit }
+  );
+}
+
+export async function getCoordinatedGroups(
+  limit = 30
+): Promise<CoordinatedGroup[]> {
+  return query<CoordinatedGroup>(
+    `SELECT
+      group_id,
+      wallets,
+      size,
+      correlation_score,
+      timing_correlation,
+      market_overlap,
+      direction_agreement,
+      size_similarity,
+      common_markets,
+      common_categories,
+      total_volume,
+      avg_suspicion,
+      label,
+      detected_at
+    FROM coordinated_trading_groups FINAL
+    ORDER BY correlation_score DESC
+    LIMIT {limit:UInt32}`,
+    { limit }
+  );
+}
+
+export async function getInsiderTradeSignals(
+  limit = 50,
+  wallet?: string
+): Promise<InsiderTradeSignal[]> {
+  const walletFilter = wallet
+    ? "AND its.proxy_wallet = {wallet:String}"
+    : "";
+  return query<InsiderTradeSignal>(
+    `SELECT
+      its.trade_id,
+      its.condition_id,
+      its.proxy_wallet,
+      tp.pseudonym,
+      its.side,
+      its.usdc_size,
+      its.price,
+      its.trade_timestamp,
+      its.pre_news_score,
+      its.statistical_score,
+      its.profitability_score,
+      its.coordination_score,
+      its.composite_score,
+      its.category,
+      its.direction_correct,
+      its.hours_before_move,
+      its.price_move_pct,
+      m.question
+    FROM insider_trade_signals its
+    LEFT JOIN (
+      SELECT proxy_wallet, pseudonym
+      FROM trader_profiles FINAL
+    ) AS tp ON its.proxy_wallet = tp.proxy_wallet
+    LEFT JOIN (
+      SELECT condition_id, question
+      FROM markets FINAL
+    ) AS m ON its.condition_id = m.condition_id
+    WHERE its.composite_score >= 20
+      ${walletFilter}
+    ORDER BY its.composite_score DESC, its.trade_timestamp DESC
+    LIMIT {limit:UInt32}`,
+    { limit, ...(wallet ? { wallet } : {}) }
+  );
+}
+
+export async function getInsiderOverview(): Promise<InsiderOverview> {
+  const rows = await query<InsiderOverview>(
+    `SELECT
+      (
+        SELECT count()
+        FROM trader_suspicion_profiles FINAL
+        WHERE suspicion_score > 0
+      ) AS total_suspects,
+      (
+        SELECT count()
+        FROM trader_suspicion_profiles FINAL
+        WHERE suspicion_tier = 'critical'
+      ) AS critical_alerts,
+      (
+        SELECT count()
+        FROM pre_news_events
+        WHERE detected_at >= now() - INTERVAL 7 DAY
+      ) AS pre_news_events,
+      (
+        SELECT count()
+        FROM coordinated_trading_groups FINAL
+      ) AS coordinated_groups,
+      (
+        SELECT avg(suspicion_score)
+        FROM trader_suspicion_profiles FINAL
+        WHERE suspicion_score > 0
+      ) AS avg_suspicion_score`
+  );
+  return rows[0] ?? {
+    total_suspects: 0,
+    critical_alerts: 0,
+    pre_news_events: 0,
+    coordinated_groups: 0,
+    avg_suspicion_score: 0,
   };
 }

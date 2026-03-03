@@ -205,6 +205,43 @@ TABLE_COLUMNS: dict[str, list[str]] = {
         "total_cost_basis", "max_position_value",
         "high_water_mark", "current_drawdown", "mode",
     ],
+    # Insider trading detection tables
+    "insider_trade_signals": [
+        "trade_id", "condition_id", "proxy_wallet",
+        "side", "size", "usdc_size", "price", "trade_timestamp",
+        "pre_news_score", "statistical_score", "profitability_score",
+        "coordination_score", "composite_score",
+        "category", "event_slug", "direction_correct",
+        "hours_before_move", "price_move_pct",
+        "scored_at",
+    ],
+    "trader_suspicion_profiles": [
+        "proxy_wallet",
+        "suspicion_score", "suspicion_tier",
+        "pre_news_score", "statistical_score", "profitability_score",
+        "coordination_score", "category_focus_score",
+        "factors",
+        "total_trades", "win_rate", "avg_roi",
+        "mideast_trade_pct", "flagged_trade_count", "total_pnl",
+        "first_flagged_at", "computed_at",
+    ],
+    "pre_news_events": [
+        "event_id", "condition_id",
+        "event_type", "magnitude", "direction",
+        "price_before", "price_after", "volume_during",
+        "category", "event_slug", "question",
+        "window_start", "window_end",
+        "detected_at",
+    ],
+    "coordinated_trading_groups": [
+        "group_id",
+        "wallets", "size",
+        "correlation_score", "timing_correlation", "market_overlap",
+        "direction_agreement", "size_similarity",
+        "common_markets", "common_categories",
+        "total_volume", "avg_suspicion", "label",
+        "detected_at", "updated_at",
+    ],
 }
 
 
@@ -374,6 +411,20 @@ class ClickHouseWriter:
 
     async def write_execution_snapshots(self, rows: list[list[Any]]) -> None:
         await self.write("execution_snapshots", rows)
+
+    # Insider trading detection convenience helpers
+
+    async def write_insider_trade_signals(self, rows: list[list[Any]]) -> None:
+        await self.write("insider_trade_signals", rows)
+
+    async def write_suspicion_profiles(self, rows: list[list[Any]]) -> None:
+        await self.write("trader_suspicion_profiles", rows)
+
+    async def write_pre_news_events(self, rows: list[list[Any]]) -> None:
+        await self.write("pre_news_events", rows)
+
+    async def write_coordinated_groups(self, rows: list[list[Any]]) -> None:
+        await self.write("coordinated_trading_groups", rows)
 
     # ------------------------------------------------------------------
     # Internal

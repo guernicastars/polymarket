@@ -21,6 +21,7 @@ SCHEMA_FILES = [
     "008_execution.sql",
     "009_bayesian.sql",
     "010_online_learning.sql",
+    "011_insider_trading.sql",
 ]
 
 

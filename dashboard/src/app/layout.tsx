@@ -11,6 +11,7 @@ import {
   Target,
   GitBranch,
   Atom,
+  ShieldAlert,
 } from "lucide-react";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ const navItems = [
   { href: "/signals", label: "Signals", icon: Zap },
   { href: "/whales", label: "Whales", icon: Users },
   { href: "/analytics", label: "Analytics", icon: Brain },
+  { href: "/insider", label: "Insider", icon: ShieldAlert },
   { href: "/causal", label: "Causal", icon: GitBranch },
   { href: "/backtest", label: "Backtest", icon: Target },
   { href: "/embedding-explorer.html", label: "Embeddings", icon: Atom },

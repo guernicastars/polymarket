@@ -334,3 +334,88 @@ export interface AnalyticsOverview {
   markets_scored: number;       // Markets with composite signals
   avg_confidence: number;
 }
+
+// --- Insider Trading Detection Types ---
+
+export interface InsiderSuspect {
+  proxy_wallet: string;
+  pseudonym: string;              // Joined from trader_profiles
+  profile_image: string;          // Joined from trader_profiles
+  suspicion_score: number;        // 0-100 composite
+  suspicion_tier: string;         // 'low' | 'medium' | 'high' | 'critical'
+  pre_news_score: number;         // 0-100
+  statistical_score: number;      // 0-100
+  profitability_score: number;    // 0-100
+  coordination_score: number;     // 0-100
+  category_focus_score: number;   // 0-100
+  total_trades: number;
+  win_rate: number;
+  avg_roi: number;
+  mideast_trade_pct: number;
+  flagged_trade_count: number;
+  total_pnl: number;
+  computed_at: string;
+}
+
+export interface PreNewsEvent {
+  event_id: string;
+  condition_id: string;
+  event_type: string;             // 'price_move' | 'resolution' | 'volume_spike'
+  magnitude: number;              // Price change % or volume spike ratio
+  direction: string;              // 'up' | 'down'
+  price_before: number;
+  price_after: number;
+  volume_during: number;
+  category: string;
+  question: string;
+  window_start: string;
+  window_end: string;
+  detected_at: string;
+  preceding_trades: number;       // Count of suspicious trades before this event
+}
+
+export interface CoordinatedGroup {
+  group_id: string;
+  wallets: string[];
+  size: number;
+  correlation_score: number;      // 0-1
+  timing_correlation: number;     // 0-1
+  market_overlap: number;         // 0-1
+  direction_agreement: number;    // 0-1
+  size_similarity: number;        // 0-1
+  common_markets: string[];
+  common_categories: string[];
+  total_volume: number;
+  avg_suspicion: number;
+  label: string;
+  detected_at: string;
+}
+
+export interface InsiderTradeSignal {
+  trade_id: string;
+  condition_id: string;
+  proxy_wallet: string;
+  pseudonym: string;              // Joined from trader_profiles
+  side: string;
+  usdc_size: number;
+  price: number;
+  trade_timestamp: string;
+  pre_news_score: number;         // 0-100
+  statistical_score: number;      // 0-100
+  profitability_score: number;    // 0-100
+  coordination_score: number;     // 0-100
+  composite_score: number;        // 0-100
+  category: string;
+  direction_correct: number;      // 0 or 1
+  hours_before_move: number;
+  price_move_pct: number;
+  question: string;               // Joined from markets
+}
+
+export interface InsiderOverview {
+  total_suspects: number;
+  critical_alerts: number;
+  pre_news_events: number;
+  coordinated_groups: number;
+  avg_suspicion_score: number;
+}

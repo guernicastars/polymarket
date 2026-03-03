@@ -19,6 +19,7 @@ from pipeline.config import (
     FORCE_INCLUDE_TOKEN_IDS,
     HEALTH_CHECK_PORT,
     HOLDER_SYNC_INTERVAL,
+    INSIDER_DETECT_INTERVAL,
     LEADERBOARD_SYNC_INTERVAL,
     MARKET_SYNC_INTERVAL,
     MICROSTRUCTURE_INTERVAL,
@@ -54,6 +55,7 @@ from pipeline.jobs.similarity_scorer import run_similarity_scorer
 from pipeline.jobs.execution_runner import run_execution_cycle, get_execution_status
 from pipeline.jobs.online_gnn_runner import run_online_gnn_predict, run_online_gnn_update
 from pipeline.jobs.bayesian_runner import run_bayesian_update, run_calibration_flush
+from pipeline.jobs.insider_detector import run_insider_detector
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +182,15 @@ class PipelineScheduler:
             seconds=SIGNAL_COMPOSITE_INTERVAL,
             id="signal_compositor",
             name="Signal Compositor",
+        )
+
+        # --- Insider trading detection ---
+        self._scheduler.add_job(
+            self._job_insider_detector,
+            "interval",
+            seconds=INSIDER_DETECT_INTERVAL,
+            id="insider_detector",
+            name="Insider Detector",
         )
 
         # --- Phase 4 jobs ---
@@ -386,6 +397,14 @@ class PipelineScheduler:
         except Exception:
             logger.error("signal_compositor_error", exc_info=True)
 
+    # --- Insider trading detection wrapper ---
+
+    async def _job_insider_detector(self) -> None:
+        try:
+            await run_insider_detector()
+        except Exception:
+            logger.error("insider_detector_error", exc_info=True)
+
     # --- Phase 4 job wrappers ---
 
     async def _job_news_tracker(self) -> None:
@@ -472,7 +491,7 @@ class PipelineScheduler:
             "active_tokens": len(self._active_token_ids),
             "tracked_wallets": len(discovered_wallets),
             "scheduler_running": self._scheduler.running,
-            "phase3_jobs": ["arbitrage_scanner", "wallet_analyzer", "signal_compositor"],
+            "phase3_jobs": ["arbitrage_scanner", "wallet_analyzer", "signal_compositor", "insider_detector"],
             "phase4_jobs": ["news_tracker", "microstructure", "similarity_scorer"],
             "phase5_execution": exec_status,
             "phase6_jobs": ["online_gnn_predict", "online_gnn_update", "bayesian_update", "calibration_flush"],
