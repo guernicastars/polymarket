@@ -1,7 +1,9 @@
 import { createClient } from "@clickhouse/client";
 
+const clickhouseUrl = process.env.CLICKHOUSE_URL ?? "http://localhost:8123";
+
 const client = createClient({
-  url: process.env.CLICKHOUSE_URL ?? "http://localhost:8123",
+  url: clickhouseUrl,
   username: process.env.CLICKHOUSE_USER ?? "default",
   password: process.env.CLICKHOUSE_PASSWORD ?? "",
   database: process.env.CLICKHOUSE_DB ?? "polymarket",
@@ -11,16 +13,31 @@ const client = createClient({
   },
 });
 
+if (!process.env.CLICKHOUSE_URL) {
+  console.warn(
+    "[ClickHouse] CLICKHOUSE_URL not set, defaulting to http://localhost:8123. Set CLICKHOUSE_URL in .env.local for production."
+  );
+}
+
 export async function query<T>(
   sql: string,
   params?: Record<string, unknown>
 ): Promise<T[]> {
-  const result = await client.query({
-    query: sql,
-    query_params: params,
-    format: "JSONEachRow",
-  });
-  return result.json() as Promise<T[]>;
+  try {
+    const result = await client.query({
+      query: sql,
+      query_params: params,
+      format: "JSONEachRow",
+    });
+    return result.json() as Promise<T[]>;
+  } catch (error) {
+    const queryPreview = sql.trim().substring(0, 80).replace(/\s+/g, " ");
+    console.error(
+      `[ClickHouse] Query failed (${clickhouseUrl}): "${queryPreview}..."`,
+      error instanceof Error ? error.message : error
+    );
+    throw error;
+  }
 }
 
 export default client;
