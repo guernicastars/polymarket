@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bali Real Estate Risk Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; }
+  #map { width: 100%; height: 100vh; }
+
+  .info-panel {
+    position: absolute; top: 10px; right: 10px; z-index: 1000;
+    background: rgba(10,10,15,0.95); border: 1px solid #1e1e2e; border-radius: 12px;
+    padding: 16px; width: 340px; max-height: 90vh; overflow-y: auto;
+    backdrop-filter: blur(10px);
+  }
+  .info-panel h2 { font-size: 18px; margin-bottom: 8px; color: #00d4aa; }
+  .info-panel h3 { font-size: 14px; margin: 12px 0 6px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+  .stat-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; border-bottom: 1px solid #1a1a2a; }
+  .stat-label { color: #888; }
+  .stat-value { font-weight: 600; }
+
+  .risk-bar { height: 8px; border-radius: 4px; background: #1a1a2a; margin: 4px 0; overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  .grade { display: inline-block; padding: 2px 10px; border-radius: 6px; font-weight: 700; font-size: 20px; }
+  .grade-A { background: #00d4aa20; color: #00d4aa; }
+  .grade-B { background: #4ecdc420; color: #4ecdc4; }
+  .grade-C { background: #ffe66d20; color: #ffe66d; }
+  .grade-D { background: #ff884420; color: #ff8844; }
+  .grade-F { background: #ff446620; color: #ff4466; }
+
+  .legend {
+    position: absolute; bottom: 20px; left: 10px; z-index: 1000;
+    background: rgba(10,10,15,0.95); border: 1px solid #1e1e2e; border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .legend h4 { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 3px 0; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  .controls {
+    position: absolute; top: 10px; left: 60px; z-index: 1000;
+    display: flex; gap: 8px;
+  }
+  .controls button {
+    background: rgba(10,10,15,0.95); border: 1px solid #1e1e2e; color: #e0e0e0;
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .controls button:hover, .controls button.active { background: #00d4aa20; border-color: #00d4aa; color: #00d4aa; }
+
+  .search-box {
+    position: absolute; top: 60px; left: 60px; z-index: 1000;
+    background: rgba(10,10,15,0.95); border: 1px solid #1e1e2e; border-radius: 8px;
+    padding: 8px 12px; width: 220px;
+  }
+  .search-box input {
+    background: transparent; border: none; color: #e0e0e0; width: 100%;
+    font-size: 13px; outline: none;
+  }
+  .search-box input::placeholder { color: #555; }
+
+  .tooltip-custom {
+    background: rgba(10,10,15,0.95) !important; border: 1px solid #1e1e2e !important;
+    color: #e0e0e0 !important; border-radius: 8px !important; padding: 8px 12px !important;
+    font-family: -apple-system, sans-serif !important; font-size: 12px !important;
+  }
+  .tooltip-custom .leaflet-tooltip-tip { display: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="controls">
+  <button class="active" onclick="setLayer('risk')">Risk Score</button>
+  <button onclick="setLayer('price')">Land Price</button>
+  <button onclick="setLayer('tourism')">Tourism</button>
+  <button onclick="setLayer('volcanic')">Volcanic</button>
+  <button onclick="setLayer('network')">Network</button>
+</div>
+
+<div class="search-box">
+  <input type="text" id="search" placeholder="Search district..." oninput="filterDistricts(this.value)">
+</div>
+
+<div class="legend" id="legend">
+  <h4>Investment Grade</h4>
+  <div class="legend-item"><div class="legend-dot" style="background:#00d4aa"></div> A — Excellent (0-25)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4ecdc4"></div> B — Good (25-40)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ffe66d"></div> C — Moderate (40-55)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff8844"></div> D — High Risk (55-70)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff4466"></div> F — Extreme (70+)</div>
+</div>
+
+<div class="info-panel" id="info-panel">
+  <h2>Bali Risk Intelligence</h2>
+  <p style="font-size:13px;color:#888;margin-bottom:12px">Click a district to view risk assessment</p>
+  <div class="stat-row"><span class="stat-label">Districts</span><span class="stat-value" id="stat-districts">57</span></div>
+  <div class="stat-row"><span class="stat-label">Regencies</span><span class="stat-value">9 + Denpasar</span></div>
+  <div class="stat-row"><span class="stat-label">Risk Model</span><span class="stat-value">4 categories</span></div>
+  <div id="district-detail"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Precomputed risk data (generated by Python risk engine)
+const DISTRICTS = [
+  {
+    "id": "denpasar_selatan",
+    "name": "Denpasar Selatan",
+    "regency": "denpasar",
+    "lat": -8.72,
+    "lng": 115.23,
+    "population": 298800,
+    "elevation_m": 15,
+    "coastal": true,
+    "volcanic_proximity_km": 62,
+    "avg_land_price_usd_m2": 3200,
+    "tourism_intensity": 0.85,
+    "infrastructure_index": 0.95,
+    "foreign_investor_density": 0.7,
+    "composite_risk": 37.3,
+    "investment_grade": "B",
+    "env_risk": 37.6,
+    "seismic_risk": 54.5,
+    "legal_risk": 38.6,
+    "admin_risk": 13.8
+  },
+  {
+    "id": "denpasar_barat",
+    "name": "Denpasar Barat",
+    "regency": "denpasar",
+    "lat": -8.67,
+    "lng": 115.2,
+    "population": 268400,
+    "elevation_m": 20,
+    "coastal": false,
+    "volcanic_proximity_km": 60,
+    "avg_land_price_usd_m2": 2800,
+    "tourism_intensity": 0.6,
+    "infrastructure_index": 0.93,
+    "foreign_investor_density": 0.45,
+    "composite_risk": 28.6,
+    "investment_grade": "B",
+    "env_risk": 20.1,
+    "seismic_risk": 45.8,
+    "legal_risk": 31.6,
+    "admin_risk": 16.1
+  },
+  {
+    "id": "denpasar_timur",
+    "name": "Denpasar Timur",
+    "regency": "denpasar",
+    "lat": -8.65,
+    "lng": 115.26,
+    "population": 196100,
+    "elevation_m": 25,
+    "coastal": false,
+    "volcanic_proximity_km": 55,
+    "avg_land_price_usd_m2": 2200,
+    "tourism_intensity": 0.4,
+    "infrastructure_index": 0.9,
+    "foreign_investor_density": 0.3,
+    "composite_risk": 28.0,
+    "investment_grade": "B",
+    "env_risk": 20.1,
+    "seismic_risk": 45.8,
+    "legal_risk": 28.8,
+    "admin_risk": 16.8
+  },
+  {
+    "id": "denpasar_utara",
+    "name": "Denpasar Utara",
+    "regency": "denpasar",
+    "lat": -8.62,
+    "lng": 115.22,
+    "population": 222500,
+    "elevation_m": 40,
+    "coastal": false,
+    "volcanic_proximity_km": 52,
+    "avg_land_price_usd_m2": 2000,
+    "tourism_intensity": 0.35,
+    "infrastructure_index": 0.92,
+    "foreign_investor_density": 0.25,
+    "composite_risk": 26.5,
+    "investment_grade": "B",
+    "env_risk": 15.1,
+    "seismic_risk": 45.8,
+    "legal_risk": 28.8,
+    "admin_risk": 16.4
+  },
+  {
+    "id": "kuta",
+    "name": "Kuta",
+    "regency": "badung",
+    "lat": -8.723,
+    "lng": 115.175,
+    "population": 93700,
+    "elevation_m": 8,
+    "coastal": true,
+    "volcanic_proximity_km": 65,
+    "avg_land_price_usd_m2": 5500,
+    "tourism_intensity": 0.98,
+    "infrastructure_index": 0.92,
+    "foreign_investor_density": 0.9,
+    "composite_risk": 40.3,
+    "investment_grade": "C",
+    "env_risk": 44.8,
+    "seismic_risk": 54.5,
+    "legal_risk": 41.6,
+    "admin_risk": 14.1
+  },
+  {
+    "id": "kuta_selatan",
+    "name": "Kuta Selatan",
+    "regency": "badung",
+    "lat": -8.79,
+    "lng": 115.16,
+    "population": 170500,
+    "elevation_m": 45,
+    "coastal": true,
+    "volcanic_proximity_km": 70,
+    "avg_land_price_usd_m2": 6800,
+    "tourism_intensity": 0.95,
+    "infrastructure_index": 0.88,
+    "foreign_investor_density": 0.92,
+    "composite_risk": 32.8,
+    "investment_grade": "B",
+    "env_risk": 28.2,
+    "seismic_risk": 44.0,
+    "legal_risk": 41.6,
+    "admin_risk": 14.9
+  },
+  {
+    "id": "kuta_utara",
+    "name": "Kuta Utara",
+    "regency": "badung",
+    "lat": -8.65,
+    "lng": 115.16,
+    "population": 127800,
+    "elevation_m": 12,
+    "coastal": true,
+    "volcanic_proximity_km": 60,
+    "avg_land_price_usd_m2": 4200,
+    "tourism_intensity": 0.88,
+    "infrastructure_index": 0.9,
+    "foreign_investor_density": 0.85,
+    "composite_risk": 35.4,
+    "investment_grade": "B",
+    "env_risk": 29.8,
+    "seismic_risk": 52.5,
+    "legal_risk": 41.6,
+    "admin_risk": 14.5
+  },
+  {
+    "id": "mengwi",
+    "name": "Mengwi",
+    "regency": "badung",
+    "lat": -8.58,
+    "lng": 115.18,
+    "population": 136500,
+    "elevation_m": 100,
+    "coastal": false,
+    "volcanic_proximity_km": 48,
+    "avg_land_price_usd_m2": 1200,
+    "tourism_intensity": 0.5,
+    "infrastructure_index": 0.78,
+    "foreign_investor_density": 0.35,
+    "composite_risk": 25.4,
+    "investment_grade": "B",
+    "env_risk": 10.3,
+    "seismic_risk": 40.0,
+    "legal_risk": 28.8,
+    "admin_risk": 25.5
+  },
+  {
+    "id": "abiansemal",
+    "name": "Abiansemal",
+    "regency": "badung",
+    "lat": -8.53,
+    "lng": 115.22,
+    "population": 93200,
+    "elevation_m": 250,
+    "coastal": false,
+    "volcanic_proximity_km": 40,
+    "avg_land_price_usd_m2": 600,
+    "tourism_intensity": 0.3,
+    "infrastructure_index": 0.65,
+    "foreign_investor_density": 0.2,
+    "composite_risk": 31.2,
+    "investment_grade": "B",
+    "env_risk": 12.9,
+    "seismic_risk": 40.0,
+    "legal_risk": 39.2,
+    "admin_risk": 37.4
+  },
+  {
+    "id": "petang",
+    "name": "Petang",
+    "regency": "badung",
+    "lat": -8.44,
+    "lng": 115.22,
+    "population": 32800,
+    "elevation_m": 650,
+    "coastal": false,
+    "volcanic_proximity_km": 30,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.45,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 35.6,
+    "investment_grade": "B",
+    "env_risk": 20.4,
+    "seismic_risk": 36.2,
+    "legal_risk": 41.2,
+    "admin_risk": 50.7
+  },
+  {
+    "id": "ubud",
+    "name": "Ubud",
+    "regency": "gianyar",
+    "lat": -8.5069,
+    "lng": 115.2624,
+    "population": 73800,
+    "elevation_m": 350,
+    "coastal": false,
+    "volcanic_proximity_km": 35,
+    "avg_land_price_usd_m2": 2800,
+    "tourism_intensity": 0.92,
+    "infrastructure_index": 0.75,
+    "foreign_investor_density": 0.8,
+    "composite_risk": 30.4,
+    "investment_grade": "B",
+    "env_risk": 16.1,
+    "seismic_risk": 43.8,
+    "legal_risk": 38.1,
+    "admin_risk": 25.5
+  },
+  {
+    "id": "gianyar",
+    "name": "Gianyar",
+    "regency": "gianyar",
+    "lat": -8.541,
+    "lng": 115.323,
+    "population": 81500,
+    "elevation_m": 200,
+    "coastal": false,
+    "volcanic_proximity_km": 38,
+    "avg_land_price_usd_m2": 1400,
+    "tourism_intensity": 0.55,
+    "infrastructure_index": 0.8,
+    "foreign_investor_density": 0.3,
+    "composite_risk": 28.5,
+    "investment_grade": "B",
+    "env_risk": 16.4,
+    "seismic_risk": 43.8,
+    "legal_risk": 28.8,
+    "admin_risk": 27.3
+  },
+  {
+    "id": "sukawati",
+    "name": "Sukawati",
+    "regency": "gianyar",
+    "lat": -8.59,
+    "lng": 115.29,
+    "population": 120800,
+    "elevation_m": 80,
+    "coastal": true,
+    "volcanic_proximity_km": 45,
+    "avg_land_price_usd_m2": 1600,
+    "tourism_intensity": 0.6,
+    "infrastructure_index": 0.72,
+    "foreign_investor_density": 0.35,
+    "composite_risk": 34.6,
+    "investment_grade": "B",
+    "env_risk": 29.7,
+    "seismic_risk": 47.5,
+    "legal_risk": 31.2,
+    "admin_risk": 30.0
+  },
+  {
+    "id": "blahbatuh",
+    "name": "Blahbatuh",
+    "regency": "gianyar",
+    "lat": -8.56,
+    "lng": 115.31,
+    "population": 67500,
+    "elevation_m": 150,
+    "coastal": false,
+    "volcanic_proximity_km": 40,
+    "avg_land_price_usd_m2": 900,
+    "tourism_intensity": 0.35,
+    "infrastructure_index": 0.7,
+    "foreign_investor_density": 0.15,
+    "composite_risk": 27.6,
+    "investment_grade": "B",
+    "env_risk": 16.4,
+    "seismic_risk": 40.0,
+    "legal_risk": 26.0,
+    "admin_risk": 30.7
+  },
+  {
+    "id": "tegallalang",
+    "name": "Tegallalang",
+    "regency": "gianyar",
+    "lat": -8.43,
+    "lng": 115.29,
+    "population": 52400,
+    "elevation_m": 500,
+    "coastal": false,
+    "volcanic_proximity_km": 28,
+    "avg_land_price_usd_m2": 1800,
+    "tourism_intensity": 0.8,
+    "infrastructure_index": 0.55,
+    "foreign_investor_density": 0.5,
+    "composite_risk": 32.7,
+    "investment_grade": "B",
+    "env_risk": 23.4,
+    "seismic_risk": 42.0,
+    "legal_risk": 33.1,
+    "admin_risk": 34.3
+  },
+  {
+    "id": "tampaksiring",
+    "name": "Tampaksiring",
+    "regency": "gianyar",
+    "lat": -8.42,
+    "lng": 115.32,
+    "population": 39400,
+    "elevation_m": 550,
+    "coastal": false,
+    "volcanic_proximity_km": 25,
+    "avg_land_price_usd_m2": 700,
+    "tourism_intensity": 0.55,
+    "infrastructure_index": 0.5,
+    "foreign_investor_density": 0.2,
+    "composite_risk": 37.8,
+    "investment_grade": "B",
+    "env_risk": 20.9,
+    "seismic_risk": 40.8,
+    "legal_risk": 45.0,
+    "admin_risk": 50.5
+  },
+  {
+    "id": "payangan",
+    "name": "Payangan",
+    "regency": "gianyar",
+    "lat": -8.4,
+    "lng": 115.25,
+    "population": 47500,
+    "elevation_m": 450,
+    "coastal": false,
+    "volcanic_proximity_km": 30,
+    "avg_land_price_usd_m2": 800,
+    "tourism_intensity": 0.45,
+    "infrastructure_index": 0.48,
+    "foreign_investor_density": 0.25,
+    "composite_risk": 36.9,
+    "investment_grade": "B",
+    "env_risk": 23.4,
+    "seismic_risk": 40.0,
+    "legal_risk": 42.8,
+    "admin_risk": 45.7
+  },
+  {
+    "id": "tabanan",
+    "name": "Tabanan",
+    "regency": "tabanan",
+    "lat": -8.54,
+    "lng": 115.13,
+    "population": 110200,
+    "elevation_m": 120,
+    "coastal": false,
+    "volcanic_proximity_km": 45,
+    "avg_land_price_usd_m2": 700,
+    "tourism_intensity": 0.35,
+    "infrastructure_index": 0.72,
+    "foreign_investor_density": 0.15,
+    "composite_risk": 28.4,
+    "investment_grade": "B",
+    "env_risk": 16.4,
+    "seismic_risk": 43.8,
+    "legal_risk": 26.0,
+    "admin_risk": 30.0
+  },
+  {
+    "id": "kediri_tabanan",
+    "name": "Kediri",
+    "regency": "tabanan",
+    "lat": -8.58,
+    "lng": 115.1,
+    "population": 67800,
+    "elevation_m": 60,
+    "coastal": true,
+    "volcanic_proximity_km": 52,
+    "avg_land_price_usd_m2": 500,
+    "tourism_intensity": 0.4,
+    "infrastructure_index": 0.58,
+    "foreign_investor_density": 0.2,
+    "composite_risk": 38.2,
+    "investment_grade": "B",
+    "env_risk": 24.4,
+    "seismic_risk": 40.0,
+    "legal_risk": 46.2,
+    "admin_risk": 46.8
+  },
+  {
+    "id": "kerambitan",
+    "name": "Kerambitan",
+    "regency": "tabanan",
+    "lat": -8.6,
+    "lng": 115.07,
+    "population": 37400,
+    "elevation_m": 40,
+    "coastal": true,
+    "volcanic_proximity_km": 55,
+    "avg_land_price_usd_m2": 300,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.48,
+    "foreign_investor_density": 0.08,
+    "composite_risk": 38.9,
+    "investment_grade": "B",
+    "env_risk": 24.4,
+    "seismic_risk": 42.0,
+    "legal_risk": 43.8,
+    "admin_risk": 50.7
+  },
+  {
+    "id": "selemadeg",
+    "name": "Selemadeg",
+    "regency": "tabanan",
+    "lat": -8.51,
+    "lng": 115.03,
+    "population": 28900,
+    "elevation_m": 200,
+    "coastal": false,
+    "volcanic_proximity_km": 50,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.4,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 34.9,
+    "investment_grade": "B",
+    "env_risk": 14.4,
+    "seismic_risk": 40.0,
+    "legal_risk": 41.2,
+    "admin_risk": 51.4
+  },
+  {
+    "id": "selemadeg_barat",
+    "name": "Selemadeg Barat",
+    "regency": "tabanan",
+    "lat": -8.48,
+    "lng": 114.98,
+    "population": 25100,
+    "elevation_m": 300,
+    "coastal": true,
+    "volcanic_proximity_km": 55,
+    "avg_land_price_usd_m2": 180,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 39.7,
+    "investment_grade": "B",
+    "env_risk": 17.8,
+    "seismic_risk": 40.0,
+    "legal_risk": 48.5,
+    "admin_risk": 61.1
+  },
+  {
+    "id": "selemadeg_timur",
+    "name": "Selemadeg Timur",
+    "regency": "tabanan",
+    "lat": -8.55,
+    "lng": 115.06,
+    "population": 24600,
+    "elevation_m": 250,
+    "coastal": false,
+    "volcanic_proximity_km": 48,
+    "avg_land_price_usd_m2": 170,
+    "tourism_intensity": 0.08,
+    "infrastructure_index": 0.38,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 37.9,
+    "investment_grade": "B",
+    "env_risk": 15.9,
+    "seismic_risk": 40.0,
+    "legal_risk": 46.0,
+    "admin_risk": 58.1
+  },
+  {
+    "id": "marga",
+    "name": "Marga",
+    "regency": "tabanan",
+    "lat": -8.47,
+    "lng": 115.15,
+    "population": 41200,
+    "elevation_m": 350,
+    "coastal": false,
+    "volcanic_proximity_km": 38,
+    "avg_land_price_usd_m2": 300,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.45,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 34.5,
+    "investment_grade": "B",
+    "env_risk": 14.2,
+    "seismic_risk": 40.0,
+    "legal_risk": 41.2,
+    "admin_risk": 49.7
+  },
+  {
+    "id": "penebel",
+    "name": "Penebel",
+    "regency": "tabanan",
+    "lat": -8.42,
+    "lng": 115.13,
+    "population": 38600,
+    "elevation_m": 550,
+    "coastal": false,
+    "volcanic_proximity_km": 32,
+    "avg_land_price_usd_m2": 250,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.38,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 37.9,
+    "investment_grade": "B",
+    "env_risk": 16.4,
+    "seismic_risk": 38.8,
+    "legal_risk": 46.0,
+    "admin_risk": 59.1
+  },
+  {
+    "id": "baturiti",
+    "name": "Baturiti",
+    "regency": "tabanan",
+    "lat": -8.37,
+    "lng": 115.17,
+    "population": 33900,
+    "elevation_m": 800,
+    "coastal": false,
+    "volcanic_proximity_km": 25,
+    "avg_land_price_usd_m2": 350,
+    "tourism_intensity": 0.35,
+    "infrastructure_index": 0.42,
+    "foreign_investor_density": 0.1,
+    "composite_risk": 37.1,
+    "investment_grade": "B",
+    "env_risk": 23.4,
+    "seismic_risk": 38.2,
+    "legal_risk": 41.2,
+    "admin_risk": 51.2
+  },
+  {
+    "id": "pupuan",
+    "name": "Pupuan",
+    "regency": "tabanan",
+    "lat": -8.38,
+    "lng": 115.05,
+    "population": 26300,
+    "elevation_m": 600,
+    "coastal": false,
+    "volcanic_proximity_km": 40,
+    "avg_land_price_usd_m2": 150,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.3,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 38.5,
+    "investment_grade": "B",
+    "env_risk": 16.4,
+    "seismic_risk": 38.8,
+    "legal_risk": 46.0,
+    "admin_risk": 61.8
+  },
+  {
+    "id": "negara",
+    "name": "Negara",
+    "regency": "jembrana",
+    "lat": -8.35,
+    "lng": 114.62,
+    "population": 79200,
+    "elevation_m": 15,
+    "coastal": true,
+    "volcanic_proximity_km": 85,
+    "avg_land_price_usd_m2": 150,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.6,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 35.6,
+    "investment_grade": "B",
+    "env_risk": 24.9,
+    "seismic_risk": 51.2,
+    "legal_risk": 28.5,
+    "admin_risk": 40.9
+  },
+  {
+    "id": "mendoyo",
+    "name": "Mendoyo",
+    "regency": "jembrana",
+    "lat": -8.38,
+    "lng": 114.72,
+    "population": 40500,
+    "elevation_m": 50,
+    "coastal": true,
+    "volcanic_proximity_km": 80,
+    "avg_land_price_usd_m2": 80,
+    "tourism_intensity": 0.05,
+    "infrastructure_index": 0.4,
+    "foreign_investor_density": 0.01,
+    "composite_risk": 36.7,
+    "investment_grade": "B",
+    "env_risk": 15.4,
+    "seismic_risk": 38.8,
+    "legal_risk": 43.8,
+    "admin_risk": 57.1
+  },
+  {
+    "id": "pekutatan",
+    "name": "Pekutatan",
+    "regency": "jembrana",
+    "lat": -8.44,
+    "lng": 114.88,
+    "population": 29100,
+    "elevation_m": 100,
+    "coastal": true,
+    "volcanic_proximity_km": 65,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.08,
+    "composite_risk": 39.0,
+    "investment_grade": "B",
+    "env_risk": 12.9,
+    "seismic_risk": 40.0,
+    "legal_risk": 48.5,
+    "admin_risk": 64.8
+  },
+  {
+    "id": "melaya",
+    "name": "Melaya",
+    "regency": "jembrana",
+    "lat": -8.3,
+    "lng": 114.5,
+    "population": 32100,
+    "elevation_m": 30,
+    "coastal": true,
+    "volcanic_proximity_km": 90,
+    "avg_land_price_usd_m2": 70,
+    "tourism_intensity": 0.05,
+    "infrastructure_index": 0.38,
+    "foreign_investor_density": 0.01,
+    "composite_risk": 39.7,
+    "investment_grade": "B",
+    "env_risk": 15.4,
+    "seismic_risk": 40.8,
+    "legal_risk": 48.5,
+    "admin_risk": 63.8
+  },
+  {
+    "id": "jembrana",
+    "name": "Jembrana",
+    "regency": "jembrana",
+    "lat": -8.36,
+    "lng": 114.65,
+    "population": 32700,
+    "elevation_m": 20,
+    "coastal": true,
+    "volcanic_proximity_km": 82,
+    "avg_land_price_usd_m2": 100,
+    "tourism_intensity": 0.08,
+    "infrastructure_index": 0.5,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 33.0,
+    "investment_grade": "B",
+    "env_risk": 21.1,
+    "seismic_risk": 40.8,
+    "legal_risk": 30.5,
+    "admin_risk": 44.2
+  },
+  {
+    "id": "klungkung",
+    "name": "Klungkung",
+    "regency": "klungkung",
+    "lat": -8.54,
+    "lng": 115.41,
+    "population": 55600,
+    "elevation_m": 50,
+    "coastal": true,
+    "volcanic_proximity_km": 32,
+    "avg_land_price_usd_m2": 600,
+    "tourism_intensity": 0.4,
+    "infrastructure_index": 0.68,
+    "foreign_investor_density": 0.12,
+    "composite_risk": 30.4,
+    "investment_grade": "B",
+    "env_risk": 21.2,
+    "seismic_risk": 42.5,
+    "legal_risk": 28.5,
+    "admin_risk": 31.4
+  },
+  {
+    "id": "banjarangkan",
+    "name": "Banjarangkan",
+    "regency": "klungkung",
+    "lat": -8.56,
+    "lng": 115.38,
+    "population": 34200,
+    "elevation_m": 100,
+    "coastal": false,
+    "volcanic_proximity_km": 35,
+    "avg_land_price_usd_m2": 350,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.5,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 33.2,
+    "investment_grade": "B",
+    "env_risk": 10.9,
+    "seismic_risk": 40.0,
+    "legal_risk": 41.2,
+    "admin_risk": 48.0
+  },
+  {
+    "id": "dawan",
+    "name": "Dawan",
+    "regency": "klungkung",
+    "lat": -8.52,
+    "lng": 115.45,
+    "population": 36100,
+    "elevation_m": 70,
+    "coastal": true,
+    "volcanic_proximity_km": 30,
+    "avg_land_price_usd_m2": 300,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.45,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 40.7,
+    "investment_grade": "C",
+    "env_risk": 29.3,
+    "seismic_risk": 42.5,
+    "legal_risk": 43.8,
+    "admin_risk": 51.7
+  },
+  {
+    "id": "nusa_penida",
+    "name": "Nusa Penida",
+    "regency": "klungkung",
+    "lat": -8.73,
+    "lng": 115.54,
+    "population": 57500,
+    "elevation_m": 120,
+    "coastal": true,
+    "volcanic_proximity_km": 55,
+    "avg_land_price_usd_m2": 800,
+    "tourism_intensity": 0.85,
+    "infrastructure_index": 0.3,
+    "foreign_investor_density": 0.45,
+    "composite_risk": 38.4,
+    "investment_grade": "B",
+    "env_risk": 19.2,
+    "seismic_risk": 44.5,
+    "legal_risk": 39.1,
+    "admin_risk": 58.8
+  },
+  {
+    "id": "bangli",
+    "name": "Bangli",
+    "regency": "bangli",
+    "lat": -8.45,
+    "lng": 115.35,
+    "population": 44200,
+    "elevation_m": 450,
+    "coastal": false,
+    "volcanic_proximity_km": 20,
+    "avg_land_price_usd_m2": 300,
+    "tourism_intensity": 0.25,
+    "infrastructure_index": 0.55,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 33.3,
+    "investment_grade": "B",
+    "env_risk": 25.0,
+    "seismic_risk": 42.0,
+    "legal_risk": 28.0,
+    "admin_risk": 41.3
+  },
+  {
+    "id": "susut",
+    "name": "Susut",
+    "regency": "bangli",
+    "lat": -8.49,
+    "lng": 115.34,
+    "population": 43800,
+    "elevation_m": 350,
+    "coastal": false,
+    "volcanic_proximity_km": 22,
+    "avg_land_price_usd_m2": 250,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.45,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 37.2,
+    "investment_grade": "B",
+    "env_risk": 19.7,
+    "seismic_risk": 42.0,
+    "legal_risk": 41.2,
+    "admin_risk": 52.2
+  },
+  {
+    "id": "tembuku",
+    "name": "Tembuku",
+    "regency": "bangli",
+    "lat": -8.47,
+    "lng": 115.38,
+    "population": 32600,
+    "elevation_m": 400,
+    "coastal": false,
+    "volcanic_proximity_km": 18,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.4,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 37.5,
+    "investment_grade": "B",
+    "env_risk": 19.7,
+    "seismic_risk": 42.0,
+    "legal_risk": 41.2,
+    "admin_risk": 53.9
+  },
+  {
+    "id": "kintamani",
+    "name": "Kintamani",
+    "regency": "bangli",
+    "lat": -8.3,
+    "lng": 115.37,
+    "population": 91300,
+    "elevation_m": 1200,
+    "coastal": false,
+    "volcanic_proximity_km": 5,
+    "avg_land_price_usd_m2": 250,
+    "tourism_intensity": 0.65,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.1,
+    "composite_risk": 47.6,
+    "investment_grade": "C",
+    "env_risk": 45.6,
+    "seismic_risk": 40.0,
+    "legal_risk": 46.0,
+    "admin_risk": 62.1
+  },
+  {
+    "id": "karangasem",
+    "name": "Karangasem",
+    "regency": "karangasem",
+    "lat": -8.45,
+    "lng": 115.6,
+    "population": 79400,
+    "elevation_m": 100,
+    "coastal": true,
+    "volcanic_proximity_km": 15,
+    "avg_land_price_usd_m2": 350,
+    "tourism_intensity": 0.3,
+    "infrastructure_index": 0.52,
+    "foreign_investor_density": 0.08,
+    "composite_risk": 38.5,
+    "investment_grade": "B",
+    "env_risk": 36.6,
+    "seismic_risk": 44.5,
+    "legal_risk": 30.5,
+    "admin_risk": 43.6
+  },
+  {
+    "id": "bebandem",
+    "name": "Bebandem",
+    "regency": "karangasem",
+    "lat": -8.43,
+    "lng": 115.55,
+    "population": 44300,
+    "elevation_m": 350,
+    "coastal": false,
+    "volcanic_proximity_km": 10,
+    "avg_land_price_usd_m2": 150,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 46.5,
+    "investment_grade": "C",
+    "env_risk": 36.3,
+    "seismic_risk": 46.2,
+    "legal_risk": 46.0,
+    "admin_risk": 62.9
+  },
+  {
+    "id": "selat",
+    "name": "Selat",
+    "regency": "karangasem",
+    "lat": -8.41,
+    "lng": 115.52,
+    "population": 37600,
+    "elevation_m": 500,
+    "coastal": false,
+    "volcanic_proximity_km": 8,
+    "avg_land_price_usd_m2": 120,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.32,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 49.5,
+    "investment_grade": "C",
+    "env_risk": 45.6,
+    "seismic_risk": 46.2,
+    "legal_risk": 46.0,
+    "admin_risk": 63.9
+  },
+  {
+    "id": "rendang",
+    "name": "Rendang",
+    "regency": "karangasem",
+    "lat": -8.39,
+    "lng": 115.45,
+    "population": 34800,
+    "elevation_m": 600,
+    "coastal": false,
+    "volcanic_proximity_km": 7,
+    "avg_land_price_usd_m2": 180,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 49.2,
+    "investment_grade": "C",
+    "env_risk": 45.6,
+    "seismic_risk": 45.0,
+    "legal_risk": 46.0,
+    "admin_risk": 63.9
+  },
+  {
+    "id": "sidemen",
+    "name": "Sidemen",
+    "regency": "karangasem",
+    "lat": -8.46,
+    "lng": 115.47,
+    "population": 31200,
+    "elevation_m": 400,
+    "coastal": false,
+    "volcanic_proximity_km": 12,
+    "avg_land_price_usd_m2": 350,
+    "tourism_intensity": 0.5,
+    "infrastructure_index": 0.38,
+    "foreign_investor_density": 0.15,
+    "composite_risk": 45.2,
+    "investment_grade": "C",
+    "env_risk": 34.8,
+    "seismic_risk": 46.2,
+    "legal_risk": 46.0,
+    "admin_risk": 58.8
+  },
+  {
+    "id": "manggis",
+    "name": "Manggis",
+    "regency": "karangasem",
+    "lat": -8.5,
+    "lng": 115.52,
+    "population": 42100,
+    "elevation_m": 50,
+    "coastal": true,
+    "volcanic_proximity_km": 18,
+    "avg_land_price_usd_m2": 500,
+    "tourism_intensity": 0.55,
+    "infrastructure_index": 0.48,
+    "foreign_investor_density": 0.25,
+    "composite_risk": 35.9,
+    "investment_grade": "B",
+    "env_risk": 29.3,
+    "seismic_risk": 44.5,
+    "legal_risk": 30.2,
+    "admin_risk": 42.4
+  },
+  {
+    "id": "kubu",
+    "name": "Kubu",
+    "regency": "karangasem",
+    "lat": -8.33,
+    "lng": 115.58,
+    "population": 65200,
+    "elevation_m": 200,
+    "coastal": true,
+    "volcanic_proximity_km": 10,
+    "avg_land_price_usd_m2": 100,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.3,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 48.3,
+    "investment_grade": "C",
+    "env_risk": 37.6,
+    "seismic_risk": 46.2,
+    "legal_risk": 48.5,
+    "admin_risk": 66.5
+  },
+  {
+    "id": "abang",
+    "name": "Abang",
+    "regency": "karangasem",
+    "lat": -8.36,
+    "lng": 115.55,
+    "population": 48700,
+    "elevation_m": 300,
+    "coastal": true,
+    "volcanic_proximity_km": 8,
+    "avg_land_price_usd_m2": 80,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.28,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 52.8,
+    "investment_grade": "C",
+    "env_risk": 49.6,
+    "seismic_risk": 46.2,
+    "legal_risk": 48.5,
+    "admin_risk": 71.0
+  },
+  {
+    "id": "buleleng",
+    "name": "Buleleng",
+    "regency": "buleleng",
+    "lat": -8.11,
+    "lng": 115.09,
+    "population": 133500,
+    "elevation_m": 20,
+    "coastal": true,
+    "volcanic_proximity_km": 35,
+    "avg_land_price_usd_m2": 400,
+    "tourism_intensity": 0.3,
+    "infrastructure_index": 0.72,
+    "foreign_investor_density": 0.1,
+    "composite_risk": 31.2,
+    "investment_grade": "B",
+    "env_risk": 23.1,
+    "seismic_risk": 44.5,
+    "legal_risk": 28.5,
+    "admin_risk": 30.0
+  },
+  {
+    "id": "seririt",
+    "name": "Seririt",
+    "regency": "buleleng",
+    "lat": -8.18,
+    "lng": 114.96,
+    "population": 48300,
+    "elevation_m": 30,
+    "coastal": true,
+    "volcanic_proximity_km": 40,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.45,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 37.7,
+    "investment_grade": "B",
+    "env_risk": 17.7,
+    "seismic_risk": 44.5,
+    "legal_risk": 43.8,
+    "admin_risk": 51.7
+  },
+  {
+    "id": "banjar",
+    "name": "Banjar",
+    "regency": "buleleng",
+    "lat": -8.17,
+    "lng": 115.02,
+    "population": 50200,
+    "elevation_m": 80,
+    "coastal": true,
+    "volcanic_proximity_km": 35,
+    "avg_land_price_usd_m2": 250,
+    "tourism_intensity": 0.25,
+    "infrastructure_index": 0.48,
+    "foreign_investor_density": 0.08,
+    "composite_risk": 37.0,
+    "investment_grade": "B",
+    "env_risk": 17.7,
+    "seismic_risk": 42.5,
+    "legal_risk": 43.8,
+    "admin_risk": 50.7
+  },
+  {
+    "id": "sukasada",
+    "name": "Sukasada",
+    "regency": "buleleng",
+    "lat": -8.2,
+    "lng": 115.12,
+    "population": 64100,
+    "elevation_m": 400,
+    "coastal": false,
+    "volcanic_proximity_km": 28,
+    "avg_land_price_usd_m2": 200,
+    "tourism_intensity": 0.2,
+    "infrastructure_index": 0.42,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 37.3,
+    "investment_grade": "B",
+    "env_risk": 21.1,
+    "seismic_risk": 42.0,
+    "legal_risk": 41.2,
+    "admin_risk": 50.7
+  },
+  {
+    "id": "sawan",
+    "name": "Sawan",
+    "regency": "buleleng",
+    "lat": -8.15,
+    "lng": 115.15,
+    "population": 47800,
+    "elevation_m": 300,
+    "coastal": false,
+    "volcanic_proximity_km": 25,
+    "avg_land_price_usd_m2": 150,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.38,
+    "foreign_investor_density": 0.02,
+    "composite_risk": 39.7,
+    "investment_grade": "B",
+    "env_risk": 18.1,
+    "seismic_risk": 44.5,
+    "legal_risk": 46.0,
+    "admin_risk": 58.1
+  },
+  {
+    "id": "kubutambahan",
+    "name": "Kubutambahan",
+    "regency": "buleleng",
+    "lat": -8.12,
+    "lng": 115.2,
+    "population": 46200,
+    "elevation_m": 50,
+    "coastal": true,
+    "volcanic_proximity_km": 22,
+    "avg_land_price_usd_m2": 180,
+    "tourism_intensity": 0.12,
+    "infrastructure_index": 0.42,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 40.0,
+    "investment_grade": "C",
+    "env_risk": 24.7,
+    "seismic_risk": 44.5,
+    "legal_risk": 43.8,
+    "admin_risk": 52.7
+  },
+  {
+    "id": "tejakula",
+    "name": "Tejakula",
+    "regency": "buleleng",
+    "lat": -8.12,
+    "lng": 115.35,
+    "population": 50600,
+    "elevation_m": 40,
+    "coastal": true,
+    "volcanic_proximity_km": 20,
+    "avg_land_price_usd_m2": 150,
+    "tourism_intensity": 0.15,
+    "infrastructure_index": 0.35,
+    "foreign_investor_density": 0.05,
+    "composite_risk": 43.5,
+    "investment_grade": "C",
+    "env_risk": 25.2,
+    "seismic_risk": 46.5,
+    "legal_risk": 48.5,
+    "admin_risk": 61.1
+  },
+  {
+    "id": "gerokgak",
+    "name": "Gerokgak",
+    "regency": "buleleng",
+    "lat": -8.15,
+    "lng": 114.85,
+    "population": 58600,
+    "elevation_m": 30,
+    "coastal": true,
+    "volcanic_proximity_km": 50,
+    "avg_land_price_usd_m2": 100,
+    "tourism_intensity": 0.1,
+    "infrastructure_index": 0.3,
+    "foreign_investor_density": 0.03,
+    "composite_risk": 41.1,
+    "investment_grade": "C",
+    "env_risk": 17.7,
+    "seismic_risk": 44.5,
+    "legal_risk": 48.5,
+    "admin_risk": 62.8
+  }
+];
+
+const map = L.map('map', {
+  center: [-8.4095, 115.1889],
+  zoom: 10,
+  zoomControl: false,
+  preferCanvas: true,
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// Dark tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM &copy; CARTO',
+  maxZoom: 18,
+}).addTo(map);
+
+// Volcano markers
+const volcanoes = [
+  { name: 'Mt. Agung', lat: -8.3433, lng: 115.5083, elev: 3142 },
+  { name: 'Mt. Batur', lat: -8.2417, lng: 115.3750, elev: 1717 },
+];
+
+const volcanoLayer = L.layerGroup();
+volcanoes.forEach(v => {
+  L.circleMarker([v.lat, v.lng], {
+    radius: 10, fillColor: '#ff4466', color: '#ff4466', weight: 2, fillOpacity: 0.8,
+  }).bindTooltip(`🌋 ${v.name} (${v.elev}m)`, { className: 'tooltip-custom' })
+    .addTo(volcanoLayer);
+
+  // Danger zones (4km, 8km, 15km)
+  [4000, 8000, 15000].forEach((r, i) => {
+    L.circle([v.lat, v.lng], {
+      radius: r, fillColor: '#ff4466', color: '#ff4466',
+      weight: 1, fillOpacity: 0.08 - i * 0.02, dashArray: '4 4',
+    }).addTo(volcanoLayer);
+  });
+});
+volcanoLayer.addTo(map);
+
+// Color scales
+function riskColor(score) {
+  if (score < 25) return '#00d4aa';
+  if (score < 40) return '#4ecdc4';
+  if (score < 55) return '#ffe66d';
+  if (score < 70) return '#ff8844';
+  return '#ff4466';
+}
+
+function priceColor(price) {
+  if (price > 5000) return '#ff4466';
+  if (price > 2000) return '#ff8844';
+  if (price > 1000) return '#ffe66d';
+  if (price > 500) return '#4ecdc4';
+  return '#00d4aa';
+}
+
+function tourismColor(intensity) {
+  if (intensity > 0.8) return '#ff4466';
+  if (intensity > 0.6) return '#ff8844';
+  if (intensity > 0.4) return '#ffe66d';
+  if (intensity > 0.2) return '#4ecdc4';
+  return '#00d4aa';
+}
+
+// District markers
+let districtMarkers = [];
+let edgeLines = [];
+let activeLayer = 'risk';
+
+function getColor(d, layer) {
+  switch(layer) {
+    case 'risk': return riskColor(d.composite_risk || 50);
+    case 'price': return priceColor(d.avg_land_price_usd_m2 || 0);
+    case 'tourism': return tourismColor(d.tourism_intensity || 0);
+    case 'volcanic': return riskColor(Math.max(0, 100 - (d.volcanic_proximity_km || 50) * 2));
+    default: return '#00d4aa';
+  }
+}
+
+function getRadius(d, layer) {
+  if (layer === 'price') return Math.max(6, Math.min(20, Math.sqrt(d.avg_land_price_usd_m2 || 0) / 4));
+  if (layer === 'tourism') return Math.max(6, d.tourism_intensity * 18);
+  return Math.max(6, Math.min(18, (d.composite_risk || 50) / 5));
+}
+
+function renderDistricts() {
+  districtMarkers.forEach(m => map.removeLayer(m));
+  districtMarkers = [];
+
+  DISTRICTS.forEach(d => {
+    const color = getColor(d, activeLayer);
+    const radius = getRadius(d, activeLayer);
+
+    const marker = L.circleMarker([d.lat, d.lng], {
+      radius, fillColor: color, color: color, weight: 2, fillOpacity: 0.7,
+    });
+
+    marker.bindTooltip(
+      `<b>${d.name}</b> (${d.regency})<br>` +
+      `Risk: ${d.composite_risk?.toFixed(1) || '—'} | Grade: ${d.investment_grade || '—'}<br>` +
+      `Price: $${(d.avg_land_price_usd_m2 || 0).toLocaleString()}/m²`,
+      { className: 'tooltip-custom', sticky: true }
+    );
+
+    marker.on('click', () => showDistrictDetail(d));
+    marker.addTo(map);
+    marker.districtData = d;
+    districtMarkers.push(marker);
+  });
+}
+
+function renderEdges() {
+  edgeLines.forEach(l => map.removeLayer(l));
+  edgeLines = [];
+
+  if (activeLayer !== 'network') return;
+
+  const districtMap = {};
+  DISTRICTS.forEach(d => districtMap[d.id] = d);
+
+  // Render edges from data
+  (window.EDGES || []).forEach(e => {
+    const src = districtMap[e.source];
+    const tgt = districtMap[e.target];
+    if (!src || !tgt) return;
+
+    const typeColors = {
+      road: '#333',
+      shared_risk_zone: '#ff446666',
+      economic_tie: '#00d4aa44',
+    };
+
+    const line = L.polyline(
+      [[src.lat, src.lng], [tgt.lat, tgt.lng]],
+      { color: typeColors[e.edge_type] || '#222', weight: 1.5, opacity: 0.6 }
+    ).addTo(map);
+    edgeLines.push(line);
+  });
+}
+
+function setLayer(layer) {
+  activeLayer = layer;
+  document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderDistricts();
+  renderEdges();
+}
+
+function showDistrictDetail(d) {
+  const grade = d.investment_grade || 'C';
+  const gradeClass = `grade-${grade}`;
+
+  document.getElementById('district-detail').innerHTML = `
+    <h3 style="color:#00d4aa;margin-top:16px">${d.name}</h3>
+    <div class="stat-row"><span class="stat-label">Regency</span><span class="stat-value">${d.regency}</span></div>
+    <div class="stat-row"><span class="stat-label">Investment Grade</span><span class="grade ${gradeClass}">${grade}</span></div>
+    <div class="stat-row"><span class="stat-label">Composite Risk</span><span class="stat-value">${d.composite_risk?.toFixed(1) || '—'}/100</span></div>
+
+    <h3>Risk Breakdown</h3>
+    ${riskBar('Environmental', d.env_risk)}
+    ${riskBar('Seismological', d.seismic_risk)}
+    ${riskBar('Legal', d.legal_risk)}
+    ${riskBar('Administrative', d.admin_risk)}
+
+    <h3>District Profile</h3>
+    <div class="stat-row"><span class="stat-label">Land Price</span><span class="stat-value">$${(d.avg_land_price_usd_m2 || 0).toLocaleString()}/m²</span></div>
+    <div class="stat-row"><span class="stat-label">Population</span><span class="stat-value">${(d.population || 0).toLocaleString()}</span></div>
+    <div class="stat-row"><span class="stat-label">Elevation</span><span class="stat-value">${d.elevation_m || 0}m</span></div>
+    <div class="stat-row"><span class="stat-label">Coastal</span><span class="stat-value">${d.coastal ? 'Yes' : 'No'}</span></div>
+    <div class="stat-row"><span class="stat-label">Volcanic Proximity</span><span class="stat-value">${d.volcanic_proximity_km || '—'} km</span></div>
+    <div class="stat-row"><span class="stat-label">Tourism Intensity</span><span class="stat-value">${((d.tourism_intensity || 0) * 100).toFixed(0)}%</span></div>
+    <div class="stat-row"><span class="stat-label">Infrastructure</span><span class="stat-value">${((d.infrastructure_index || 0) * 100).toFixed(0)}%</span></div>
+    <div class="stat-row"><span class="stat-label">Foreign Investor Density</span><span class="stat-value">${((d.foreign_investor_density || 0) * 100).toFixed(0)}%</span></div>
+  `;
+}
+
+function riskBar(label, score) {
+  const s = score || 0;
+  const color = riskColor(s);
+  return `
+    <div style="margin:6px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+        <span style="color:#888">${label}</span>
+        <span style="color:${color};font-weight:600">${s.toFixed(1)}</span>
+      </div>
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width:${s}%;background:${color}"></div>
+      </div>
+    </div>`;
+}
+
+function filterDistricts(query) {
+  const q = query.toLowerCase();
+  districtMarkers.forEach(m => {
+    const d = m.districtData;
+    const match = !q || d.name.toLowerCase().includes(q) || d.regency.toLowerCase().includes(q);
+    m.setStyle({ fillOpacity: match ? 0.7 : 0.1, opacity: match ? 1 : 0.2 });
+  });
+}
+
+window.EDGES = [{"source": "denpasar_selatan", "target": "denpasar_barat", "edge_type": "road", "weight": 0.95, "properties": {"road_type": "arterial", "distance_km": 5}}, {"source": "denpasar_selatan", "target": "denpasar_timur", "edge_type": "road", "weight": 0.95, "properties": {"road_type": "arterial", "distance_km": 6}}, {"source": "denpasar_selatan", "target": "kuta", "edge_type": "road", "weight": 0.9, "properties": {"road_type": "bypass", "distance_km": 8}}, {"source": "denpasar_selatan", "target": "sukawati", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 12}}, {"source": "denpasar_barat", "target": "denpasar_utara", "edge_type": "road", "weight": 0.95, "properties": {"road_type": "arterial", "distance_km": 4}}, {"source": "denpasar_barat", "target": "kuta", "edge_type": "road", "weight": 0.9, "properties": {"road_type": "arterial", "distance_km": 7}}, {"source": "denpasar_timur", "target": "denpasar_utara", "edge_type": "road", "weight": 0.9, "properties": {"road_type": "arterial", "distance_km": 5}}, {"source": "denpasar_timur", "target": "sukawati", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "denpasar_utara", "target": "mengwi", "edge_type": "road", "weight": 0.85, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "kuta", "target": "kuta_selatan", "edge_type": "road", "weight": 0.9, "properties": {"road_type": "toll", "distance_km": 12}}, {"source": "kuta", "target": "kuta_utara", "edge_type": "road", "weight": 0.9, "properties": {"road_type": "arterial", "distance_km": 8}}, {"source": "kuta_utara", "target": "mengwi", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "kuta_utara", "target": "kediri_tabanan", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "coastal", "distance_km": 15}}, {"source": "mengwi", "target": "abiansemal", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "mengwi", "target": "tabanan", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 15}}, {"source": "abiansemal", "target": "petang", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "provincial", "distance_km": 18}}, {"source": "abiansemal", "target": "ubud", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "ubud", "target": "tegallalang", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "ubud", "target": "gianyar", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "ubud", "target": "payangan", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "ubud", "target": "sukawati", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "gianyar", "target": "blahbatuh", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "provincial", "distance_km": 6}}, {"source": "gianyar", "target": "tampaksiring", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 15}}, {"source": "sukawati", "target": "blahbatuh", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "provincial", "distance_km": 5}}, {"source": "tegallalang", "target": "tampaksiring", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "tegallalang", "target": "payangan", "edge_type": "road", "weight": 0.65, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "tampaksiring", "target": "kintamani", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "provincial", "distance_km": 20}}, {"source": "tabanan", "target": "kediri_tabanan", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "tabanan", "target": "marga", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "tabanan", "target": "kerambitan", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "kediri_tabanan", "target": "kerambitan", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "kerambitan", "target": "selemadeg_timur", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 15}}, {"source": "selemadeg", "target": "selemadeg_timur", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "local", "distance_km": 8}}, {"source": "selemadeg", "target": "selemadeg_barat", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 12}}, {"source": "selemadeg_barat", "target": "pupuan", "edge_type": "road", "weight": 0.45, "properties": {"road_type": "local", "distance_km": 20}}, {"source": "marga", "target": "penebel", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "penebel", "target": "baturiti", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "provincial", "distance_km": 15}}, {"source": "penebel", "target": "pupuan", "edge_type": "road", "weight": 0.45, "properties": {"road_type": "local", "distance_km": 20}}, {"source": "baturiti", "target": "petang", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "local", "distance_km": 12}}, {"source": "bangli", "target": "susut", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "bangli", "target": "tembuku", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "bangli", "target": "kintamani", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "provincial", "distance_km": 25}}, {"source": "susut", "target": "gianyar", "edge_type": "road", "weight": 0.65, "properties": {"road_type": "provincial", "distance_km": 15}}, {"source": "tembuku", "target": "sidemen", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 15}}, {"source": "klungkung", "target": "banjarangkan", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "provincial", "distance_km": 5}}, {"source": "klungkung", "target": "dawan", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "klungkung", "target": "nusa_penida", "edge_type": "road", "weight": 0.3, "properties": {"road_type": "ferry", "distance_km": 25}}, {"source": "banjarangkan", "target": "susut", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "local", "distance_km": 12}}, {"source": "karangasem", "target": "bebandem", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "karangasem", "target": "manggis", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "coastal", "distance_km": 12}}, {"source": "karangasem", "target": "kubu", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "coastal", "distance_km": 18}}, {"source": "bebandem", "target": "selat", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 10}}, {"source": "bebandem", "target": "abang", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "local", "distance_km": 12}}, {"source": "selat", "target": "rendang", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "provincial", "distance_km": 8}}, {"source": "rendang", "target": "sidemen", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 10}}, {"source": "kubu", "target": "abang", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "local", "distance_km": 12}}, {"source": "kubu", "target": "tejakula", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "coastal", "distance_km": 20}}, {"source": "manggis", "target": "sidemen", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "local", "distance_km": 15}}, {"source": "dawan", "target": "klungkung", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "buleleng", "target": "banjar", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 10}}, {"source": "buleleng", "target": "sukasada", "edge_type": "road", "weight": 0.75, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "buleleng", "target": "sawan", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 12}}, {"source": "buleleng", "target": "kubutambahan", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "coastal", "distance_km": 15}}, {"source": "banjar", "target": "seririt", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "provincial", "distance_km": 10}}, {"source": "seririt", "target": "gerokgak", "edge_type": "road", "weight": 0.55, "properties": {"road_type": "coastal", "distance_km": 25}}, {"source": "sukasada", "target": "baturiti", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "mountain", "distance_km": 20}}, {"source": "kubutambahan", "target": "tejakula", "edge_type": "road", "weight": 0.65, "properties": {"road_type": "coastal", "distance_km": 18}}, {"source": "kubutambahan", "target": "kintamani", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "mountain", "distance_km": 22}}, {"source": "negara", "target": "jembrana", "edge_type": "road", "weight": 0.8, "properties": {"road_type": "arterial", "distance_km": 5}}, {"source": "negara", "target": "mendoyo", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "arterial", "distance_km": 12}}, {"source": "negara", "target": "melaya", "edge_type": "road", "weight": 0.7, "properties": {"road_type": "arterial", "distance_km": 15}}, {"source": "mendoyo", "target": "pekutatan", "edge_type": "road", "weight": 0.6, "properties": {"road_type": "coastal", "distance_km": 18}}, {"source": "pekutatan", "target": "selemadeg_barat", "edge_type": "road", "weight": 0.5, "properties": {"road_type": "coastal", "distance_km": 20}}, {"source": "melaya", "target": "gerokgak", "edge_type": "road", "weight": 0.45, "properties": {"road_type": "mountain", "distance_km": 35}}, {"source": "kuta", "target": "kuta_utara", "edge_type": "shared_risk_zone", "weight": 0.9, "properties": {"risk_type": "flood", "zone": "kuta_flood"}}, {"source": "kuta", "target": "kuta_selatan", "edge_type": "shared_risk_zone", "weight": 0.85, "properties": {"risk_type": "tsunami", "zone": "south_coast"}}, {"source": "denpasar_selatan", "target": "kuta", "edge_type": "shared_risk_zone", "weight": 0.8, "properties": {"risk_type": "flood", "zone": "denpasar_flood"}}, {"source": "rendang", "target": "selat", "edge_type": "shared_risk_zone", "weight": 0.95, "properties": {"risk_type": "volcanic", "zone": "agung_high"}}, {"source": "bebandem", "target": "kubu", "edge_type": "shared_risk_zone", "weight": 0.9, "properties": {"risk_type": "volcanic", "zone": "agung_lahar"}}, {"source": "abang", "target": "kubu", "edge_type": "shared_risk_zone", "weight": 0.9, "properties": {"risk_type": "volcanic", "zone": "agung_lahar"}}, {"source": "kuta", "target": "kuta_selatan", "edge_type": "economic_tie", "weight": 0.95, "properties": {"tie_type": "tourism_corridor"}}, {"source": "kuta", "target": "kuta_utara", "edge_type": "economic_tie", "weight": 0.92, "properties": {"tie_type": "tourism_corridor"}}, {"source": "ubud", "target": "tegallalang", "edge_type": "economic_tie", "weight": 0.88, "properties": {"tie_type": "tourism_corridor"}}, {"source": "denpasar_selatan", "target": "kuta", "edge_type": "economic_tie", "weight": 0.85, "properties": {"tie_type": "commerce"}}, {"source": "kuta_selatan", "target": "nusa_penida", "edge_type": "economic_tie", "weight": 0.7, "properties": {"tie_type": "tourism_feeder"}}];
+// Initialize
+renderDistricts();
+
+// Stats
+document.getElementById('stat-districts').textContent = DISTRICTS.length;
+</script>
+</body>
+</html>

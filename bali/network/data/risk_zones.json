@@ -1,0 +1,191 @@
+{
+  "metadata": {
+    "description": "Natural hazard risk zones for Bali based on BNPB, PVMBG, and BMKG data",
+    "sources": [
+      "BNPB (National Disaster Agency) hazard maps",
+      "PVMBG (Volcanology Agency) volcanic hazard zones",
+      "BMKG seismic hazard maps",
+      "BPBD Bali flood/landslide data"
+    ]
+  },
+  "volcanic_zones": {
+    "agung": {
+      "volcano_id": "agung",
+      "name": "Mount Agung",
+      "lat": -8.3433,
+      "lng": 115.5083,
+      "elevation_m": 3142,
+      "last_eruption": "2019",
+      "alert_level": "normal",
+      "danger_zones": [
+        {
+          "radius_km": 4,
+          "severity": "extreme",
+          "description": "Exclusion zone - no habitation permitted during eruption",
+          "affected_districts": ["rendang", "selat", "bebandem"]
+        },
+        {
+          "radius_km": 8,
+          "severity": "high",
+          "description": "Primary lahar/pyroclastic flow path",
+          "affected_districts": ["rendang", "selat", "bebandem", "karangasem", "sidemen", "kubu", "abang"]
+        },
+        {
+          "radius_km": 15,
+          "severity": "medium",
+          "description": "Ash fall zone, secondary lahar risk",
+          "affected_districts": ["rendang", "selat", "bebandem", "karangasem", "sidemen", "kubu", "abang", "manggis", "dawan", "tembuku", "kintamani"]
+        },
+        {
+          "radius_km": 30,
+          "severity": "low",
+          "description": "Potential heavy ash fall zone",
+          "affected_districts": ["rendang", "selat", "bebandem", "karangasem", "sidemen", "kubu", "abang", "manggis", "dawan", "tembuku", "kintamani", "bangli", "klungkung", "banjarangkan", "tampaksiring", "tejakula"]
+        }
+      ]
+    },
+    "batur": {
+      "volcano_id": "batur",
+      "name": "Mount Batur",
+      "lat": -8.2417,
+      "lng": 115.3750,
+      "elevation_m": 1717,
+      "last_eruption": "2000",
+      "alert_level": "normal",
+      "danger_zones": [
+        {
+          "radius_km": 3,
+          "severity": "extreme",
+          "description": "Caldera exclusion zone",
+          "affected_districts": ["kintamani"]
+        },
+        {
+          "radius_km": 8,
+          "severity": "medium",
+          "description": "Pyroclastic/lahar risk from Batur",
+          "affected_districts": ["kintamani", "susut", "bangli"]
+        }
+      ]
+    }
+  },
+  "tsunami_zones": [
+    {
+      "zone_id": "south_coast",
+      "severity": "high",
+      "description": "South coast facing Indian Ocean - highest tsunami risk from Sunda Trench subduction",
+      "max_wave_height_m": 15,
+      "affected_districts": ["kuta", "kuta_selatan", "denpasar_selatan", "sukawati", "kerambitan", "selemadeg_barat", "kediri_tabanan", "nusa_penida"]
+    },
+    {
+      "zone_id": "east_coast",
+      "severity": "medium",
+      "description": "East coast - moderate risk from Flores Back-Arc Thrust",
+      "max_wave_height_m": 8,
+      "affected_districts": ["karangasem", "manggis", "kubu", "abang", "klungkung", "dawan"]
+    },
+    {
+      "zone_id": "north_coast",
+      "severity": "low",
+      "description": "North coast - lower but non-zero tsunami risk",
+      "max_wave_height_m": 4,
+      "affected_districts": ["buleleng", "seririt", "banjar", "kubutambahan", "tejakula", "gerokgak"]
+    },
+    {
+      "zone_id": "west_coast",
+      "severity": "medium",
+      "description": "West coast - Bali Strait, moderate risk",
+      "max_wave_height_m": 6,
+      "affected_districts": ["negara", "melaya", "jembrana", "mendoyo", "pekutatan"]
+    }
+  ],
+  "flood_zones": [
+    {
+      "zone_id": "denpasar_flood",
+      "severity": "high",
+      "description": "Urban flooding from Badung River and poor drainage",
+      "season": "november-march",
+      "affected_districts": ["denpasar_selatan", "denpasar_barat", "denpasar_timur", "denpasar_utara"]
+    },
+    {
+      "zone_id": "kuta_flood",
+      "severity": "high",
+      "description": "Low-lying coastal flooding, tidal + rain compound events",
+      "season": "november-march",
+      "affected_districts": ["kuta", "kuta_utara", "kuta_selatan"]
+    },
+    {
+      "zone_id": "tabanan_river",
+      "severity": "medium",
+      "description": "River flooding from mountain watersheds",
+      "season": "december-february",
+      "affected_districts": ["tabanan", "kediri_tabanan", "kerambitan"]
+    },
+    {
+      "zone_id": "gianyar_river",
+      "severity": "medium",
+      "description": "Ayung and Petanu river flooding",
+      "season": "december-february",
+      "affected_districts": ["ubud", "gianyar", "sukawati", "blahbatuh"]
+    }
+  ],
+  "landslide_zones": [
+    {
+      "zone_id": "agung_slopes",
+      "severity": "high",
+      "description": "Steep volcanic slopes with loose material",
+      "affected_districts": ["rendang", "selat", "bebandem", "sidemen", "abang"]
+    },
+    {
+      "zone_id": "central_highlands",
+      "severity": "medium",
+      "description": "Highland areas with steep terrain and high rainfall",
+      "affected_districts": ["kintamani", "bangli", "payangan", "tegallalang", "baturiti", "sukasada"]
+    },
+    {
+      "zone_id": "west_hills",
+      "severity": "medium",
+      "description": "Western hill areas",
+      "affected_districts": ["pupuan", "penebel", "selemadeg", "selemadeg_timur", "marga"]
+    }
+  ],
+  "liquefaction_zones": [
+    {
+      "zone_id": "south_coastal_liq",
+      "severity": "high",
+      "description": "Sandy/alluvial coastal soils prone to liquefaction during strong shaking",
+      "affected_districts": ["kuta", "kuta_utara", "denpasar_selatan", "sukawati"]
+    },
+    {
+      "zone_id": "river_valleys_liq",
+      "severity": "medium",
+      "description": "Alluvial river valley deposits",
+      "affected_districts": ["gianyar", "ubud", "tabanan", "negara"]
+    }
+  ],
+  "seismic_sources": [
+    {
+      "source_id": "sunda_trench",
+      "name": "Sunda Megathrust (Java Trench segment)",
+      "type": "subduction",
+      "max_magnitude": 8.5,
+      "distance_km": 250,
+      "description": "Indo-Australian plate subducting beneath Eurasian plate south of Bali"
+    },
+    {
+      "source_id": "flores_back_arc",
+      "name": "Flores Back-Arc Thrust",
+      "type": "thrust",
+      "max_magnitude": 7.5,
+      "distance_km": 100,
+      "description": "Active thrust fault north of Bali, caused 1815-class events"
+    },
+    {
+      "source_id": "bali_fault",
+      "name": "Bali Fault Zone",
+      "type": "strike_slip",
+      "max_magnitude": 6.5,
+      "distance_km": 0,
+      "description": "Local fault system traversing central Bali"
+    }
+  ]
+}

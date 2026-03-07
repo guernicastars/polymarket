@@ -1,0 +1,3023 @@
+{
+  "districts": [
+    {
+      "id": "mengwi",
+      "name": "Mengwi",
+      "regency": "badung",
+      "lat": -8.58,
+      "lng": 115.18,
+      "population": 136500,
+      "elevation_m": 100,
+      "coastal": false,
+      "volcanic_proximity_km": 48,
+      "avg_land_price_usd_m2": 1200,
+      "tourism_intensity": 0.5,
+      "infrastructure_index": 0.78,
+      "foreign_investor_density": 0.35,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "rice_terraces",
+        "temples",
+        "suburban"
+      ],
+      "area_km2": 82.0,
+      "composite_risk": 25.4,
+      "investment_grade": "B",
+      "env_risk": 10.3,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 10,
+        "tsunami": 2,
+        "landslide": 3,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 28.8,
+      "legal_factors": {
+        "ownership_pathway": 45,
+        "title_security": 17,
+        "zoning_compliance": 20,
+        "dispute_density": 30
+      },
+      "admin_risk": 25.5,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 17.6,
+        "bureaucratic_complexity": 30,
+        "utility_access": 15.4
+      }
+    },
+    {
+      "id": "denpasar_utara",
+      "name": "Denpasar Utara",
+      "regency": "denpasar",
+      "lat": -8.62,
+      "lng": 115.22,
+      "population": 222500,
+      "elevation_m": 40,
+      "coastal": false,
+      "volcanic_proximity_km": 52,
+      "avg_land_price_usd_m2": 2000,
+      "tourism_intensity": 0.35,
+      "infrastructure_index": 0.92,
+      "foreign_investor_density": 0.25,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "urban",
+        "university"
+      ],
+      "area_km2": 31.42,
+      "composite_risk": 26.5,
+      "investment_grade": "B",
+      "env_risk": 15.1,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 50,
+        "tsunami": 2,
+        "landslide": 3,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 45.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 28.8,
+      "legal_factors": {
+        "ownership_pathway": 45,
+        "title_security": 17,
+        "zoning_compliance": 20,
+        "dispute_density": 30
+      },
+      "admin_risk": 16.4,
+      "admin_factors": {
+        "permit_complexity": 25,
+        "infrastructure_quality": 6.4,
+        "bureaucratic_complexity": 25,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "blahbatuh",
+      "name": "Blahbatuh",
+      "regency": "gianyar",
+      "lat": -8.56,
+      "lng": 115.31,
+      "population": 67500,
+      "elevation_m": 150,
+      "coastal": false,
+      "volcanic_proximity_km": 40,
+      "avg_land_price_usd_m2": 900,
+      "tourism_intensity": 0.35,
+      "infrastructure_index": 0.7,
+      "foreign_investor_density": 0.15,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "traditional",
+        "artisan"
+      ],
+      "area_km2": 19.58,
+      "composite_risk": 27.6,
+      "investment_grade": "B",
+      "env_risk": 16.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 30,
+        "tsunami": 2,
+        "landslide": 10,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 26.0,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 20,
+        "zoning_compliance": 20,
+        "dispute_density": 20
+      },
+      "admin_risk": 30.7,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 24.0,
+        "bureaucratic_complexity": 40,
+        "utility_access": 21.0
+      }
+    },
+    {
+      "id": "denpasar_timur",
+      "name": "Denpasar Timur",
+      "regency": "denpasar",
+      "lat": -8.65,
+      "lng": 115.26,
+      "population": 196100,
+      "elevation_m": 25,
+      "coastal": false,
+      "volcanic_proximity_km": 55,
+      "avg_land_price_usd_m2": 2200,
+      "tourism_intensity": 0.4,
+      "infrastructure_index": 0.9,
+      "foreign_investor_density": 0.3,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "urban",
+        "cultural"
+      ],
+      "area_km2": 22.31,
+      "composite_risk": 28.0,
+      "investment_grade": "B",
+      "env_risk": 20.1,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 70,
+        "tsunami": 2,
+        "landslide": 3,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 45.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 28.8,
+      "legal_factors": {
+        "ownership_pathway": 45,
+        "title_security": 17,
+        "zoning_compliance": 20,
+        "dispute_density": 30
+      },
+      "admin_risk": 16.8,
+      "admin_factors": {
+        "permit_complexity": 25,
+        "infrastructure_quality": 8.0,
+        "bureaucratic_complexity": 25,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "tabanan",
+      "name": "Tabanan",
+      "regency": "tabanan",
+      "lat": -8.54,
+      "lng": 115.13,
+      "population": 110200,
+      "elevation_m": 120,
+      "coastal": false,
+      "volcanic_proximity_km": 45,
+      "avg_land_price_usd_m2": 700,
+      "tourism_intensity": 0.35,
+      "infrastructure_index": 0.72,
+      "foreign_investor_density": 0.15,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "rice_bowl"
+      ],
+      "area_km2": 78.1,
+      "composite_risk": 28.4,
+      "investment_grade": "B",
+      "env_risk": 16.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 30,
+        "tsunami": 2,
+        "landslide": 10,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 43.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 26.0,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 20,
+        "zoning_compliance": 20,
+        "dispute_density": 20
+      },
+      "admin_risk": 30.0,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 22.4,
+        "bureaucratic_complexity": 40,
+        "utility_access": 19.6
+      }
+    },
+    {
+      "id": "gianyar",
+      "name": "Gianyar",
+      "regency": "gianyar",
+      "lat": -8.541,
+      "lng": 115.323,
+      "population": 81500,
+      "elevation_m": 200,
+      "coastal": false,
+      "volcanic_proximity_km": 38,
+      "avg_land_price_usd_m2": 1400,
+      "tourism_intensity": 0.55,
+      "infrastructure_index": 0.8,
+      "foreign_investor_density": 0.3,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "traditional"
+      ],
+      "area_km2": 19.25,
+      "composite_risk": 28.5,
+      "investment_grade": "B",
+      "env_risk": 16.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 30,
+        "tsunami": 2,
+        "landslide": 10,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 43.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 28.8,
+      "legal_factors": {
+        "ownership_pathway": 45,
+        "title_security": 17,
+        "zoning_compliance": 20,
+        "dispute_density": 30
+      },
+      "admin_risk": 27.3,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 16.0,
+        "bureaucratic_complexity": 40,
+        "utility_access": 14.0
+      }
+    },
+    {
+      "id": "denpasar_barat",
+      "name": "Denpasar Barat",
+      "regency": "denpasar",
+      "lat": -8.67,
+      "lng": 115.2,
+      "population": 268400,
+      "elevation_m": 20,
+      "coastal": false,
+      "volcanic_proximity_km": 60,
+      "avg_land_price_usd_m2": 2800,
+      "tourism_intensity": 0.6,
+      "infrastructure_index": 0.93,
+      "foreign_investor_density": 0.45,
+      "dominant_zone": "commercial",
+      "dominant_title": "shm",
+      "tags": [
+        "urban",
+        "government",
+        "port"
+      ],
+      "area_km2": 24.06,
+      "composite_risk": 28.6,
+      "investment_grade": "B",
+      "env_risk": 20.1,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 70,
+        "tsunami": 2,
+        "landslide": 3,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 45.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 31.6,
+      "legal_factors": {
+        "ownership_pathway": 52,
+        "title_security": 17,
+        "zoning_compliance": 15,
+        "dispute_density": 40
+      },
+      "admin_risk": 16.1,
+      "admin_factors": {
+        "permit_complexity": 25,
+        "infrastructure_quality": 5.6,
+        "bureaucratic_complexity": 25,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "ubud",
+      "name": "Ubud",
+      "regency": "gianyar",
+      "lat": -8.5069,
+      "lng": 115.2624,
+      "population": 73800,
+      "elevation_m": 350,
+      "coastal": false,
+      "volcanic_proximity_km": 35,
+      "avg_land_price_usd_m2": 2800,
+      "tourism_intensity": 0.92,
+      "infrastructure_index": 0.75,
+      "foreign_investor_density": 0.8,
+      "dominant_zone": "tourism",
+      "dominant_title": "shm",
+      "tags": [
+        "cultural_center",
+        "rice_terraces",
+        "yoga",
+        "art",
+        "digital_nomad"
+      ],
+      "area_km2": 42.38,
+      "composite_risk": 30.4,
+      "investment_grade": "B",
+      "env_risk": 16.1,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 23,
+        "tsunami": 2,
+        "landslide": 20,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 43.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 25,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 38.1,
+      "legal_factors": {
+        "ownership_pathway": 60,
+        "title_security": 17,
+        "zoning_compliance": 25,
+        "dispute_density": 48
+      },
+      "admin_risk": 25.5,
+      "admin_factors": {
+        "permit_complexity": 30,
+        "infrastructure_quality": 20.0,
+        "bureaucratic_complexity": 32,
+        "utility_access": 17.5
+      }
+    },
+    {
+      "id": "klungkung",
+      "name": "Klungkung",
+      "regency": "klungkung",
+      "lat": -8.54,
+      "lng": 115.41,
+      "population": 55600,
+      "elevation_m": 50,
+      "coastal": true,
+      "volcanic_proximity_km": 32,
+      "avg_land_price_usd_m2": 600,
+      "tourism_intensity": 0.4,
+      "infrastructure_index": 0.68,
+      "foreign_investor_density": 0.12,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "kerta_gosa",
+        "historical"
+      ],
+      "area_km2": 29.0,
+      "composite_risk": 30.4,
+      "investment_grade": "B",
+      "env_risk": 21.2,
+      "env_factors": {
+        "volcanic": 21.5,
+        "flood": 20,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 42.5,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 28.5,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 20,
+        "zoning_compliance": 30,
+        "dispute_density": 20
+      },
+      "admin_risk": 31.4,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 25.6,
+        "bureaucratic_complexity": 40,
+        "utility_access": 22.4
+      }
+    },
+    {
+      "id": "abiansemal",
+      "name": "Abiansemal",
+      "regency": "badung",
+      "lat": -8.53,
+      "lng": 115.22,
+      "population": 93200,
+      "elevation_m": 250,
+      "coastal": false,
+      "volcanic_proximity_km": 40,
+      "avg_land_price_usd_m2": 600,
+      "tourism_intensity": 0.3,
+      "infrastructure_index": 0.65,
+      "foreign_investor_density": 0.2,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rice_terraces",
+        "rural",
+        "artisan"
+      ],
+      "area_km2": 69.01,
+      "composite_risk": 31.2,
+      "investment_grade": "B",
+      "env_risk": 12.9,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 10,
+        "tsunami": 2,
+        "landslide": 20,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 39.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 20,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 37.4,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 28.0,
+        "bureaucratic_complexity": 30,
+        "utility_access": 24.5
+      }
+    },
+    {
+      "id": "buleleng",
+      "name": "Buleleng",
+      "regency": "buleleng",
+      "lat": -8.11,
+      "lng": 115.09,
+      "population": 133500,
+      "elevation_m": 20,
+      "coastal": true,
+      "volcanic_proximity_km": 35,
+      "avg_land_price_usd_m2": 400,
+      "tourism_intensity": 0.3,
+      "infrastructure_index": 0.72,
+      "foreign_investor_density": 0.1,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "singaraja",
+        "town_center",
+        "port",
+        "north_bali"
+      ],
+      "area_km2": 46.94,
+      "composite_risk": 31.2,
+      "investment_grade": "B",
+      "env_risk": 23.1,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 40,
+        "tsunami": 22.0,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 55,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 28.5,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 20,
+        "zoning_compliance": 30,
+        "dispute_density": 20
+      },
+      "admin_risk": 30.0,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 22.4,
+        "bureaucratic_complexity": 40,
+        "utility_access": 19.6
+      }
+    },
+    {
+      "id": "tegallalang",
+      "name": "Tegallalang",
+      "regency": "gianyar",
+      "lat": -8.43,
+      "lng": 115.29,
+      "population": 52400,
+      "elevation_m": 500,
+      "coastal": false,
+      "volcanic_proximity_km": 28,
+      "avg_land_price_usd_m2": 1800,
+      "tourism_intensity": 0.8,
+      "infrastructure_index": 0.55,
+      "foreign_investor_density": 0.5,
+      "dominant_zone": "tourism",
+      "dominant_title": "shm",
+      "tags": [
+        "rice_terraces",
+        "UNESCO",
+        "craft_village"
+      ],
+      "area_km2": 61.8,
+      "composite_risk": 32.7,
+      "investment_grade": "B",
+      "env_risk": 23.4,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 33.1,
+      "legal_factors": {
+        "ownership_pathway": 42,
+        "title_security": 25,
+        "zoning_compliance": 25,
+        "dispute_density": 40
+      },
+      "admin_risk": 34.3,
+      "admin_factors": {
+        "permit_complexity": 30,
+        "infrastructure_quality": 36.0,
+        "bureaucratic_complexity": 40,
+        "utility_access": 31.5
+      }
+    },
+    {
+      "id": "kuta_selatan",
+      "name": "Kuta Selatan",
+      "regency": "badung",
+      "lat": -8.79,
+      "lng": 115.16,
+      "population": 170500,
+      "elevation_m": 45,
+      "coastal": true,
+      "volcanic_proximity_km": 70,
+      "avg_land_price_usd_m2": 6800,
+      "tourism_intensity": 0.95,
+      "infrastructure_index": 0.88,
+      "foreign_investor_density": 0.92,
+      "dominant_zone": "tourism",
+      "dominant_title": "hgb",
+      "tags": [
+        "nusa_dua",
+        "jimbaran",
+        "uluwatu",
+        "luxury",
+        "cliff"
+      ],
+      "area_km2": 101.13,
+      "composite_risk": 32.8,
+      "investment_grade": "B",
+      "env_risk": 28.2,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 50,
+        "tsunami": 55,
+        "landslide": 3,
+        "coastal_erosion": 50
+      },
+      "seismic_risk": 44.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 41.6,
+      "legal_factors": {
+        "ownership_pathway": 50,
+        "title_security": 25,
+        "zoning_compliance": 35,
+        "dispute_density": 58
+      },
+      "admin_risk": 14.9,
+      "admin_factors": {
+        "permit_complexity": 20,
+        "infrastructure_quality": 9.6,
+        "bureaucratic_complexity": 22,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "jembrana",
+      "name": "Jembrana",
+      "regency": "jembrana",
+      "lat": -8.36,
+      "lng": 114.65,
+      "population": 32700,
+      "elevation_m": 20,
+      "coastal": true,
+      "volcanic_proximity_km": 82,
+      "avg_land_price_usd_m2": 100,
+      "tourism_intensity": 0.08,
+      "infrastructure_index": 0.5,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "west_bali_national_park"
+      ],
+      "area_km2": 46.0,
+      "composite_risk": 33.0,
+      "investment_grade": "B",
+      "env_risk": 21.1,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 40,
+        "tsunami": 38.5,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 40.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 45,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 30.5,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 28,
+        "zoning_compliance": 30,
+        "dispute_density": 20
+      },
+      "admin_risk": 44.2,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 40.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 35.0
+      }
+    },
+    {
+      "id": "banjarangkan",
+      "name": "Banjarangkan",
+      "regency": "klungkung",
+      "lat": -8.56,
+      "lng": 115.38,
+      "population": 34200,
+      "elevation_m": 100,
+      "coastal": false,
+      "volcanic_proximity_km": 35,
+      "avg_land_price_usd_m2": 350,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.5,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rural",
+        "traditional"
+      ],
+      "area_km2": 24.12,
+      "composite_risk": 33.2,
+      "investment_grade": "B",
+      "env_risk": 10.9,
+      "env_factors": {
+        "volcanic": 21.5,
+        "flood": 10,
+        "tsunami": 2,
+        "landslide": 3,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 48.0,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 40.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 35.0
+      }
+    },
+    {
+      "id": "bangli",
+      "name": "Bangli",
+      "regency": "bangli",
+      "lat": -8.45,
+      "lng": 115.35,
+      "population": 44200,
+      "elevation_m": 450,
+      "coastal": false,
+      "volcanic_proximity_km": 20,
+      "avg_land_price_usd_m2": 300,
+      "tourism_intensity": 0.25,
+      "infrastructure_index": 0.55,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "highland"
+      ],
+      "area_km2": 56.32,
+      "composite_risk": 33.3,
+      "investment_grade": "B",
+      "env_risk": 25.0,
+      "env_factors": {
+        "volcanic": 44.5,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 28.0,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 28,
+        "zoning_compliance": 20,
+        "dispute_density": 20
+      },
+      "admin_risk": 41.3,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 36.0,
+        "bureaucratic_complexity": 62,
+        "utility_access": 31.5
+      }
+    },
+    {
+      "id": "marga",
+      "name": "Marga",
+      "regency": "tabanan",
+      "lat": -8.47,
+      "lng": 115.15,
+      "population": 41200,
+      "elevation_m": 350,
+      "coastal": false,
+      "volcanic_proximity_km": 38,
+      "avg_land_price_usd_m2": 300,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.45,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "memorial",
+        "highland"
+      ],
+      "area_km2": 61.58,
+      "composite_risk": 34.5,
+      "investment_grade": "B",
+      "env_risk": 14.2,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 40,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 49.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 44.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 38.5
+      }
+    },
+    {
+      "id": "sukawati",
+      "name": "Sukawati",
+      "regency": "gianyar",
+      "lat": -8.59,
+      "lng": 115.29,
+      "population": 120800,
+      "elevation_m": 80,
+      "coastal": true,
+      "volcanic_proximity_km": 45,
+      "avg_land_price_usd_m2": 1600,
+      "tourism_intensity": 0.6,
+      "infrastructure_index": 0.72,
+      "foreign_investor_density": 0.35,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "art_market",
+        "beach",
+        "traditional"
+      ],
+      "area_km2": 55.02,
+      "composite_risk": 34.6,
+      "investment_grade": "B",
+      "env_risk": 29.7,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 40,
+        "tsunami": 55,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 47.5,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 40,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 31.2,
+      "legal_factors": {
+        "ownership_pathway": 45,
+        "title_security": 17,
+        "zoning_compliance": 30,
+        "dispute_density": 30
+      },
+      "admin_risk": 30.0,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 22.4,
+        "bureaucratic_complexity": 40,
+        "utility_access": 19.6
+      }
+    },
+    {
+      "id": "selemadeg",
+      "name": "Selemadeg",
+      "regency": "tabanan",
+      "lat": -8.51,
+      "lng": 115.03,
+      "population": 28900,
+      "elevation_m": 200,
+      "coastal": false,
+      "volcanic_proximity_km": 50,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.4,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "remote",
+        "farming"
+      ],
+      "area_km2": 65.57,
+      "composite_risk": 34.9,
+      "investment_grade": "B",
+      "env_risk": 14.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 10,
+        "tsunami": 2,
+        "landslide": 30,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 51.4,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 48.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 42.0
+      }
+    },
+    {
+      "id": "kuta_utara",
+      "name": "Kuta Utara",
+      "regency": "badung",
+      "lat": -8.65,
+      "lng": 115.16,
+      "population": 127800,
+      "elevation_m": 12,
+      "coastal": true,
+      "volcanic_proximity_km": 60,
+      "avg_land_price_usd_m2": 4200,
+      "tourism_intensity": 0.88,
+      "infrastructure_index": 0.9,
+      "foreign_investor_density": 0.85,
+      "dominant_zone": "tourism",
+      "dominant_title": "hgb",
+      "tags": [
+        "canggu",
+        "berawa",
+        "surf",
+        "digital_nomad"
+      ],
+      "area_km2": 33.86,
+      "composite_risk": 35.4,
+      "investment_grade": "B",
+      "env_risk": 29.8,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 85,
+        "tsunami": 22.0,
+        "landslide": 3,
+        "coastal_erosion": 40
+      },
+      "seismic_risk": 52.5,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 45,
+        "ground_acceleration": 70
+      },
+      "legal_risk": 41.6,
+      "legal_factors": {
+        "ownership_pathway": 50,
+        "title_security": 25,
+        "zoning_compliance": 35,
+        "dispute_density": 58
+      },
+      "admin_risk": 14.5,
+      "admin_factors": {
+        "permit_complexity": 20,
+        "infrastructure_quality": 8.0,
+        "bureaucratic_complexity": 22,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "petang",
+      "name": "Petang",
+      "regency": "badung",
+      "lat": -8.44,
+      "lng": 115.22,
+      "population": 32800,
+      "elevation_m": 650,
+      "coastal": false,
+      "volcanic_proximity_km": 30,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.45,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "highland",
+        "farming",
+        "remote"
+      ],
+      "area_km2": 115.0,
+      "composite_risk": 35.6,
+      "investment_grade": "B",
+      "env_risk": 20.4,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 35,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 36.2,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 45
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 50.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 54.0,
+        "bureaucratic_complexity": 42,
+        "utility_access": 43.5
+      }
+    },
+    {
+      "id": "negara",
+      "name": "Negara",
+      "regency": "jembrana",
+      "lat": -8.35,
+      "lng": 114.62,
+      "population": 79200,
+      "elevation_m": 15,
+      "coastal": true,
+      "volcanic_proximity_km": 85,
+      "avg_land_price_usd_m2": 150,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.6,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "java_ferry"
+      ],
+      "area_km2": 126.6,
+      "composite_risk": 35.6,
+      "investment_grade": "B",
+      "env_risk": 24.9,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 55,
+        "tsunami": 38.5,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 51.2,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 45,
+        "liquefaction": 45,
+        "ground_acceleration": 70
+      },
+      "legal_risk": 28.5,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 20,
+        "zoning_compliance": 30,
+        "dispute_density": 20
+      },
+      "admin_risk": 40.9,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 32.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 28.0
+      }
+    },
+    {
+      "id": "manggis",
+      "name": "Manggis",
+      "regency": "karangasem",
+      "lat": -8.5,
+      "lng": 115.52,
+      "population": 42100,
+      "elevation_m": 50,
+      "coastal": true,
+      "volcanic_proximity_km": 18,
+      "avg_land_price_usd_m2": 500,
+      "tourism_intensity": 0.55,
+      "infrastructure_index": 0.48,
+      "foreign_investor_density": 0.25,
+      "dominant_zone": "tourism",
+      "dominant_title": "shm",
+      "tags": [
+        "candidasa",
+        "diving",
+        "east_bali",
+        "quiet_tourism"
+      ],
+      "area_km2": 69.83,
+      "composite_risk": 35.9,
+      "investment_grade": "B",
+      "env_risk": 29.3,
+      "env_factors": {
+        "volcanic": 44.5,
+        "flood": 20,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 30.2,
+      "legal_factors": {
+        "ownership_pathway": 35,
+        "title_security": 28,
+        "zoning_compliance": 35,
+        "dispute_density": 20
+      },
+      "admin_risk": 42.4,
+      "admin_factors": {
+        "permit_complexity": 30,
+        "infrastructure_quality": 41.6,
+        "bureaucratic_complexity": 55,
+        "utility_access": 46.4
+      }
+    },
+    {
+      "id": "mendoyo",
+      "name": "Mendoyo",
+      "regency": "jembrana",
+      "lat": -8.38,
+      "lng": 114.72,
+      "population": 40500,
+      "elevation_m": 50,
+      "coastal": true,
+      "volcanic_proximity_km": 80,
+      "avg_land_price_usd_m2": 80,
+      "tourism_intensity": 0.05,
+      "infrastructure_index": 0.4,
+      "foreign_investor_density": 0.01,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rural",
+        "west_bali"
+      ],
+      "area_km2": 93.72,
+      "composite_risk": 36.7,
+      "investment_grade": "B",
+      "env_risk": 15.4,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 20,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 38.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 45,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 57.1,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 48.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 52.0
+      }
+    },
+    {
+      "id": "payangan",
+      "name": "Payangan",
+      "regency": "gianyar",
+      "lat": -8.4,
+      "lng": 115.25,
+      "population": 47500,
+      "elevation_m": 450,
+      "coastal": false,
+      "volcanic_proximity_km": 30,
+      "avg_land_price_usd_m2": 800,
+      "tourism_intensity": 0.45,
+      "infrastructure_index": 0.48,
+      "foreign_investor_density": 0.25,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "highland",
+        "rafting",
+        "retreat"
+      ],
+      "area_km2": 109.43,
+      "composite_risk": 36.9,
+      "investment_grade": "B",
+      "env_risk": 23.4,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 42.8,
+      "legal_factors": {
+        "ownership_pathway": 60,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 45.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 41.6,
+        "bureaucratic_complexity": 40,
+        "utility_access": 36.4
+      }
+    },
+    {
+      "id": "banjar",
+      "name": "Banjar",
+      "regency": "buleleng",
+      "lat": -8.17,
+      "lng": 115.02,
+      "population": 50200,
+      "elevation_m": 80,
+      "coastal": true,
+      "volcanic_proximity_km": 35,
+      "avg_land_price_usd_m2": 250,
+      "tourism_intensity": 0.25,
+      "infrastructure_index": 0.48,
+      "foreign_investor_density": 0.08,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "hot_springs",
+        "lovina_adjacent"
+      ],
+      "area_km2": 67.27,
+      "composite_risk": 37.0,
+      "investment_grade": "B",
+      "env_risk": 17.7,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 20,
+        "tsunami": 20,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 42.5,
+      "seismic_factors": {
+        "fault_proximity": 55,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 50.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 41.6,
+        "bureaucratic_complexity": 52,
+        "utility_access": 46.4
+      }
+    },
+    {
+      "id": "baturiti",
+      "name": "Baturiti",
+      "regency": "tabanan",
+      "lat": -8.37,
+      "lng": 115.17,
+      "population": 33900,
+      "elevation_m": 800,
+      "coastal": false,
+      "volcanic_proximity_km": 25,
+      "avg_land_price_usd_m2": 350,
+      "tourism_intensity": 0.35,
+      "infrastructure_index": 0.42,
+      "foreign_investor_density": 0.1,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "bedugul",
+        "lake_bratan",
+        "botanical_garden",
+        "highland"
+      ],
+      "area_km2": 56.34,
+      "composite_risk": 37.1,
+      "investment_grade": "B",
+      "env_risk": 23.4,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 38.2,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 45
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 51.2,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 56.4,
+        "bureaucratic_complexity": 40,
+        "utility_access": 45.6
+      }
+    },
+    {
+      "id": "susut",
+      "name": "Susut",
+      "regency": "bangli",
+      "lat": -8.49,
+      "lng": 115.34,
+      "population": 43800,
+      "elevation_m": 350,
+      "coastal": false,
+      "volcanic_proximity_km": 22,
+      "avg_land_price_usd_m2": 250,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.45,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rural",
+        "traditional"
+      ],
+      "area_km2": 49.3,
+      "composite_risk": 37.2,
+      "investment_grade": "B",
+      "env_risk": 19.7,
+      "env_factors": {
+        "volcanic": 44.5,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 20,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 52.2,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 44.0,
+        "bureaucratic_complexity": 62,
+        "utility_access": 38.5
+      }
+    },
+    {
+      "id": "denpasar_selatan",
+      "name": "Denpasar Selatan",
+      "regency": "denpasar",
+      "lat": -8.72,
+      "lng": 115.23,
+      "population": 298800,
+      "elevation_m": 15,
+      "coastal": true,
+      "volcanic_proximity_km": 62,
+      "avg_land_price_usd_m2": 3200,
+      "tourism_intensity": 0.85,
+      "infrastructure_index": 0.95,
+      "foreign_investor_density": 0.7,
+      "dominant_zone": "commercial",
+      "dominant_title": "shm",
+      "tags": [
+        "urban",
+        "sanur",
+        "bypass",
+        "hospital"
+      ],
+      "area_km2": 49.99,
+      "composite_risk": 37.3,
+      "investment_grade": "B",
+      "env_risk": 37.6,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 85,
+        "tsunami": 60.5,
+        "landslide": 3,
+        "coastal_erosion": 40
+      },
+      "seismic_risk": 54.5,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 45,
+        "ground_acceleration": 70
+      },
+      "legal_risk": 38.6,
+      "legal_factors": {
+        "ownership_pathway": 62,
+        "title_security": 15,
+        "zoning_compliance": 25,
+        "dispute_density": 50
+      },
+      "admin_risk": 13.8,
+      "admin_factors": {
+        "permit_complexity": 25,
+        "infrastructure_quality": 4.0,
+        "bureaucratic_complexity": 17,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "sukasada",
+      "name": "Sukasada",
+      "regency": "buleleng",
+      "lat": -8.2,
+      "lng": 115.12,
+      "population": 64100,
+      "elevation_m": 400,
+      "coastal": false,
+      "volcanic_proximity_km": 28,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.42,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "highland",
+        "lake_buyan",
+        "waterfalls"
+      ],
+      "area_km2": 92.53,
+      "composite_risk": 37.3,
+      "investment_grade": "B",
+      "env_risk": 21.1,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 40,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 50.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 46.4,
+        "bureaucratic_complexity": 52,
+        "utility_access": 40.6
+      }
+    },
+    {
+      "id": "tembuku",
+      "name": "Tembuku",
+      "regency": "bangli",
+      "lat": -8.47,
+      "lng": 115.38,
+      "population": 32600,
+      "elevation_m": 400,
+      "coastal": false,
+      "volcanic_proximity_km": 18,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.4,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rural",
+        "farming"
+      ],
+      "area_km2": 48.32,
+      "composite_risk": 37.5,
+      "investment_grade": "B",
+      "env_risk": 19.7,
+      "env_factors": {
+        "volcanic": 44.5,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 20,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 41.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 55,
+        "dispute_density": 20
+      },
+      "admin_risk": 53.9,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 48.0,
+        "bureaucratic_complexity": 62,
+        "utility_access": 42.0
+      }
+    },
+    {
+      "id": "seririt",
+      "name": "Seririt",
+      "regency": "buleleng",
+      "lat": -8.18,
+      "lng": 114.96,
+      "population": 48300,
+      "elevation_m": 30,
+      "coastal": true,
+      "volcanic_proximity_km": 40,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.45,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "north_coast",
+        "quiet"
+      ],
+      "area_km2": 69.18,
+      "composite_risk": 37.7,
+      "investment_grade": "B",
+      "env_risk": 17.7,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 20,
+        "tsunami": 20,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 55,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 51.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 44.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 48.5
+      }
+    },
+    {
+      "id": "tampaksiring",
+      "name": "Tampaksiring",
+      "regency": "gianyar",
+      "lat": -8.42,
+      "lng": 115.32,
+      "population": 39400,
+      "elevation_m": 550,
+      "coastal": false,
+      "volcanic_proximity_km": 25,
+      "avg_land_price_usd_m2": 700,
+      "tourism_intensity": 0.55,
+      "infrastructure_index": 0.5,
+      "foreign_investor_density": 0.2,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "tirta_empul",
+        "presidential_palace",
+        "sacred"
+      ],
+      "area_km2": 34.36,
+      "composite_risk": 37.8,
+      "investment_grade": "B",
+      "env_risk": 20.9,
+      "env_factors": {
+        "volcanic": 41.5,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 35,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.8,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 45.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 70,
+        "dispute_density": 20
+      },
+      "admin_risk": 50.5,
+      "admin_factors": {
+        "permit_complexity": 75,
+        "infrastructure_quality": 40.0,
+        "bureaucratic_complexity": 40,
+        "utility_access": 40.0
+      }
+    },
+    {
+      "id": "selemadeg_timur",
+      "name": "Selemadeg Timur",
+      "regency": "tabanan",
+      "lat": -8.55,
+      "lng": 115.06,
+      "population": 24600,
+      "elevation_m": 250,
+      "coastal": false,
+      "volcanic_proximity_km": 48,
+      "avg_land_price_usd_m2": 170,
+      "tourism_intensity": 0.08,
+      "infrastructure_index": 0.38,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "remote",
+        "farming"
+      ],
+      "area_km2": 52.35,
+      "composite_risk": 37.9,
+      "investment_grade": "B",
+      "env_risk": 15.9,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 10,
+        "tsunami": 2,
+        "landslide": 40,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 58.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 49.6,
+        "bureaucratic_complexity": 52,
+        "utility_access": 43.4
+      }
+    },
+    {
+      "id": "penebel",
+      "name": "Penebel",
+      "regency": "tabanan",
+      "lat": -8.42,
+      "lng": 115.13,
+      "population": 38600,
+      "elevation_m": 550,
+      "coastal": false,
+      "volcanic_proximity_km": 32,
+      "avg_land_price_usd_m2": 250,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.38,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "highland",
+        "jatiluwih",
+        "UNESCO"
+      ],
+      "area_km2": 89.3,
+      "composite_risk": 37.9,
+      "investment_grade": "B",
+      "env_risk": 16.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 38.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 59.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 49.6,
+        "bureaucratic_complexity": 52,
+        "utility_access": 48.4
+      }
+    },
+    {
+      "id": "kediri_tabanan",
+      "name": "Kediri",
+      "regency": "tabanan",
+      "lat": -8.58,
+      "lng": 115.1,
+      "population": 67800,
+      "elevation_m": 60,
+      "coastal": true,
+      "volcanic_proximity_km": 52,
+      "avg_land_price_usd_m2": 500,
+      "tourism_intensity": 0.4,
+      "infrastructure_index": 0.58,
+      "foreign_investor_density": 0.2,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "tanah_lot",
+        "coastal",
+        "temple"
+      ],
+      "area_km2": 94.56,
+      "composite_risk": 38.2,
+      "investment_grade": "B",
+      "env_risk": 24.4,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 40,
+        "tsunami": 55,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.2,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 75,
+        "dispute_density": 20
+      },
+      "admin_risk": 46.8,
+      "admin_factors": {
+        "permit_complexity": 75,
+        "infrastructure_quality": 33.6,
+        "bureaucratic_complexity": 40,
+        "utility_access": 29.4
+      }
+    },
+    {
+      "id": "nusa_penida",
+      "name": "Nusa Penida",
+      "regency": "klungkung",
+      "lat": -8.73,
+      "lng": 115.54,
+      "population": 57500,
+      "elevation_m": 120,
+      "coastal": true,
+      "volcanic_proximity_km": 55,
+      "avg_land_price_usd_m2": 800,
+      "tourism_intensity": 0.85,
+      "infrastructure_index": 0.3,
+      "foreign_investor_density": 0.45,
+      "dominant_zone": "tourism",
+      "dominant_title": "shm",
+      "tags": [
+        "island",
+        "cliff",
+        "diving",
+        "instagram",
+        "remote"
+      ],
+      "area_km2": 202.84,
+      "composite_risk": 38.4,
+      "investment_grade": "B",
+      "env_risk": 19.2,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 10,
+        "tsunami": 55,
+        "landslide": 10,
+        "coastal_erosion": 50
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 39.1,
+      "legal_factors": {
+        "ownership_pathway": 42,
+        "title_security": 35,
+        "zoning_compliance": 35,
+        "dispute_density": 45
+      },
+      "admin_risk": 58.8,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 76.0,
+        "bureaucratic_complexity": 40,
+        "utility_access": 59.0
+      }
+    },
+    {
+      "id": "pupuan",
+      "name": "Pupuan",
+      "regency": "tabanan",
+      "lat": -8.38,
+      "lng": 115.05,
+      "population": 26300,
+      "elevation_m": 600,
+      "coastal": false,
+      "volcanic_proximity_km": 40,
+      "avg_land_price_usd_m2": 150,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.3,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "coffee",
+        "remote",
+        "highland"
+      ],
+      "area_km2": 90.12,
+      "composite_risk": 38.5,
+      "investment_grade": "B",
+      "env_risk": 16.4,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 38.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 61.8,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 56.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 54.0
+      }
+    },
+    {
+      "id": "karangasem",
+      "name": "Karangasem",
+      "regency": "karangasem",
+      "lat": -8.45,
+      "lng": 115.6,
+      "population": 79400,
+      "elevation_m": 100,
+      "coastal": true,
+      "volcanic_proximity_km": 15,
+      "avg_land_price_usd_m2": 350,
+      "tourism_intensity": 0.3,
+      "infrastructure_index": 0.52,
+      "foreign_investor_density": 0.08,
+      "dominant_zone": "residential",
+      "dominant_title": "shm",
+      "tags": [
+        "town_center",
+        "traditional",
+        "agung_view"
+      ],
+      "area_km2": 90.28,
+      "composite_risk": 38.5,
+      "investment_grade": "B",
+      "env_risk": 36.6,
+      "env_factors": {
+        "volcanic": 72.5,
+        "flood": 10,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 30.5,
+      "legal_factors": {
+        "ownership_pathway": 40,
+        "title_security": 28,
+        "zoning_compliance": 30,
+        "dispute_density": 20
+      },
+      "admin_risk": 43.6,
+      "admin_factors": {
+        "permit_complexity": 35,
+        "infrastructure_quality": 38.4,
+        "bureaucratic_complexity": 67,
+        "utility_access": 33.6
+      }
+    },
+    {
+      "id": "kerambitan",
+      "name": "Kerambitan",
+      "regency": "tabanan",
+      "lat": -8.6,
+      "lng": 115.07,
+      "population": 37400,
+      "elevation_m": 40,
+      "coastal": true,
+      "volcanic_proximity_km": 55,
+      "avg_land_price_usd_m2": 300,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.48,
+      "foreign_investor_density": 0.08,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rural",
+        "rice_fields"
+      ],
+      "area_km2": 42.43,
+      "composite_risk": 38.9,
+      "investment_grade": "B",
+      "env_risk": 24.4,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 40,
+        "tsunami": 55,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 42.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 50.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 41.6,
+        "bureaucratic_complexity": 52,
+        "utility_access": 46.4
+      }
+    },
+    {
+      "id": "pekutatan",
+      "name": "Pekutatan",
+      "regency": "jembrana",
+      "lat": -8.44,
+      "lng": 114.88,
+      "population": 29100,
+      "elevation_m": 100,
+      "coastal": true,
+      "volcanic_proximity_km": 65,
+      "avg_land_price_usd_m2": 200,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.08,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "medewi",
+        "surf",
+        "west_coast"
+      ],
+      "area_km2": 94.8,
+      "composite_risk": 39.0,
+      "investment_grade": "B",
+      "env_risk": 12.9,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 10,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 64.8,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 52.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 55.5
+      }
+    },
+    {
+      "id": "selemadeg_barat",
+      "name": "Selemadeg Barat",
+      "regency": "tabanan",
+      "lat": -8.48,
+      "lng": 114.98,
+      "population": 25100,
+      "elevation_m": 300,
+      "coastal": true,
+      "volcanic_proximity_km": 55,
+      "avg_land_price_usd_m2": 180,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "west_coast",
+        "remote",
+        "surf"
+      ],
+      "area_km2": 78.5,
+      "composite_risk": 39.7,
+      "investment_grade": "B",
+      "env_risk": 17.8,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 3,
+        "tsunami": 55,
+        "landslide": 20,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 61.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 52.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 55.5
+      }
+    },
+    {
+      "id": "melaya",
+      "name": "Melaya",
+      "regency": "jembrana",
+      "lat": -8.3,
+      "lng": 114.5,
+      "population": 32100,
+      "elevation_m": 30,
+      "coastal": true,
+      "volcanic_proximity_km": 90,
+      "avg_land_price_usd_m2": 70,
+      "tourism_intensity": 0.05,
+      "infrastructure_index": 0.38,
+      "foreign_investor_density": 0.01,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "java_strait",
+        "mangrove",
+        "remote"
+      ],
+      "area_km2": 79.32,
+      "composite_risk": 39.7,
+      "investment_grade": "B",
+      "env_risk": 15.4,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 20,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 40.8,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 45,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 63.8,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 49.6,
+        "bureaucratic_complexity": 67,
+        "utility_access": 53.4
+      }
+    },
+    {
+      "id": "sawan",
+      "name": "Sawan",
+      "regency": "buleleng",
+      "lat": -8.15,
+      "lng": 115.15,
+      "population": 47800,
+      "elevation_m": 300,
+      "coastal": false,
+      "volcanic_proximity_km": 25,
+      "avg_land_price_usd_m2": 150,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.38,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "gamelan",
+        "traditional"
+      ],
+      "area_km2": 77.24,
+      "composite_risk": 39.7,
+      "investment_grade": "B",
+      "env_risk": 18.1,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 20,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 63,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 58.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 49.6,
+        "bureaucratic_complexity": 52,
+        "utility_access": 43.4
+      }
+    },
+    {
+      "id": "kubutambahan",
+      "name": "Kubutambahan",
+      "regency": "buleleng",
+      "lat": -8.12,
+      "lng": 115.2,
+      "population": 46200,
+      "elevation_m": 50,
+      "coastal": true,
+      "volcanic_proximity_km": 22,
+      "avg_land_price_usd_m2": 180,
+      "tourism_intensity": 0.12,
+      "infrastructure_index": 0.42,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "north_coast",
+        "traditional"
+      ],
+      "area_km2": 74.36,
+      "composite_risk": 40.0,
+      "investment_grade": "C",
+      "env_risk": 24.7,
+      "env_factors": {
+        "volcanic": 40.0,
+        "flood": 20,
+        "tsunami": 20,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 63,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 52.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 46.4,
+        "bureaucratic_complexity": 52,
+        "utility_access": 50.6
+      }
+    },
+    {
+      "id": "kuta",
+      "name": "Kuta",
+      "regency": "badung",
+      "lat": -8.723,
+      "lng": 115.175,
+      "population": 93700,
+      "elevation_m": 8,
+      "coastal": true,
+      "volcanic_proximity_km": 65,
+      "avg_land_price_usd_m2": 5500,
+      "tourism_intensity": 0.98,
+      "infrastructure_index": 0.92,
+      "foreign_investor_density": 0.9,
+      "dominant_zone": "tourism",
+      "dominant_title": "hgb",
+      "tags": [
+        "airport",
+        "beach",
+        "nightlife",
+        "tourist_hotspot"
+      ],
+      "area_km2": 17.52,
+      "composite_risk": 40.3,
+      "investment_grade": "C",
+      "env_risk": 44.8,
+      "env_factors": {
+        "volcanic": 5.0,
+        "flood": 100,
+        "tsunami": 71.5,
+        "landslide": 3,
+        "coastal_erosion": 65
+      },
+      "seismic_risk": 54.5,
+      "seismic_factors": {
+        "fault_proximity": 53,
+        "historical_frequency": 50,
+        "liquefaction": 45,
+        "ground_acceleration": 70
+      },
+      "legal_risk": 41.6,
+      "legal_factors": {
+        "ownership_pathway": 50,
+        "title_security": 25,
+        "zoning_compliance": 35,
+        "dispute_density": 58
+      },
+      "admin_risk": 14.1,
+      "admin_factors": {
+        "permit_complexity": 20,
+        "infrastructure_quality": 6.4,
+        "bureaucratic_complexity": 22,
+        "utility_access": 5
+      }
+    },
+    {
+      "id": "dawan",
+      "name": "Dawan",
+      "regency": "klungkung",
+      "lat": -8.52,
+      "lng": 115.45,
+      "population": 36100,
+      "elevation_m": 70,
+      "coastal": true,
+      "volcanic_proximity_km": 30,
+      "avg_land_price_usd_m2": 300,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.45,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "east_coast",
+        "traditional"
+      ],
+      "area_km2": 24.54,
+      "composite_risk": 40.7,
+      "investment_grade": "C",
+      "env_risk": 29.3,
+      "env_factors": {
+        "volcanic": 44.5,
+        "flood": 20,
+        "tsunami": 35,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 42.5,
+      "seismic_factors": {
+        "fault_proximity": 45,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 43.8,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 28,
+        "zoning_compliance": 65,
+        "dispute_density": 20
+      },
+      "admin_risk": 51.7,
+      "admin_factors": {
+        "permit_complexity": 60,
+        "infrastructure_quality": 44.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 48.5
+      }
+    },
+    {
+      "id": "gerokgak",
+      "name": "Gerokgak",
+      "regency": "buleleng",
+      "lat": -8.15,
+      "lng": 114.85,
+      "population": 58600,
+      "elevation_m": 30,
+      "coastal": true,
+      "volcanic_proximity_km": 50,
+      "avg_land_price_usd_m2": 100,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.3,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "pemuteran",
+        "menjangan",
+        "diving",
+        "national_park"
+      ],
+      "area_km2": 262.89,
+      "composite_risk": 41.1,
+      "investment_grade": "C",
+      "env_risk": 17.7,
+      "env_factors": {
+        "volcanic": 20.0,
+        "flood": 20,
+        "tsunami": 20,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 44.5,
+      "seismic_factors": {
+        "fault_proximity": 55,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 62.8,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 56.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 59.0
+      }
+    },
+    {
+      "id": "tejakula",
+      "name": "Tejakula",
+      "regency": "buleleng",
+      "lat": -8.12,
+      "lng": 115.35,
+      "population": 50600,
+      "elevation_m": 40,
+      "coastal": true,
+      "volcanic_proximity_km": 20,
+      "avg_land_price_usd_m2": 150,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "north_east",
+        "diving",
+        "quiet"
+      ],
+      "area_km2": 96.83,
+      "composite_risk": 43.5,
+      "investment_grade": "C",
+      "env_risk": 25.2,
+      "env_factors": {
+        "volcanic": 41.5,
+        "flood": 20,
+        "tsunami": 20,
+        "landslide": 3,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 46.5,
+      "seismic_factors": {
+        "fault_proximity": 63,
+        "historical_frequency": 50,
+        "liquefaction": 10,
+        "ground_acceleration": 63
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 61.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 52.0,
+        "bureaucratic_complexity": 52,
+        "utility_access": 55.5
+      }
+    },
+    {
+      "id": "sidemen",
+      "name": "Sidemen",
+      "regency": "karangasem",
+      "lat": -8.46,
+      "lng": 115.47,
+      "population": 31200,
+      "elevation_m": 400,
+      "coastal": false,
+      "volcanic_proximity_km": 12,
+      "avg_land_price_usd_m2": 350,
+      "tourism_intensity": 0.5,
+      "infrastructure_index": 0.38,
+      "foreign_investor_density": 0.15,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "rice_terraces",
+        "weaving",
+        "scenic",
+        "emerging"
+      ],
+      "area_km2": 55.12,
+      "composite_risk": 45.2,
+      "investment_grade": "C",
+      "env_risk": 34.8,
+      "env_factors": {
+        "volcanic": 72.5,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 46.2,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 58.8,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 49.6,
+        "bureaucratic_complexity": 55,
+        "utility_access": 43.4
+      }
+    },
+    {
+      "id": "bebandem",
+      "name": "Bebandem",
+      "regency": "karangasem",
+      "lat": -8.43,
+      "lng": 115.55,
+      "population": 44300,
+      "elevation_m": 350,
+      "coastal": false,
+      "volcanic_proximity_km": 10,
+      "avg_land_price_usd_m2": 150,
+      "tourism_intensity": 0.1,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.02,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "volcanic_slope",
+        "salt_farming",
+        "remote"
+      ],
+      "area_km2": 58.47,
+      "composite_risk": 46.5,
+      "investment_grade": "C",
+      "env_risk": 36.3,
+      "env_factors": {
+        "volcanic": 77.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 55,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 46.2,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 62.9,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 52.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 45.5
+      }
+    },
+    {
+      "id": "kintamani",
+      "name": "Kintamani",
+      "regency": "bangli",
+      "lat": -8.3,
+      "lng": 115.37,
+      "population": 91300,
+      "elevation_m": 1200,
+      "coastal": false,
+      "volcanic_proximity_km": 5,
+      "avg_land_price_usd_m2": 250,
+      "tourism_intensity": 0.65,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.1,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "mount_batur",
+        "lake_batur",
+        "volcano",
+        "caldera",
+        "highland"
+      ],
+      "area_km2": 366.92,
+      "composite_risk": 47.6,
+      "investment_grade": "C",
+      "env_risk": 45.6,
+      "env_factors": {
+        "volcanic": 97.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 70,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 40.0,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 50,
+        "liquefaction": 5,
+        "ground_acceleration": 45
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 62.1,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 62.0,
+        "bureaucratic_complexity": 50,
+        "utility_access": 50.5
+      }
+    },
+    {
+      "id": "kubu",
+      "name": "Kubu",
+      "regency": "karangasem",
+      "lat": -8.33,
+      "lng": 115.58,
+      "population": 65200,
+      "elevation_m": 200,
+      "coastal": true,
+      "volcanic_proximity_km": 10,
+      "avg_land_price_usd_m2": 100,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.3,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "tulamben",
+        "diving",
+        "volcanic_coast",
+        "lahar_path"
+      ],
+      "area_km2": 127.78,
+      "composite_risk": 48.3,
+      "investment_grade": "C",
+      "env_risk": 37.6,
+      "env_factors": {
+        "volcanic": 72.5,
+        "flood": 10,
+        "tsunami": 35,
+        "landslide": 10,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 46.2,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 66.5,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 56.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 59.0
+      }
+    },
+    {
+      "id": "rendang",
+      "name": "Rendang",
+      "regency": "karangasem",
+      "lat": -8.39,
+      "lng": 115.45,
+      "population": 34800,
+      "elevation_m": 600,
+      "coastal": false,
+      "volcanic_proximity_km": 7,
+      "avg_land_price_usd_m2": 180,
+      "tourism_intensity": 0.2,
+      "infrastructure_index": 0.35,
+      "foreign_investor_density": 0.05,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "mount_agung_slope",
+        "volcanic_danger_zone"
+      ],
+      "area_km2": 88.0,
+      "composite_risk": 49.2,
+      "investment_grade": "C",
+      "env_risk": 45.6,
+      "env_factors": {
+        "volcanic": 97.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 70,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 45.0,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 5,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 63.9,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 52.0,
+        "bureaucratic_complexity": 67,
+        "utility_access": 50.5
+      }
+    },
+    {
+      "id": "selat",
+      "name": "Selat",
+      "regency": "karangasem",
+      "lat": -8.41,
+      "lng": 115.52,
+      "population": 37600,
+      "elevation_m": 500,
+      "coastal": false,
+      "volcanic_proximity_km": 8,
+      "avg_land_price_usd_m2": 120,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.32,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "mount_agung_slope",
+        "volcanic_zone",
+        "remote"
+      ],
+      "area_km2": 80.51,
+      "composite_risk": 49.5,
+      "investment_grade": "C",
+      "env_risk": 45.6,
+      "env_factors": {
+        "volcanic": 97.0,
+        "flood": 3,
+        "tsunami": 2,
+        "landslide": 70,
+        "coastal_erosion": 0
+      },
+      "seismic_risk": 46.2,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 46.0,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 55,
+        "dispute_density": 35
+      },
+      "admin_risk": 63.9,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 54.4,
+        "bureaucratic_complexity": 67,
+        "utility_access": 47.6
+      }
+    },
+    {
+      "id": "abang",
+      "name": "Abang",
+      "regency": "karangasem",
+      "lat": -8.36,
+      "lng": 115.55,
+      "population": 48700,
+      "elevation_m": 300,
+      "coastal": true,
+      "volcanic_proximity_km": 8,
+      "avg_land_price_usd_m2": 80,
+      "tourism_intensity": 0.15,
+      "infrastructure_index": 0.28,
+      "foreign_investor_density": 0.03,
+      "dominant_zone": "agricultural",
+      "dominant_title": "shm",
+      "tags": [
+        "volcanic_slope",
+        "remote",
+        "lahar_path"
+      ],
+      "area_km2": 100.32,
+      "composite_risk": 52.8,
+      "investment_grade": "C",
+      "env_risk": 49.6,
+      "env_factors": {
+        "volcanic": 92.5,
+        "flood": 3,
+        "tsunami": 35,
+        "landslide": 55,
+        "coastal_erosion": 25
+      },
+      "seismic_risk": 46.2,
+      "seismic_factors": {
+        "fault_proximity": 60,
+        "historical_frequency": 60,
+        "liquefaction": 10,
+        "ground_acceleration": 55
+      },
+      "legal_risk": 48.5,
+      "legal_factors": {
+        "ownership_pathway": 55,
+        "title_security": 35,
+        "zoning_compliance": 65,
+        "dispute_density": 35
+      },
+      "admin_risk": 71.0,
+      "admin_factors": {
+        "permit_complexity": 80,
+        "infrastructure_quality": 72.6,
+        "bureaucratic_complexity": 67,
+        "utility_access": 60.4
+      }
+    }
+  ],
+  "generated_at": "2026-03-07"
+}
