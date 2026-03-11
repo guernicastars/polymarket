@@ -12,6 +12,7 @@ import {
   GitBranch,
   Atom,
   ShieldAlert,
+  MapPin,
 } from "lucide-react";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ const navItems = [
   { href: "/causal", label: "Causal", icon: GitBranch },
   { href: "/backtest", label: "Backtest", icon: Target },
   { href: "/embedding-explorer.html", label: "Embeddings", icon: Atom },
+  { href: "/bali-risk", label: "Bali Risk", icon: MapPin },
 ];
 
 export default function RootLayout({
