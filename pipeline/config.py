@@ -35,7 +35,7 @@ ORDERBOOK_INTERVAL = 60          # 1 minute
 # Writer / buffer settings
 # ---------------------------------------------------------------------------
 BUFFER_FLUSH_SIZE = 10_000       # Flush after this many rows
-BUFFER_FLUSH_INTERVAL = 10.0     # Flush after this many seconds
+BUFFER_FLUSH_INTERVAL = 30.0     # Flush after this many seconds (30s to reduce part count)
 WRITER_MAX_RETRIES = 3
 WRITER_BASE_BACKOFF = 1.0        # Seconds, doubles per retry
 
@@ -194,6 +194,16 @@ HEALTH_CHECK_PORT = int(os.environ.get("HEALTH_CHECK_PORT", "8080"))
 # Logging
 # ---------------------------------------------------------------------------
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+# ---------------------------------------------------------------------------
+# Feature flags for optional jobs (disable on memory-constrained VMs)
+# ---------------------------------------------------------------------------
+ENABLE_NEWS_TRACKER = os.environ.get("ENABLE_NEWS_TRACKER", "true").lower() == "true"
+ENABLE_MICROSTRUCTURE = os.environ.get("ENABLE_MICROSTRUCTURE", "true").lower() == "true"
+ENABLE_GNN = os.environ.get("ENABLE_GNN", "true").lower() == "true"
+ENABLE_BAYESIAN = os.environ.get("ENABLE_BAYESIAN", "true").lower() == "true"
+ENABLE_EXECUTION = os.environ.get("ENABLE_EXECUTION", "true").lower() == "true"
+ENABLE_SIMILARITY = os.environ.get("ENABLE_SIMILARITY", "true").lower() == "true"
 
 
 def setup_logging() -> None:

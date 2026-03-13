@@ -15,6 +15,12 @@ from pipeline.config import (
     ARBITRAGE_SCAN_INTERVAL,
     BAYESIAN_CALIBRATION_INTERVAL,
     BAYESIAN_UPDATE_INTERVAL,
+    ENABLE_BAYESIAN,
+    ENABLE_EXECUTION,
+    ENABLE_GNN,
+    ENABLE_MICROSTRUCTURE,
+    ENABLE_NEWS_TRACKER,
+    ENABLE_SIMILARITY,
     EXECUTION_INTERVAL,
     FORCE_INCLUDE_TOKEN_IDS,
     HEALTH_CHECK_PORT,
@@ -193,73 +199,79 @@ class PipelineScheduler:
             name="Insider Detector",
         )
 
-        # --- Phase 4 jobs ---
-        self._scheduler.add_job(
-            self._job_news_tracker,
-            "interval",
-            seconds=NEWS_TRACKER_INTERVAL,
-            id="news_tracker",
-            name="News Tracker",
-        )
-        self._scheduler.add_job(
-            self._job_microstructure,
-            "interval",
-            seconds=MICROSTRUCTURE_INTERVAL,
-            id="microstructure",
-            name="Microstructure Engine",
-        )
-        self._scheduler.add_job(
-            self._job_similarity_scorer,
-            "interval",
-            seconds=SIMILARITY_SCORER_INTERVAL,
-            id="similarity_scorer",
-            name="Similarity Scorer",
-        )
+        # --- Phase 4 jobs (optional) ---
+        if ENABLE_NEWS_TRACKER:
+            self._scheduler.add_job(
+                self._job_news_tracker,
+                "interval",
+                seconds=NEWS_TRACKER_INTERVAL,
+                id="news_tracker",
+                name="News Tracker",
+            )
+        if ENABLE_MICROSTRUCTURE:
+            self._scheduler.add_job(
+                self._job_microstructure,
+                "interval",
+                seconds=MICROSTRUCTURE_INTERVAL,
+                id="microstructure",
+                name="Microstructure Engine",
+            )
+        if ENABLE_SIMILARITY:
+            self._scheduler.add_job(
+                self._job_similarity_scorer,
+                "interval",
+                seconds=SIMILARITY_SCORER_INTERVAL,
+                id="similarity_scorer",
+                name="Similarity Scorer",
+            )
 
-        # --- Phase 5: Execution ---
-        self._scheduler.add_job(
-            self._job_execution_cycle,
-            "interval",
-            seconds=EXECUTION_INTERVAL,
-            id="execution_cycle",
-            name="Execution Cycle",
-        )
+        # --- Phase 5: Execution (optional) ---
+        if ENABLE_EXECUTION:
+            self._scheduler.add_job(
+                self._job_execution_cycle,
+                "interval",
+                seconds=EXECUTION_INTERVAL,
+                id="execution_cycle",
+                name="Execution Cycle",
+            )
 
-        # --- Phase 6: Online GNN + Bayesian ---
-        self._scheduler.add_job(
-            self._job_online_gnn_predict,
-            "interval",
-            seconds=ONLINE_GNN_PREDICT_INTERVAL,
-            id="online_gnn_predict",
-            name="Online GNN Predict",
-        )
-        self._scheduler.add_job(
-            self._job_online_gnn_update,
-            "interval",
-            seconds=ONLINE_GNN_UPDATE_INTERVAL,
-            id="online_gnn_update",
-            name="Online GNN Update",
-        )
-        self._scheduler.add_job(
-            self._job_bayesian_update,
-            "interval",
-            seconds=BAYESIAN_UPDATE_INTERVAL,
-            id="bayesian_update",
-            name="Bayesian Update",
-        )
-        self._scheduler.add_job(
-            self._job_calibration_flush,
-            "interval",
-            seconds=BAYESIAN_CALIBRATION_INTERVAL,
-            id="calibration_flush",
-            name="Calibration Flush",
-        )
+        # --- Phase 6: Online GNN + Bayesian (optional) ---
+        if ENABLE_GNN:
+            self._scheduler.add_job(
+                self._job_online_gnn_predict,
+                "interval",
+                seconds=ONLINE_GNN_PREDICT_INTERVAL,
+                id="online_gnn_predict",
+                name="Online GNN Predict",
+            )
+            self._scheduler.add_job(
+                self._job_online_gnn_update,
+                "interval",
+                seconds=ONLINE_GNN_UPDATE_INTERVAL,
+                id="online_gnn_update",
+                name="Online GNN Update",
+            )
+        if ENABLE_BAYESIAN:
+            self._scheduler.add_job(
+                self._job_bayesian_update,
+                "interval",
+                seconds=BAYESIAN_UPDATE_INTERVAL,
+                id="bayesian_update",
+                name="Bayesian Update",
+            )
+            self._scheduler.add_job(
+                self._job_calibration_flush,
+                "interval",
+                seconds=BAYESIAN_CALIBRATION_INTERVAL,
+                id="calibration_flush",
+                name="Calibration Flush",
+            )
 
         # Periodic buffer flush for stale data
         self._scheduler.add_job(
             self._writer.flush_stale,
             "interval",
-            seconds=5,
+            seconds=15,
             id="buffer_flush",
             name="Buffer Flush",
         )
