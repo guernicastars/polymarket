@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "marl-epistemic"
+version = "0.1.0"
+description = "Epistemic Diversity and Meta-Learning in Multi-Agent Systems"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Eugene Shcherbinin"},
+]
+
+dependencies = [
+    "torch>=2.1.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "gymnasium>=0.29.0",
+    "pettingzoo>=1.24.0",
+    "wandb>=0.16.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.13.0",
+    "pyyaml>=6.0",
+    "scipy>=1.11.0",
+    "scikit-learn>=1.3.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

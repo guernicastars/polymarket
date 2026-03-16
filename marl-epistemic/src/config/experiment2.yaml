@@ -1,0 +1,47 @@
+# Experiment 2: Multi-Agent Prediction Market
+experiment:
+  name: "prediction_market_keynesian"
+  description: "Show Keynesian evidence weighting outperforms simple ensembling"
+  n_seeds: 5
+
+market:
+  n_features: 20
+  n_events: 2000
+  high_evidence_fraction: 0.6
+  noise_scale: 0.1
+
+agents:
+  architectures: ["linear", "mlp", "cnn", "attention"]
+  hidden_dim: 128
+  embed_dim: 32
+  n_channels: 32
+  dropout_rate: 0.1
+  mc_dropout_samples: 20
+
+training:
+  n_epochs: 100
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.0001
+
+keynesian:
+  mu: 0.1
+  mu_schedule: "warmup"
+  mu_warmup_steps: 500
+  evidence_method: "mc_dropout"
+
+ensemble:
+  methods:
+    - "best_single"
+    - "simple_average"
+    - "accuracy_weighted"
+    - "keynesian_weighted"
+    - "evidence_lola"
+
+logging:
+  wandb_project: "marl-epistemic"
+  log_interval: 10
+
+analysis:
+  ece_bins: 10
+  blind_spot_threshold: 0.1
