@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MERIDIAN — Bloomsbury Technology</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#07080C;--bg2:#0D0F14;--bg3:#13151C;--glass:rgba(13,15,20,0.85);
+--text:#E8E6E1;--text2:#8A8880;--text3:#5C5A55;
+--gold:#D4A843;--gold-b:#F0C850;--gold-d:#8B7534;--gold-g:rgba(212,168,67,0.15);
+--red:#C0392B;--red-g:rgba(192,57,43,0.3);--amber:#E67E22;
+--green:#27AE60;--cyan:#4ECDC4;--cyan-g:rgba(78,205,196,0.2);
+--civ-w:#4A90D9;--civ-o:#8E44AD;--civ-i:#27AE60;--civ-s:#C0392B;
+--civ-h:#E67E22;--civ-l:#F39C12;--civ-a:#1ABC9C;
+--mono:'JetBrains Mono',monospace;--serif:'Cormorant Garamond',serif;--sans:'Outfit',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.008) 2px,rgba(255,255,255,0.008) 3px);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+#root{position:relative;z-index:1}
+
+/* Watermark */
+.watermark{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+.watermark::before{content:'BLOOMSBURY TECHNOLOGY — CONFIDENTIAL';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-family:var(--mono);font-size:8px;letter-spacing:6px;color:rgba(212,168,67,0.025);white-space:nowrap;text-transform:uppercase}
+
+/* Boot */
+.boot-screen{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;transition:opacity 0.6s ease}
+.boot-screen.done{opacity:0;pointer-events:none}
+.boot-text{font-family:var(--mono);font-size:13px;color:var(--green);max-width:600px;width:100%}
+.boot-line{opacity:0;transform:translateY(4px);animation:bootIn 0.3s ease forwards}
+@keyframes bootIn{to{opacity:1;transform:translateY(0)}}
+
+/* Nav */
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;padding:0 32px;height:52px;background:rgba(7,8,12,0.92);backdrop-filter:blur(24px);border-bottom:1px solid rgba(212,168,67,0.08)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:500;color:var(--gold);letter-spacing:3px;margin-right:auto}
+.nav-diamond{color:var(--gold);font-size:16px}
+.nav-tabs{display:flex;gap:0}
+.nav-tab{padding:16px 20px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);background:none;border:none;cursor:pointer;position:relative;transition:color 0.3s}
+.nav-tab:hover{color:var(--text2)}
+.nav-tab.active{color:var(--gold)}
+.nav-tab.active::after{content:'';position:absolute;bottom:0;left:20px;right:20px;height:1px;background:var(--gold)}
+.nav-clock{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:1px;margin-left:auto}
+
+/* Section */
+.section{min-height:100vh;padding:72px 40px 60px;position:relative}
+.section-label{font-family:var(--mono);font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-d);margin-bottom:8px}
+.section-title{font-family:var(--serif);font-size:42px;font-weight:600;color:var(--text);line-height:1.15;margin-bottom:6px}
+.section-sub{font-family:var(--sans);font-size:13px;color:var(--text3);max-width:640px;margin-bottom:40px}
+
+/* Glass */
+.glass{background:var(--glass);border:1px solid rgba(212,168,67,0.08);border-radius:10px;backdrop-filter:blur(16px)}
+.glass:hover{border-color:rgba(212,168,67,0.18)}
+
+/* Fade */
+.fi{opacity:0;transform:translateY(20px);transition:opacity 0.7s ease,transform 0.7s ease}
+.fi.vis{opacity:1;transform:translateY(0)}
+
+/* Pulse */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 8px var(--red-g)}50%{box-shadow:0 0 24px var(--red-g)}}
+.pulse{animation:pulse 2s ease infinite}
+
+/* Grid helpers */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.flex{display:flex}.fc{flex-direction:column}.ai-c{align-items:center}.jc-sb{justify-content:space-between}.jc-c{justify-content:center}
+.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.gap-20{gap:20px}.gap-24{gap:24px}.gap-32{gap:32px}
+.w-full{width:100%}.mx-auto{margin:0 auto}.max-w-1200{max-width:1200px}
+.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-24{margin-bottom:24px}.mb-32{margin-bottom:32px}.mb-40{margin-bottom:40px}.mb-48{margin-bottom:48px}
+.p-16{padding:16px}.p-20{padding:20px}.p-24{padding:24px}.p-28{padding:28px}
+.text-center{text-align:center}.text-right{text-align:right}
+.mono{font-family:var(--mono)}.serif{font-family:var(--serif)}
+.text-gold{color:var(--gold)}.text-red{color:var(--red)}.text-green{color:var(--green)}.text-cyan{color:var(--cyan)}.text-amber{color:var(--amber)}
+.fs-9{font-size:9px}.fs-10{font-size:10px}.fs-11{font-size:11px}.fs-12{font-size:12px}.fs-13{font-size:13px}.fs-14{font-size:14px}
+.ls-1{letter-spacing:1px}.ls-2{letter-spacing:2px}.ls-3{letter-spacing:3px}.ls-4{letter-spacing:4px}
+.upper{text-transform:uppercase}.fw-500{font-weight:500}.fw-600{font-weight:600}.fw-700{font-weight:700}
+.tab-nums{font-variant-numeric:tabular-nums}
+.pointer{cursor:pointer}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Hypothesis card */
+.hyp-card{background:var(--bg2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:20px 24px;cursor:pointer;transition:all 0.3s}
+.hyp-card:hover{border-color:rgba(212,168,67,0.15);transform:translateY(-1px)}
+.hyp-card.expanded{border-color:rgba(212,168,67,0.25)}
+.hyp-prob{font-family:var(--mono);font-size:36px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+
+/* Anomaly row */
+.anomaly-row{display:grid;grid-template-columns:70px 1fr 120px 1fr 80px 1fr;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px;transition:background 0.2s}
+.anomaly-row:hover{background:rgba(212,168,67,0.03)}
+.z-badge{font-family:var(--mono);font-weight:600;padding:2px 8px;border-radius:4px;font-size:11px;display:inline-block}
+
+/* Silence row */
+.silence-row{display:grid;grid-template-columns:1.2fr 120px 80px 80px 80px 1fr;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+
+/* Sovereign row */
+.sov-row{display:grid;grid-template-columns:120px 100px 60px 100px 80px 60px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+
+/* Chokepoint card */
+.choke-card{background:var(--bg2);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:20px;position:relative;overflow:hidden}
+.choke-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+
+/* Convergence card */
+.conv-card{background:var(--bg2);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:28px;position:relative;overflow:hidden}
+.conv-card.high{border-color:rgba(192,57,43,0.3);box-shadow:0 0 30px rgba(192,57,43,0.1)}
+.conv-card.med{border-color:rgba(212,168,67,0.25);box-shadow:0 0 20px rgba(212,168,67,0.08)}
+
+/* Action log */
+.action-row{display:grid;grid-template-columns:90px 1fr 140px 100px 80px 80px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+.status-badge{padding:2px 10px;border-radius:10px;font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase}
+
+/* Evidence feed */
+.evidence-item{padding:12px 16px;border-left:2px solid var(--bg3);margin-bottom:2px;transition:border-color 0.3s}
+.evidence-item:hover{border-left-color:var(--gold-d)}
+
+/* Sparkline mini */
+.spark-mini{display:flex;align-items:end;gap:1px;height:28px}
+.spark-bar{flex:1;border-radius:1px 1px 0 0;min-width:2px;transition:height 0.3s}
+
+/* Narrative timeline */
+.narr-row{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.narr-label{width:140px;font-size:11px;color:var(--text2);flex-shrink:0}
+.narr-bar{flex:1;height:24px;display:flex;border-radius:4px;overflow:hidden}
+.narr-seg{transition:width 0.5s ease}
+
+/* Prediction comparison */
+.pred-row{display:grid;grid-template-columns:1.2fr 100px 100px 80px 60px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+
+/* Footer */
+.footer{padding:60px 40px 32px;border-top:1px solid rgba(255,255,255,0.03);text-align:center}
+
+/* Responsive */
+@media(max-width:1280px){.g3{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.section{padding:60px 20px 40px}.anomaly-row,.silence-row,.sov-row,.action-row,.pred-row{grid-template-columns:1fr;gap:4px}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:rgba(212,168,67,0.15);border-radius:3px}
+
+/* Tab component */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:24px}
+.tab-btn{padding:10px 20px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);background:none;border:none;cursor:pointer;position:relative;transition:color 0.3s}
+.tab-btn:hover{color:var(--text2)}
+.tab-btn.active{color:var(--gold)}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--gold)}
+
+/* Correlation matrix */
+.corr-cell{width:100%;aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:500;transition:transform 0.2s}
+.corr-cell:hover{transform:scale(1.15);z-index:1}
+
+/* Progress bar */
+.prog-bar{height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width 0.8s ease}
+
+/* Recruitment */
+.recruit-row{display:grid;grid-template-columns:140px 1fr 120px 1fr;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+
+/* Supply chain node */
+.supply-node{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;font-size:11px;border:1px solid rgba(255,255,255,0.06)}
+</style>
+</head>
+<body>
+<div class="watermark"></div>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo,memo}=React;
+
+// ═══════════════════════════════════════════════════════
+// DATA LAYER
+// ═══════════════════════════════════════════════════════
+
+const HYPOTHESES=[
+{id:'H1',text:'Russia launches major summer offensive in Ukraine',cat:'Military Escalation',prior:0.35,current:0.42,trend:'↑',
+ history:[.28,.29,.31,.30,.32,.34,.33,.35,.36,.37,.38,.39,.38,.40,.39,.41,.40,.41,.42,.42,.41,.42,.42,.42],
+ evidence:[
+  {time:'4h ago',text:'[Russian MoD] [deployed 3rd Army Corps reserves] [to Zaporizhzhia axis] [southern Ukraine]',dir:'↑',mag:'+1.8%'},
+  {time:'1d ago',text:'[Satellite imagery] [shows field hospital construction] [near Melitopol] [occupied Zaporizhzhia]',dir:'↑',mag:'+0.9%'},
+  {time:'3d ago',text:'[Ukrainian GUR] [intercepted logistics orders] [for ammunition stockpiling] [Crimea depots]',dir:'↑',mag:'+1.2%'}
+]},
+{id:'H2',text:'Iran closes Strait of Hormuz within 90 days',cat:'Military Escalation',prior:0.08,current:0.14,trend:'↑',
+ history:[.05,.05,.06,.06,.07,.07,.07,.08,.08,.08,.09,.09,.10,.10,.11,.11,.12,.11,.12,.13,.13,.14,.14,.14],
+ evidence:[
+  {time:'2h ago',text:'[IRGC Navy] [deployed fast boats near USS Eisenhower] [Strait of Hormuz] [Persian Gulf]',dir:'↑',mag:'+3.2%'},
+  {time:'8h ago',text:'[Iran] [announced naval exercise "Great Prophet 19"] [covering Hormuz approaches] [this week]',dir:'↑',mag:'+1.5%'},
+  {time:'2d ago',text:'[Lloyd\'s of London] [increased war risk premiums] [for Hormuz transit] [+45bps]',dir:'↑',mag:'+0.8%'}
+]},
+{id:'H3',text:'China imposes capital outflow restrictions on Hong Kong',cat:'Economic Warfare',prior:0.22,current:0.19,trend:'↓',
+ history:[.18,.19,.20,.21,.22,.22,.23,.22,.22,.21,.22,.21,.21,.20,.21,.20,.20,.19,.20,.19,.19,.19,.19,.19],
+ evidence:[
+  {time:'6h ago',text:'[PBoC] [maintained Northbound Stock Connect quotas unchanged] [Shanghai–HK link]',dir:'↓',mag:'-0.6%'},
+  {time:'1d ago',text:'[HK Monetary Authority] [reported stable aggregate balance] [HK banking system]',dir:'↓',mag:'-0.4%'},
+  {time:'4d ago',text:'[Bloomberg] [reported HK→Singapore fund transfers +180%] [3-month rolling basis]',dir:'↑',mag:'+1.1%'}
+]},
+{id:'H4',text:'Turkey sovereign debt restructuring within 12 months',cat:'Financial System',prior:0.15,current:0.23,trend:'↑',
+ history:[.10,.11,.11,.12,.13,.13,.14,.14,.15,.15,.16,.16,.17,.17,.18,.18,.19,.20,.20,.21,.22,.22,.23,.23],
+ evidence:[
+  {time:'6h ago',text:'[Turkish CDS 5Y] [widened +85bps in 48 hours] [to 485bps] [Istanbul]',dir:'↑',mag:'+2.1%'},
+  {time:'1d ago',text:'[CBRT] [burned $2.1B reserves defending lira] [in single session] [Ankara]',dir:'↑',mag:'+1.4%'},
+  {time:'3d ago',text:'[Fitch] [placed Turkey on negative watch] [citing reserve adequacy] [sovereign rating]',dir:'↑',mag:'+1.8%'}
+]},
+{id:'H5',text:'US–China semiconductor ban escalation',cat:'Economic Warfare',prior:0.45,current:0.52,trend:'↑',
+ history:[.38,.39,.40,.41,.42,.42,.43,.44,.44,.45,.45,.46,.46,.47,.47,.48,.48,.49,.49,.50,.50,.51,.51,.52],
+ evidence:[
+  {time:'3h ago',text:'[US Commerce Dept] [added 14 Chinese AI chip firms to Entity List] [Washington DC]',dir:'↑',mag:'+2.4%'},
+  {time:'1d ago',text:'[TSMC] [halted shipments to 3 Chinese customers] [pending license review] [Hsinchu]',dir:'↑',mag:'+1.1%'},
+  {time:'2d ago',text:'[China MoC] [announced gallium/germanium export review] [retaliatory measure] [Beijing]',dir:'↑',mag:'+0.8%'}
+]},
+{id:'H6',text:'OPEC+ production cut exceeding 1M bpd',cat:'Resource & Supply',prior:0.30,current:0.38,trend:'↑',
+ history:[.22,.23,.24,.25,.26,.27,.28,.28,.29,.30,.30,.31,.31,.32,.32,.33,.34,.34,.35,.36,.36,.37,.38,.38],
+ evidence:[
+  {time:'5h ago',text:'[Saudi Energy Minister] [hinted at "calibrating supply to demand realities"] [Riyadh forum]',dir:'↑',mag:'+2.0%'},
+  {time:'1d ago',text:'[Iraq] [signaled willingness to extend voluntary cuts] [through Q3] [Baghdad]',dir:'↑',mag:'+1.2%'},
+  {time:'3d ago',text:'[IEA] [revised demand forecast down 400K bpd] [for H2 2026] [Paris]',dir:'↑',mag:'+0.6%'}
+]},
+{id:'H7',text:'North Korea nuclear test or ICBM launch',cat:'Military Escalation',prior:0.12,current:0.11,trend:'→',
+ history:[.10,.10,.11,.11,.12,.12,.12,.12,.11,.11,.12,.12,.11,.11,.12,.12,.11,.11,.12,.11,.11,.11,.11,.11],
+ evidence:[
+  {time:'2d ago',text:'[38 North] [detected continued activity at Punggye-ri] [tunnel maintenance] [North Hamgyong]',dir:'→',mag:'+0.2%'},
+  {time:'5d ago',text:'[Kim Jong Un] [conducted routine military inspection] [no escalatory signals] [Pyongyang]',dir:'↓',mag:'-0.3%'},
+  {time:'1w ago',text:'[ROK JCS] [assessed DPRK missile readiness as baseline] [no elevated posture] [Seoul]',dir:'→',mag:'0%'}
+]},
+{id:'H8',text:'EU imposes secondary sanctions on China–Russia trade',cat:'Economic Warfare',prior:0.18,current:0.31,trend:'↑↑',
+ history:[.12,.13,.13,.14,.15,.15,.16,.17,.17,.18,.18,.19,.20,.21,.22,.23,.24,.25,.26,.27,.28,.29,.30,.31],
+ evidence:[
+  {time:'1h ago',text:'[EU Council] [circulated draft secondary sanctions framework] [targeting dual-use goods] [Brussels]',dir:'↑',mag:'+3.8%'},
+  {time:'12h ago',text:'[FT] [reported France and Germany aligned on China trade measures] [behind closed doors]',dir:'↑',mag:'+2.1%'},
+  {time:'2d ago',text:'[European Commission] [published report on Chinese components in Russian weapons] [Brussels]',dir:'↑',mag:'+1.5%'}
+]},
+{id:'H9',text:'Argentina dollarization completes successfully',cat:'Financial System',prior:0.40,current:0.35,trend:'↓',
+ history:[.32,.34,.35,.37,.38,.39,.40,.40,.41,.40,.40,.39,.39,.38,.38,.37,.37,.36,.36,.36,.35,.35,.35,.35],
+ evidence:[
+  {time:'8h ago',text:'[Argentine Congress] [delayed vote on currency reform bill] [opposition filibuster] [Buenos Aires]',dir:'↓',mag:'-1.2%'},
+  {time:'2d ago',text:'[IMF] [expressed concerns about dollarization timeline] [technical capacity] [Washington]',dir:'↓',mag:'-0.8%'},
+  {time:'4d ago',text:'[Milei] [reaffirmed commitment to dollarization] [despite Congressional resistance] [Casa Rosada]',dir:'↑',mag:'+0.5%'}
+]},
+{id:'H10',text:'India–Pakistan military escalation (beyond LoC skirmishes)',cat:'Military Escalation',prior:0.05,current:0.07,trend:'→',
+ history:[.04,.04,.04,.05,.05,.05,.05,.05,.05,.05,.05,.05,.06,.06,.06,.06,.06,.06,.07,.07,.07,.07,.07,.07],
+ evidence:[
+  {time:'1d ago',text:'[Indian Army] [conducted routine patrol reinforcement] [along LoC] [Kashmir sector]',dir:'→',mag:'+0.3%'},
+  {time:'3d ago',text:'[Pakistan PM] [called for dialogue on water-sharing disputes] [Indus Waters Treaty] [Islamabad]',dir:'↓',mag:'-0.2%'},
+  {time:'1w ago',text:'[Ceasefire violations] [remained at baseline levels] [both sides] [LoC Kashmir]',dir:'→',mag:'0%'}
+]},
+{id:'H11',text:'Major cyberattack on Western financial infrastructure',cat:'Financial System',prior:0.10,current:0.13,trend:'↑',
+ history:[.07,.07,.08,.08,.08,.09,.09,.09,.10,.10,.10,.10,.10,.11,.11,.11,.11,.12,.12,.12,.12,.13,.13,.13],
+ evidence:[
+  {time:'4h ago',text:'[CISA] [issued elevated alert for financial sector] [citing increased probing activity] [Washington]',dir:'↑',mag:'+0.8%'},
+  {time:'2d ago',text:'[Mandiant] [attributed SWIFT-targeting malware to Lazarus Group] [new variant detected] [report]',dir:'↑',mag:'+0.6%'},
+  {time:'5d ago',text:'[ECB] [conducted emergency cyber resilience exercise] [with 12 major banks] [Frankfurt]',dir:'↑',mag:'+0.4%'}
+]},
+{id:'H12',text:'Saudi Arabia–Iran normalization process holds',cat:'Regime Stability',prior:0.55,current:0.48,trend:'↓',
+ history:[.60,.59,.58,.57,.57,.56,.56,.55,.55,.55,.54,.54,.53,.53,.52,.52,.51,.51,.50,.50,.49,.49,.48,.48],
+ evidence:[
+  {time:'6h ago',text:'[Saudi FM] [cancelled scheduled visit to Tehran] [citing "scheduling conflicts"] [Riyadh]',dir:'↓',mag:'-1.4%'},
+  {time:'1d ago',text:'[Houthi] [launched drone swarm at Saudi Aramco facility] [intercepted] [Ras Tanura]',dir:'↓',mag:'-0.9%'},
+  {time:'3d ago',text:'[Iran] [reopened embassy in Riyadh as planned] [ambassadorial level] [diplomatic progress]',dir:'↑',mag:'+0.6%'}
+]}
+];
+
+const ANOMALIES=[
+{time:'2h ago',asset:'Brent Crude Jun futures',type:'Volume spike',detail:'3.2x average volume in OTM calls',z:4.1,hyp:'H2 (Iran/Hormuz)'},
+{time:'6h ago',asset:'Turkish CDS 5Y',type:'Spread widening',detail:'+85bps in 48h',z:3.7,hyp:'H4 (Turkey debt)'},
+{time:'1d ago',asset:'TSMC ADR',type:'Options skew',detail:'Put/call ratio 2.8x (90d high)',z:2.9,hyp:'H5 (Semiconductor ban)'},
+{time:'1d ago',asset:'Polymarket: "Iran strike"',type:'Price dislocation',detail:'23% vs oil implied ~11%',z:2.5,hyp:'H2 (Iran/Hormuz)'},
+{time:'2d ago',asset:'Bitcoin',type:'Correlation break',detail:'Decorrelated from NASDAQ for 5 sessions',z:2.2,hyp:'—'},
+{time:'3d ago',asset:"Sotheby's private sales",type:'Volume spike',detail:'2.1x monthly average, 68% Gulf buyers',z:2.8,hyp:'H6 (OPEC), Capital flight'},
+{time:'5d ago',asset:'Gerhard Richter (auction)',type:'Price anomaly',detail:'Hammer price 41% above high estimate',z:1.9,hyp:'—'},
+{time:'5d ago',asset:'Gold spot',type:'Volume spike',detail:'2.4x average on London fix',z:3.1,hyp:'Multiple'},
+{time:'1w ago',asset:'Uranium futures',type:'Price anomaly',detail:'+12% in 3 sessions, low volume',z:2.0,hyp:'H8 (EU sanctions)'},
+];
+
+const FLOW_SOURCES=[
+{name:'North America',color:'#4A90D9',base:18.2},
+{name:'Europe',color:'#4A90D9',base:14.8},
+{name:'China / HK',color:'#C0392B',base:12.5},
+{name:'Gulf / MENA',color:'#27AE60',base:9.8},
+{name:'Russia / CIS',color:'#8E44AD',base:6.2},
+{name:'Latin America',color:'#F39C12',base:4.1},
+{name:'Sub-Saharan Africa',color:'#1ABC9C',base:1.8},
+];
+
+const FLOW_DESTS=[
+{name:'Equities',share:.32},{name:'Fixed Income',share:.22},{name:'Commodities',share:.12},
+{name:'Crypto',share:.06},{name:'Art & Collectibles',share:.08},{name:'Real Estate',share:.14},{name:'Prediction Markets',share:.02},{name:'Other Alternatives',share:.04},
+];
+
+const CORR_ASSETS=['Equities','Bonds','Oil','Gold','BTC','Art','Pred Mkt'];
+const CORR_MATRIX=[
+[1,.42,-.18,.05,.35,.12,.28],
+[.42,1,-.25,.38,-.08,.22,.05],
+[-.18,-.25,1,.15,.10,-.05,.18],
+[.05,.38,.15,1,-.12,.45,.08],
+[.35,-.08,.10,-.12,1,.08,.32],
+[.12,.22,-.05,.45,.08,1,.15],
+[.28,.05,.18,.08,.32,.15,1],
+];
+
+const PRED_MARKETS=[
+{event:'Iran military strike on Israel (2026)',pm:23,market:11,spread:12,dir:'PM higher'},
+{event:'China invades Taiwan (by 2027)',pm:8,market:14,spread:-6,dir:'Market higher'},
+{event:'US recession by Q4 2026',pm:31,market:38,spread:-7,dir:'Market higher'},
+{event:'OPEC cuts >1M bpd',pm:42,market:35,spread:7,dir:'PM higher'},
+{event:'Russia–Ukraine ceasefire (2026)',pm:18,market:22,spread:-4,dir:'Market higher'},
+{event:'Bitcoin >$100K (2026)',pm:55,market:48,spread:7,dir:'PM higher'},
+{event:'Trump wins 2028 nomination',pm:72,market:65,spread:7,dir:'PM higher'},
+];
+
+const NARRATIVES=[
+{actor:'US State Dept',segments:[{w:15,c:'#27AE60'},{w:25,c:'#E67E22'},{w:35,c:'#E67E22'},{w:25,c:'#C0392B'}]},
+{actor:'Kremlin',segments:[{w:10,c:'#C0392B'},{w:20,c:'#E67E22'},{w:30,c:'#C0392B'},{w:40,c:'#C0392B'}]},
+{actor:'PBoC',segments:[{w:30,c:'#27AE60'},{w:25,c:'#27AE60'},{w:25,c:'#F39C12'},{w:20,c:'#F39C12'}]},
+{actor:'ECB',segments:[{w:35,c:'#27AE60'},{w:30,c:'#27AE60'},{w:20,c:'#F39C12'},{w:15,c:'#E67E22'}]},
+{actor:'IRGC',segments:[{w:10,c:'#E67E22'},{w:15,c:'#C0392B'},{w:30,c:'#C0392B'},{w:45,c:'#C0392B'}]},
+{actor:'NATO SecGen',segments:[{w:20,c:'#27AE60'},{w:20,c:'#E67E22'},{w:30,c:'#E67E22'},{w:30,c:'#C0392B'}]},
+];
+
+const SILENCE_DATA=[
+{entity:'PBoC on yuan policy',baseline:4.2,current:0.8,drop:'-81%',duration:'2 weeks',assessment:'Pre-announcement quiet period?'},
+{entity:'IRGC Quds Force commanders',baseline:2.1,current:0.3,drop:'-86%',duration:'10 days',assessment:'Operational security'},
+{entity:'Saudi Aramco investor comms',baseline:3.5,current:1.1,drop:'-69%',duration:'1 week',assessment:'Pre-earnings or policy shift'},
+{entity:'Russian 1st Guards Tank Army (social)',baseline:5.8,current:0.4,drop:'-93%',duration:'12 days',assessment:'OPSEC — possible redeployment'},
+{entity:'Turkish Central Bank governor',baseline:3.0,current:0.9,drop:'-70%',duration:'8 days',assessment:'Policy reversal incoming?'},
+];
+
+const RECRUITMENT=[
+{org:'BAE Systems',cluster:'Electronic warfare engineers',vol:'+340%',signal:'Capability buildup'},
+{org:'Clifford Chance',cluster:'Iran sanctions specialists',vol:'+180%',signal:'Anticipating new sanctions'},
+{org:'Goldman Sachs',cluster:'Mandarin-speaking commodity traders',vol:'+90%',signal:'China desk expansion'},
+{org:'UK MoD',cluster:'Arctic logistics planners',vol:'+220%',signal:'Northern flank priority'},
+{org:'Palantir',cluster:'Farsi-speaking OSINT analysts',vol:'+260%',signal:'Iran intelligence demand'},
+{org:'McKinsey',cluster:'Supply chain resilience consultants',vol:'+150%',signal:'Decoupling advisory'},
+];
+
+const CHOKEPOINTS=[
+{name:'Strait of Hormuz',share:'20% global oil',vessels:21,avg:20,risk:'Elevated',insurance:'+45bps',lat:26.5,lon:56.3,
+ throughput:[18,19,20,21,20,19,20,21,22,21,20,19,18,19,20,21,20,19,20,21,20,19,18,19]},
+{name:'Strait of Malacca',share:'25% global trade',vessels:68,avg:72,risk:'Normal',insurance:'+5bps',lat:2.5,lon:101.5,
+ throughput:[70,71,72,73,72,71,70,71,72,73,72,71,70,69,68,69,70,71,70,69,68,69,68,68]},
+{name:'Suez Canal',share:'12% global trade',vessels:34,avg:50,risk:'Critical',insurance:'+120bps',lat:30.5,lon:32.3,
+ throughput:[50,49,48,47,45,42,40,38,36,35,34,33,34,35,34,33,34,35,34,33,34,35,34,34]},
+{name:'Panama Canal',share:'5% global trade',vessels:24,avg:36,risk:'Elevated',insurance:'+30bps',lat:9.0,lon:-79.5,
+ throughput:[36,35,34,33,32,30,28,26,25,24,24,25,26,25,24,23,24,25,24,23,24,25,24,24]},
+{name:'Bosphorus',share:'Russian grain + oil',vessels:42,avg:45,risk:'Normal',insurance:'+8bps',lat:41.1,lon:29.0,
+ throughput:[44,45,46,45,44,43,44,45,44,43,42,43,44,43,42,43,44,43,42,41,42,43,42,42]},
+{name:'Taiwan Strait',share:'90% advanced chips',vessels:185,avg:190,risk:'Elevated',insurance:'+35bps',lat:24.5,lon:119.5,
+ throughput:[190,191,192,190,189,188,190,191,189,188,187,186,185,186,187,186,185,184,185,186,185,184,185,185]},
+{name:'GIUK Gap',share:'Undersea cables + NATO',vessels:12,avg:15,risk:'Normal',insurance:'+3bps',lat:62,lon:-15,
+ throughput:[15,15,14,15,16,15,14,13,14,15,14,13,12,13,14,13,12,13,14,13,12,11,12,12]},
+{name:'Cape of Good Hope',share:'Suez alternative',vessels:58,avg:35,risk:'Elevated',insurance:'+18bps',lat:-34.3,lon:18.5,
+ throughput:[32,33,34,36,38,42,45,48,50,52,54,55,56,57,58,57,56,57,58,57,58,59,58,58]},
+];
+
+const SUPPLY_DEPS=[
+{resource:'Semiconductor-grade Neon',source:'Ukraine (Mariupol, Odesa)',share:'50%',dest:'Global chip fabs',risk:'Critical'},
+{resource:'Palladium',source:'Russia',share:'40%',dest:'Catalytic converters, electronics',risk:'High'},
+{resource:'Cobalt',source:'DRC',share:'70%',dest:'EV batteries',risk:'High'},
+{resource:'Lithium',source:'Chile / Australia / Argentina',share:'85%',dest:'EV batteries',risk:'Medium'},
+{resource:'Advanced chips (<7nm)',source:'TSMC, Taiwan',share:'90%',dest:'AI, defense, consumer',risk:'Critical'},
+{resource:'Rare earths (processed)',source:'China',share:'90%',dest:'Magnets, defense, EVs',risk:'Critical'},
+{resource:'Potash / fertilizer',source:'Russia + Belarus',share:'40%',dest:'Global agriculture',risk:'High'},
+{resource:'Uranium enrichment',source:'Russia (Rosatom)',share:'40%',dest:'Nuclear power',risk:'High'},
+];
+
+const SOVEREIGN_STRESS=[
+{country:'Turkey',cds:485,trend:'↑',reserves:3.2,debt:41,rating:'🟠'},
+{country:'Egypt',cds:890,trend:'↑',reserves:2.8,debt:93,rating:'🔴'},
+{country:'Pakistan',cds:1240,trend:'→',reserves:1.4,debt:78,rating:'🔴'},
+{country:'Argentina',cds:1850,trend:'↓',reserves:2.1,debt:89,rating:'🔴'},
+{country:'South Africa',cds:310,trend:'↑',reserves:4.5,debt:73,rating:'🟡'},
+{country:'Brazil',cds:165,trend:'→',reserves:14.2,debt:74,rating:'🟢'},
+{country:'Saudi Arabia',cds:58,trend:'→',reserves:28.0,debt:26,rating:'🟢'},
+{country:'Nigeria',cds:620,trend:'↑',reserves:3.8,debt:38,rating:'🟡'},
+{country:'Ukraine',cds:2100,trend:'→',reserves:2.5,debt:82,rating:'🔴'},
+{country:'Indonesia',cds:95,trend:'→',reserves:6.8,debt:40,rating:'🟢'},
+{country:'Mexico',cds:135,trend:'→',reserves:9.2,debt:54,rating:'🟢'},
+{country:'Poland',cds:62,trend:'↓',reserves:8.1,debt:51,rating:'🟢'},
+];
+
+const CONVERGENCE_ALERTS=[
+{title:'GULF ESCALATION CONVERGENCE',score:78,level:'high',horizon:'30–90 days',
+ signals:[
+  {contour:1,text:'Iran/Hormuz hypothesis at 0.14 → 0.22 in 7 days',conf:72},
+  {contour:2,text:'Brent OTM calls volume 3.2x, Gulf art buying 2.1x baseline',conf:81},
+  {contour:3,text:'IRGC silence -86% for 10 days, US CENTCOM language shifted to "deterrence"',conf:68},
+  {contour:4,text:'Hormuz throughput down 8%, war risk insurance +45bps',conf:74},
+ ],
+ action:'Overweight energy commodities, increase gold allocation, monitor Richter/Gursky (Gulf collector favorites), hedge via oil call spreads'},
+{title:'CHINA CAPITAL CONTROLS',score:62,level:'med',horizon:'60–180 days',
+ signals:[
+  {contour:1,text:'HK capital outflow restrictions hypothesis at 0.19',conf:55},
+  {contour:2,text:'HK→Singapore fund transfers +180% (3mo rolling), crypto OTC volume in HK +300%',conf:78},
+  {contour:3,text:'PBoC yuan silence -81%, Goldman hiring Mandarin commodity traders +90%',conf:64},
+  {contour:4,text:'Taiwan Strait vessel density normal but TSMC inventory builds detected',conf:48},
+ ],
+ action:'Reduce HK-denominated art market exposure, increase Singapore gallery relationships, watch for Zao Wou-Ki and Chinese contemporary repricing'},
+{title:'EU SANCTIONS ESCALATION',score:58,level:'med',horizon:'30–120 days',
+ signals:[
+  {contour:1,text:'EU secondary sanctions hypothesis surged 0.18→0.31 in 30 days',conf:72},
+  {contour:2,text:'Uranium futures +12%, European energy spreads widening',conf:61},
+  {contour:3,text:'FT reports France-Germany alignment behind closed doors',conf:65},
+  {contour:4,text:'Rare earth processing bottleneck risk elevated',conf:52},
+ ],
+ action:'Position for European energy volatility, monitor Russian-origin art collections for forced sales, increase rare earth commodity exposure'},
+];
+
+const BACKTEST={
+ title:'BACKTEST: Ukraine Invasion — February 2022',
+ text:'MERIDIAN would have generated a convergence alert at Score 81 on January 14, 2022 — 41 days before invasion.',
+ details:'Bayesian military escalation hypothesis reached 0.67. Satellite imagery confirmed field hospital construction near Gomel. Russian 1st Guards Tank Army social media went silent (−94%). Anomalous wheat futures volume detected (4.8σ). Blood supply contracts awarded to Russian military hospitals. All four contours lit simultaneously.',
+ action:'Overweight wheat, energy, gold. Underweight European equities. Rotate art holdings away from Russian-origin collectors. Result: portfolio would have outperformed by +18.3% over subsequent 90 days.'
+};
+
+const ACTION_LOG=[
+{time:'14:22 UTC',thesis:'Gulf escalation driving energy + safe haven rotation',asset:'Gold Jun futures',entry:'$3,045',conf:78,status:'Active'},
+{time:'12:15 UTC',thesis:'Richter repricing on Gulf collector demand',asset:'Richter \'Abstraktes Bild\'',entry:'£4.2M fair value',conf:71,status:'New'},
+{time:'09:40 UTC',thesis:'Turkey stress → EM contagion hedge',asset:'Turkish CDS 5Y',entry:'485bps',conf:65,status:'Active'},
+{time:'Yesterday',thesis:'Semiconductor supply chain disruption',asset:'TSMC put spread',entry:'$142/$130 Apr',conf:62,status:'Active'},
+{time:'2d ago',thesis:'OPEC cut probability rising',asset:'Brent call spread',entry:'$82/$88 Jun',conf:58,status:'Active'},
+{time:'3d ago',thesis:'Koons overvaluation — sentiment shift',asset:'Koons \'Balloon Dog (Blue)\'',entry:'SELL above $52M',conf:54,status:'New'},
+{time:'5d ago',thesis:'Bitcoin–NASDAQ decorrelation signal',asset:'BTC/ETH spread',entry:'Ratio 42.1',conf:48,status:'Closed'},
+{time:'1w ago',thesis:'Argentina dollarization delay → peso vol',asset:'ARS vol surface',entry:'6mo 35% IV',conf:52,status:'Closed'},
+];
+
+
+// ═══════════════════════════════════════════════════════
+// UTILITY COMPONENTS
+// ═══════════════════════════════════════════════════════
+
+function FadeIn({children,delay=0,className=''}){
+  const ref=useRef(null);
+  const[vis,setVis]=useState(false);
+  useEffect(()=>{
+    const obs=new IntersectionObserver(([e])=>{
+      if(e.isIntersecting){setTimeout(()=>setVis(true),delay);obs.disconnect()}
+    },{threshold:0.1});
+    if(ref.current)obs.observe(ref.current);
+    return()=>obs.disconnect();
+  },[delay]);
+  return <div ref={ref} className={`fi ${vis?'vis':''} ${className}`}>{children}</div>;
+}
+
+function Counter({target,decimals=0,duration=800,suffix='',prefix=''}){
+  const[val,setVal]=useState(0);
+  const ref=useRef(null);
+  const started=useRef(false);
+  useEffect(()=>{
+    const obs=new IntersectionObserver(([e])=>{
+      if(e.isIntersecting&&!started.current){
+        started.current=true;
+        const t0=Date.now();
+        const go=()=>{
+          const p=Math.min((Date.now()-t0)/duration,1);
+          const ease=1-Math.pow(1-p,3);
+          setVal(target*ease);
+          if(p<1)requestAnimationFrame(go);
+        };go();
+      }
+    },{threshold:0.3});
+    if(ref.current)obs.observe(ref.current);
+    return()=>obs.disconnect();
+  },[target,duration]);
+  return <span ref={ref}>{prefix}{val.toFixed(decimals)}{suffix}</span>;
+}
+
+function MiniSparkline({data,color='var(--gold)',h=28}){
+  const mn=Math.min(...data),mx=Math.max(...data),range=mx-mn||1;
+  return(
+    <div className="spark-mini">
+      {data.map((v,i)=>(
+        <div key={i} className="spark-bar" style={{
+          height:`${((v-mn)/range)*100}%`,
+          background:i===data.length-1?color:`${color}44`,
+          minHeight:'2px'
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function ProgressBar({value,max=100,color='var(--gold)'}){
+  return(
+    <div className="prog-bar">
+      <div className="prog-fill" style={{width:`${(value/max)*100}%`,background:color}}/>
+    </div>
+  );
+}
+
+function probColor(p){
+  if(p>=0.6)return'var(--red)';
+  if(p>=0.25)return'var(--amber)';
+  return'var(--green)';
+}
+
+function zColor(z){
+  if(z>=3.5)return{bg:'rgba(192,57,43,0.15)',text:'var(--red)'};
+  if(z>=2.5)return{bg:'rgba(212,168,67,0.12)',text:'var(--gold)'};
+  return{bg:'rgba(78,205,196,0.1)',text:'var(--cyan)'};
+}
+
+function riskColor(r){
+  if(r==='Critical')return'var(--red)';
+  if(r==='Elevated')return'var(--amber)';
+  return'var(--green)';
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT SCREEN
+// ═══════════════════════════════════════════════════════
+
+const BOOT_LINES=[
+  '> MERIDIAN v0.9.1-alpha',
+  '> CLASSIFICATION: INTERNAL — PITCH PROTOTYPE',
+  '> INITIALIZING BAYESIAN PRIOR NETWORK...',
+  '> LOADING 12 ACTIVE HYPOTHESES...',
+  '> SCANNING 147 DATA FEEDS...',
+  '> CAPITAL FLOW MATRICES CALIBRATED',
+  '> SILENCE DETECTION BASELINES LOADED',
+  '> CHOKEPOINT MONITORS ONLINE',
+  '> CONNECTING TO OSINT AGGREGATOR...',
+  '> CONVERGENCE ENGINE ARMED',
+  '> ██████████████████████████ 100%',
+  '> SYSTEM READY — КОДОВОЕ СЛОВО: МЕРИДИАН',
+];
+
+function BootScreen({onDone}){
+  const[lines,setLines]=useState([]);
+  const[done,setDone]=useState(false);
+  useEffect(()=>{
+    let i=0;
+    const iv=setInterval(()=>{
+      if(i<BOOT_LINES.length){setLines(l=>[...l,BOOT_LINES[i]]);i++}
+      else{clearInterval(iv);setTimeout(()=>{setDone(true);setTimeout(onDone,600)},400)}
+    },130);
+    return()=>clearInterval(iv);
+  },[onDone]);
+  return(
+    <div className={`boot-screen ${done?'done':''}`}>
+      <div className="boot-text" style={{padding:'40px'}}>
+        {lines.map((l,i)=>(
+          <div key={i} className="boot-line" style={{animationDelay:`${i*0.05}s`,
+            color:i===lines.length-1&&i===BOOT_LINES.length-1?'var(--gold)':'var(--green)',
+            marginBottom:'6px'}}>
+            {l}
+          </div>
+        ))}
+        <div className="boot-line" style={{marginTop:'16px',opacity:0.3,fontSize:'10px',color:'var(--gold-d)'}}>
+          BLOOMSBURY TECHNOLOGY — LONDON
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+
+const TABS=['ОБСТАНОВКА','ПОТОКИ','НАМЕРЕНИЯ','УЯЗВИМОСТИ','SYNTHESIS'];
+
+function Nav({active,setActive}){
+  const[time,setTime]=useState('');
+  useEffect(()=>{
+    const tick=()=>{
+      const d=new Date();
+      setTime(`UTC ${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}:${d.getUTCSeconds().toString().padStart(2,'0')}`);
+    };
+    tick();const iv=setInterval(tick,1000);return()=>clearInterval(iv);
+  },[]);
+  return(
+    <nav className="nav">
+      <div className="nav-logo"><span className="nav-diamond">◆</span> MERIDIAN</div>
+      <div className="nav-tabs">
+        {TABS.map((t,i)=>(
+          <button key={t} className={`nav-tab ${active===i?'active':''}`}
+            onClick={()=>{setActive(i);document.getElementById(`contour-${i}`)?.scrollIntoView({behavior:'smooth'})}}>{t}</button>
+        ))}
+      </div>
+      <div className="nav-clock mono tab-nums">{time}</div>
+    </nav>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CONTOUR 1: ОБСТАНОВКА — Bayesian Situation Awareness
+// ═══════════════════════════════════════════════════════
+
+function HypothesisCard({h}){
+  const[exp,setExp]=useState(false);
+  const col=probColor(h.current);
+  const delta=h.current-h.prior;
+  const deltaStr=(delta>=0?'+':'')+( (delta*100).toFixed(1) )+'%';
+  return(
+    <div className={`hyp-card ${exp?'expanded':''}`} onClick={()=>setExp(!exp)}>
+      <div className="flex jc-sb ai-c mb-8">
+        <span className="mono fs-10 ls-2 upper" style={{color:'var(--text3)'}}>{h.id} · {h.cat}</span>
+        <span className="mono fs-11" style={{color:delta>=0?'var(--red)':'var(--green)'}}>{h.trend} {deltaStr}</span>
+      </div>
+      <div className="flex gap-16 ai-c mb-12">
+        <div className="hyp-prob" style={{color:col}}>{(h.current*100).toFixed(0)}%</div>
+        <div className="fc gap-4" style={{flex:1}}>
+          <div style={{fontSize:'14px',fontWeight:500,lineHeight:1.3}}>{h.text}</div>
+          <div className="mono fs-10" style={{color:'var(--text3)'}}>Prior (30d): {(h.prior*100).toFixed(0)}%</div>
+        </div>
+      </div>
+      <MiniSparkline data={h.history.map(v=>v*100)} color={col}/>
+      {exp&&(
+        <div style={{marginTop:'16px',borderTop:'1px solid rgba(255,255,255,0.04)',paddingTop:'16px'}}>
+          <div className="mono fs-9 ls-2 upper mb-8" style={{color:'var(--text3)'}}>Latest Evidence</div>
+          {h.evidence.map((e,i)=>(
+            <div key={i} className="evidence-item" style={{borderLeftColor:e.dir==='↑'?'var(--red)':e.dir==='↓'?'var(--green)':'var(--text3)'}}>
+              <div className="flex jc-sb mb-4">
+                <span className="mono fs-10" style={{color:'var(--text3)'}}>{e.time}</span>
+                <span className="mono fs-10 fw-600" style={{color:e.dir==='↑'?'var(--red)':'var(--green)'}}>{e.dir} {e.mag}</span>
+              </div>
+              <div className="fs-12" style={{color:'var(--text2)',lineHeight:1.5}}>{e.text}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorldTensionMap(){
+  const svgRef=useRef(null);
+  useEffect(()=>{
+    if(!svgRef.current)return;
+    const svg=d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    const w=svgRef.current.clientWidth||1100,h=340;
+    const proj=d3.geoNaturalEarth1().scale(w/5.8).translate([w/2,h/2]);
+
+    // Graticule
+    svg.append('path').datum(d3.geoGraticule().step([30,30])())
+      .attr('d',d3.geoPath().projection(proj)).attr('fill','none')
+      .attr('stroke','rgba(255,255,255,0.025)').attr('stroke-width',0.5);
+    svg.append('path').datum({type:'Sphere'})
+      .attr('d',d3.geoPath().projection(proj)).attr('fill','none')
+      .attr('stroke','rgba(212,168,67,0.06)').attr('stroke-width',1);
+
+    // Tension regions (approximate)
+    const regions=[
+      {lat:48,lon:35,r:60,color:'var(--red)',op:0.15,label:'Ukraine'},
+      {lat:30,lon:45,r:50,color:'var(--red)',op:0.12,label:'Middle East'},
+      {lat:24,lon:120,r:40,color:'var(--amber)',op:0.08,label:'Taiwan'},
+      {lat:14,lon:2,r:35,color:'var(--amber)',op:0.06,label:'Sahel'},
+      {lat:33,lon:53,r:35,color:'var(--red)',op:0.10,label:'Iran'},
+    ];
+
+    regions.forEach(r=>{
+      const[x,y]=proj([r.lon,r.lat]);
+      if(!x)return;
+      // Radial gradient glow
+      const grad=svg.append('defs').append('radialGradient').attr('id',`tg-${r.label}`);
+      grad.append('stop').attr('offset','0%').attr('stop-color',r.color).attr('stop-opacity',r.op);
+      grad.append('stop').attr('offset','100%').attr('stop-color',r.color).attr('stop-opacity',0);
+      svg.append('circle').attr('cx',x).attr('cy',y).attr('r',r.r).attr('fill',`url(#tg-${r.label})`);
+    });
+
+    // Hotspots from hypotheses
+    const hotspots=[
+      {lat:48.5,lon:31,name:'Ukraine',p:.42},{lat:26.5,lon:56,name:'Hormuz',p:.14},
+      {lat:24,lon:120,name:'Taiwan',p:.52},{lat:39,lon:35,name:'Turkey',p:.23},
+      {lat:32,lon:53,name:'Iran',p:.14},{lat:50,lon:14,name:'EU',p:.31},
+      {lat:35,lon:127,name:'DPRK',p:.11},{lat:34,lon:75,name:'Kashmir',p:.07},
+    ];
+
+    hotspots.forEach((h,i)=>{
+      const[x,y]=proj([h.lon,h.lat]);
+      if(!x)return;
+      const col=probColor(h.p);
+      // Pulse
+      const pulse=svg.append('circle').attr('cx',x).attr('cy',y).attr('r',4).attr('fill','none')
+        .attr('stroke',col).attr('stroke-width',1).attr('opacity',0);
+      function doPulse(){
+        pulse.attr('r',4).attr('opacity',0.6)
+          .transition().duration(2000).delay(i*200)
+          .attr('r',18).attr('opacity',0).on('end',doPulse);
+      }
+      doPulse();
+      svg.append('circle').attr('cx',x).attr('cy',y).attr('r',3).attr('fill',col).attr('opacity',0.8);
+      svg.append('text').attr('x',x+8).attr('y',y+3).text(`${h.name} ${(h.p*100).toFixed(0)}%`)
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','9px')
+        .attr('fill','rgba(232,230,227,0.4)').attr('letter-spacing','1px');
+    });
+  },[]);
+  return <svg ref={svgRef} style={{width:'100%',height:'340px'}}/>;
+}
+
+function Contour1(){
+  const[catFilter,setCatFilter]=useState('All');
+  const cats=['All','Military Escalation','Economic Warfare','Resource & Supply','Financial System','Regime Stability'];
+  const filtered=catFilter==='All'?HYPOTHESES:HYPOTHESES.filter(h=>h.cat===catFilter);
+  return(
+    <section id="contour-0" className="section">
+      <FadeIn>
+        <div className="section-label">Contour 1</div>
+        <div className="section-title">ОБСТАНОВКА</div>
+        <div className="section-sub">Bayesian Situation Awareness — Structured belief network across 12 geopolitical hypotheses. Not news aggregation — probabilistic state estimation.</div>
+      </FadeIn>
+      <FadeIn delay={100}>
+        <div className="glass p-20 mb-24">
+          <WorldTensionMap/>
+        </div>
+      </FadeIn>
+      <FadeIn delay={200}>
+        <div className="tab-bar mb-24">
+          {cats.map(c=>(
+            <button key={c} className={`tab-btn ${catFilter===c?'active':''}`} onClick={()=>setCatFilter(c)}>{c}</button>
+          ))}
+        </div>
+      </FadeIn>
+      <div className="grid g3 gap-16">
+        {filtered.map((h,i)=>(
+          <FadeIn key={h.id} delay={100+i*60}>
+            <HypothesisCard h={h}/>
+          </FadeIn>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CONTOUR 2: ПОТОКИ — Capital Flow & Anomaly Detection
+// ═══════════════════════════════════════════════════════
+
+function SankeyFlow({tension}){
+  const svgRef=useRef(null);
+  useEffect(()=>{
+    if(!svgRef.current)return;
+    const svg=d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    const w=svgRef.current.clientWidth||1000,h=420;
+    const pL=170,pR=170,fw=w-pL-pR;
+    const tMult=0.5+(tension/100)*1.0;
+    const altBoost=1+(tension/100)*0.5;
+    const tradDamp=1-(tension/100)*0.25;
+
+    const sources=FLOW_SOURCES;
+    const dests=FLOW_DESTS.map(d=>{
+      const isAlt=['Art & Collectibles','Crypto','Prediction Markets','Other Alternatives'].includes(d.name);
+      const isTrad=['Equities','Fixed Income','Real Estate'].includes(d.name);
+      return{...d,adj:d.share*(isAlt?altBoost:isTrad?tradDamp:1)};
+    });
+    const totalAdj=dests.reduce((s,d)=>s+d.adj,0);
+    const totalSrc=sources.reduce((s,d)=>s+d.base*tMult,0);
+
+    const sGap=8,sTotal=h-(sources.length-1)*sGap;
+    let sY=0;
+    const sPos=sources.map(s=>{
+      const sh=(s.base*tMult/totalSrc)*sTotal;
+      const p={...s,y:sY,h:sh,mid:sY+sh/2,val:s.base*tMult};
+      sY+=sh+sGap;return p;
+    });
+
+    const dGap=6,dTotal=h-(dests.length-1)*dGap;
+    let dY=0;
+    const dPos=dests.map(d=>{
+      const dh=(d.adj/totalAdj)*dTotal;
+      const p={...d,y:dY,h:dh,mid:dY+dh/2,_off:0};
+      dY+=dh+dGap;return p;
+    });
+
+    const g=svg.append('g').attr('transform',`translate(${pL},0)`);
+
+    sPos.forEach(src=>{
+      let off=0;
+      dPos.forEach(dst=>{
+        const fh=src.h*(dst.adj/totalAdj);
+        const dstVal=src.val*(dst.adj/totalAdj);
+        const dstH=(dstVal/(totalSrc*dst.adj/totalAdj))*dst.h;
+        const y0t=src.y+off,y0b=y0t+fh;
+        const y1t=dst.y+dst._off,y1b=y1t+dstH;
+        dst._off+=dstH;
+
+        const path=`M0,${y0t} C${fw*0.4},${y0t} ${fw*0.6},${y1t} ${fw},${y1t} L${fw},${y1b} C${fw*0.6},${y1b} ${fw*0.4},${y0b} 0,${y0b} Z`;
+        g.append('path').attr('d',path).attr('fill',src.color).attr('opacity',0.12+(tension/100)*0.12)
+          .attr('stroke',src.color).attr('stroke-width',0.3).attr('stroke-opacity',0.2);
+        off+=fh;
+      });
+    });
+
+    // Source labels
+    sPos.forEach(s=>{
+      svg.append('text').attr('x',pL-12).attr('y',s.mid+4).attr('text-anchor','end')
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','11px').attr('fill','rgba(232,230,227,0.6)').text(s.name);
+      svg.append('text').attr('x',pL-12).attr('y',s.mid+18).attr('text-anchor','end')
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','10px').attr('fill',s.color).attr('opacity',0.7)
+        .text(`$${s.val.toFixed(1)}B`);
+    });
+    // Dest labels
+    dPos.forEach(d=>{
+      const isAlt=['Art & Collectibles','Crypto','Prediction Markets'].includes(d.name);
+      svg.append('text').attr('x',pL+fw+12).attr('y',d.mid+4).attr('text-anchor','start')
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','11px')
+        .attr('fill',isAlt?'rgba(232,230,227,0.8)':'rgba(232,230,227,0.5)').text(d.name);
+      svg.append('text').attr('x',pL+fw+12).attr('y',d.mid+18).attr('text-anchor','start')
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','10px')
+        .attr('fill',isAlt?'var(--gold)':'var(--text3)').attr('opacity',0.7)
+        .text(`${(d.adj/totalAdj*100).toFixed(0)}%`);
+    });
+  },[tension]);
+  return <svg ref={svgRef} style={{width:'100%',height:'420px'}}/>;
+}
+
+function CorrMatrix(){
+  return(
+    <div style={{overflowX:'auto'}}>
+      <div style={{display:'grid',gridTemplateColumns:`80px repeat(${CORR_ASSETS.length},1fr)`,gap:'3px',maxWidth:'500px'}}>
+        <div/>
+        {CORR_ASSETS.map(a=><div key={a} className="mono fs-9 text-center" style={{color:'var(--text3)',padding:'4px 0'}}>{a}</div>)}
+        {CORR_MATRIX.map((row,i)=>(
+          <React.Fragment key={i}>
+            <div className="mono fs-9 flex ai-c" style={{color:'var(--text3)'}}>{CORR_ASSETS[i]}</div>
+            {row.map((v,j)=>{
+              const abs=Math.abs(v);
+              const bg=i===j?'rgba(212,168,67,0.2)':
+                v>0?`rgba(78,205,196,${abs*0.4})`:`rgba(192,57,43,${abs*0.4})`;
+              return <div key={j} className="corr-cell" style={{background:bg,color:abs>0.3?'var(--text)':'var(--text3)'}}>{v.toFixed(2)}</div>;
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Contour2(){
+  const[tension,setTension]=useState(73);
+  const[tab,setTab]=useState('sankey');
+  return(
+    <section id="contour-1" className="section">
+      <FadeIn>
+        <div className="section-label">Contour 2</div>
+        <div className="section-title">ПОТОКИ</div>
+        <div className="section-sub">Capital Flow & Anomaly Detection — Tracking where money moves across civilizational boundaries. Detecting insider knowledge and panic flows in real time.</div>
+      </FadeIn>
+
+      <div className="tab-bar">
+        {['sankey','anomalies','correlation','prediction'].map(t=>(
+          <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {{sankey:'Flow Map',anomalies:'Anomaly Scanner',correlation:'Correlation',prediction:'Pred Markets'}[t]}
+          </button>
+        ))}
+      </div>
+
+      {tab==='sankey'&&(
+        <FadeIn>
+          <div className="flex fc ai-c gap-12 mb-24" style={{maxWidth:'500px',margin:'0 auto 32px'}}>
+            <span className="mono fs-9 ls-3 upper" style={{color:'var(--text3)'}}>Tension Level</span>
+            <span className="mono fw-700" style={{fontSize:'32px',color:'var(--gold)',fontVariantNumeric:'tabular-nums'}}>{tension}</span>
+            <input type="range" min="0" max="100" value={tension} onChange={e=>setTension(+e.target.value)} style={{width:'100%'}}/>
+            <div className="flex jc-sb w-full mono fs-9" style={{color:'var(--text3)'}}>
+              <span>PEACETIME</span><span>COLD WAR</span><span>HOT CONFLICT</span>
+            </div>
+          </div>
+          <div className="glass p-24">
+            <div className="flex jc-sb mb-8 mono fs-9 ls-2 upper" style={{color:'var(--text3)',padding:'0 40px'}}>
+              <span>Source Regions</span><span>Asset Classes</span>
+            </div>
+            <SankeyFlow tension={tension}/>
+          </div>
+          <div style={{background:'linear-gradient(135deg,rgba(212,168,67,0.06),rgba(78,205,196,0.04))',border:'1px solid rgba(212,168,67,0.15)',
+            borderLeft:'3px solid var(--gold)',borderRadius:'0 8px 8px 0',padding:'20px 28px',margin:'24px 0',maxWidth:'900px'}}>
+            <div className="serif" style={{fontSize:'16px',fontStyle:'italic',color:'var(--text2)',lineHeight:1.6}}>
+              "When the Fault Line Index rises above 65, alternative asset inflows increase by 23% within 6 months.
+              Art market leads by 2 quarters — the smart money moves first, auction records follow."
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='anomalies'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div className="anomaly-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Time</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Asset</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Type</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Detail</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Z-Score</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Linked Hypothesis</span>
+            </div>
+            {ANOMALIES.map((a,i)=>{
+              const zc=zColor(a.z);
+              return(
+                <div key={i} className="anomaly-row">
+                  <span className="mono" style={{color:'var(--text3)'}}>{a.time}</span>
+                  <span style={{color:'var(--text)',fontWeight:500}}>{a.asset}</span>
+                  <span style={{color:'var(--text2)'}}>{a.type}</span>
+                  <span style={{color:'var(--text2)'}}>{a.detail}</span>
+                  <span><span className="z-badge" style={{background:zc.bg,color:zc.text}}>{a.z.toFixed(1)}σ</span></span>
+                  <span className="mono fs-11" style={{color:'var(--cyan)'}}>{a.hyp}</span>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='correlation'&&(
+        <FadeIn>
+          <div className="grid g2 gap-24">
+            <div className="glass p-24">
+              <div className="mono fs-9 ls-2 upper mb-16" style={{color:'var(--text3)'}}>30-Day Rolling Correlation Matrix</div>
+              <CorrMatrix/>
+              <div className="flex gap-16 mt-16" style={{marginTop:'16px'}}>
+                <span className="flex ai-c gap-8 fs-10" style={{color:'var(--text3)'}}><span style={{width:12,height:12,borderRadius:2,background:'rgba(78,205,196,0.3)'}}/> Positive</span>
+                <span className="flex ai-c gap-8 fs-10" style={{color:'var(--text3)'}}><span style={{width:12,height:12,borderRadius:2,background:'rgba(192,57,43,0.3)'}}/> Negative</span>
+              </div>
+            </div>
+            <div className="glass p-24">
+              <div className="mono fs-9 ls-2 upper mb-16" style={{color:'var(--text3)'}}>Key Decorrelation Signals</div>
+              <div className="fc gap-12">
+                {[
+                  {pair:'BTC ↔ NASDAQ',current:0.35,hist:0.72,signal:'Decorrelation for 5 sessions — possible safe-haven rotation'},
+                  {pair:'Art ↔ Gold',current:0.45,hist:0.28,signal:'Correlation spike — both attracting flight capital'},
+                  {pair:'Oil ↔ Equities',current:-0.18,hist:0.15,signal:'Negative correlation — supply shock regime'},
+                  {pair:'Pred Mkt ↔ BTC',current:0.32,hist:0.08,signal:'New correlation — retail speculative overlap'},
+                ].map((d,i)=>(
+                  <div key={i} style={{padding:'12px 16px',background:'rgba(255,255,255,0.02)',borderRadius:'8px'}}>
+                    <div className="flex jc-sb ai-c mb-4">
+                      <span className="mono fs-12 fw-500" style={{color:'var(--text)'}}>{d.pair}</span>
+                      <span className="mono fs-11" style={{color:Math.abs(d.current-d.hist)>0.2?'var(--gold)':'var(--text3)'}}>
+                        {d.hist.toFixed(2)} → {d.current.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="fs-11" style={{color:'var(--text3)'}}>{d.signal}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='prediction'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div className="mono fs-9 ls-2 upper p-20" style={{color:'var(--text3)',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              Prediction Market vs Market-Implied Probability Comparison
+            </div>
+            <div className="pred-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Event</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Pred Mkt</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Mkt Implied</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Spread</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Dir</span>
+            </div>
+            {PRED_MARKETS.map((p,i)=>(
+              <div key={i} className="pred-row">
+                <span style={{color:'var(--text)',fontWeight:400}}>{p.event}</span>
+                <span className="mono text-right tab-nums" style={{color:'var(--cyan)'}}>{p.pm}%</span>
+                <span className="mono text-right tab-nums" style={{color:'var(--text2)'}}>{p.market}%</span>
+                <span className="mono text-right tab-nums fw-600" style={{color:Math.abs(p.spread)>=6?'var(--gold)':'var(--text3)'}}>
+                  {p.spread>0?'+':''}{p.spread}%
+                </span>
+                <span className="fs-11" style={{color:'var(--text3)'}}>{p.dir}</span>
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+      )}
+    </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CONTOUR 3: НАМЕРЕНИЯ — Elite Discourse & Signal Intelligence
+// ═══════════════════════════════════════════════════════
+
+function NarrativeTimeline(){
+  const labels={0:'Diplomatic',1:'Hedging',2:'Deterrence',3:'Confrontation'};
+  const colors=['#27AE60','#F39C12','#E67E22','#C0392B'];
+  return(
+    <div>
+      <div className="flex gap-16 mb-16">
+        {colors.map((c,i)=>(
+          <span key={i} className="flex ai-c gap-6 fs-10" style={{color:'var(--text3)'}}>
+            <span style={{width:10,height:10,borderRadius:2,background:c}}/>{labels[i]}
+          </span>
+        ))}
+      </div>
+      <div className="mono fs-9 ls-1 upper mb-8 flex" style={{color:'var(--text3)'}}>
+        <span style={{width:140}}></span>
+        <div className="flex jc-sb" style={{flex:1}}>
+          <span>6 months ago</span><span>3 months ago</span><span>Now</span>
+        </div>
+      </div>
+      {NARRATIVES.map((n,i)=>(
+        <div key={i} className="narr-row">
+          <div className="narr-label mono">{n.actor}</div>
+          <div className="narr-bar">
+            {n.segments.map((s,j)=>(
+              <div key={j} className="narr-seg" style={{width:`${s.w}%`,background:s.c,opacity:0.7}}/>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Contour3(){
+  const[tab,setTab]=useState('narrative');
+  return(
+    <section id="contour-2" className="section">
+      <FadeIn>
+        <div className="section-label">Contour 3</div>
+        <div className="section-title">НАМЕРЕНИЯ</div>
+        <div className="section-sub">Elite Discourse & Signal Intelligence — Tracking what decision-makers say, how their language shifts, and what they stop saying.</div>
+      </FadeIn>
+
+      <div className="tab-bar">
+        {['narrative','silence','recruitment'].map(t=>(
+          <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {{narrative:'Narrative Shifts',silence:'Silence Detector',recruitment:'Recruitment Signals'}[t]}
+          </button>
+        ))}
+      </div>
+
+      {tab==='narrative'&&(
+        <FadeIn>
+          <div className="glass p-24">
+            <div className="mono fs-9 ls-2 upper mb-16" style={{color:'var(--text3)'}}>
+              Narrative Phase Classification — 6 Month Timeline
+            </div>
+            <NarrativeTimeline/>
+            <div style={{marginTop:'24px',padding:'16px 20px',background:'rgba(192,57,43,0.06)',border:'1px solid rgba(192,57,43,0.15)',borderRadius:'8px'}}>
+              <div className="flex ai-c gap-8 mb-8">
+                <span style={{width:6,height:6,borderRadius:'50%',background:'var(--red)'}} className="pulse"/>
+                <span className="mono fs-10 ls-2 upper fw-600" style={{color:'var(--red)'}}>Transition Alert</span>
+              </div>
+              <div className="fs-12" style={{color:'var(--text2)'}}>
+                <strong>IRGC discourse</strong> shifted from "deterrence" to "confrontation" rhetoric 10 days ago.
+                Commander Qaani's last public statement included "decisive response" framing — first use of this
+                phrase since January 2020 Soleimani escalation cycle. Simultaneously, US CENTCOM shifted to
+                "deterrence" language, suggesting intelligence assessment of elevated threat.
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='silence'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div style={{padding:'20px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              <div className="mono fs-9 ls-2 upper" style={{color:'var(--text3)'}}>
+                Anomalous Communication Silence — Entities Below 2σ Baseline
+              </div>
+              <div className="fs-11 mt-8" style={{color:'var(--text3)',marginTop:'6px'}}>
+                Silence often precedes action. Monitoring rolling 90-day average of public statements.
+              </div>
+            </div>
+            <div className="silence-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Entity</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Baseline/wk</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Current</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Drop</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Duration</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Assessment</span>
+            </div>
+            {SILENCE_DATA.map((s,i)=>(
+              <div key={i} className="silence-row">
+                <span style={{color:'var(--text)',fontWeight:500}}>{s.entity}</span>
+                <span className="mono text-right tab-nums" style={{color:'var(--text2)'}}>{s.baseline}</span>
+                <span className="mono text-right tab-nums fw-600" style={{color:'var(--red)'}}>{s.current}</span>
+                <span className="mono text-right tab-nums fw-600" style={{color:'var(--red)'}}>{s.drop}</span>
+                <span className="mono" style={{color:'var(--amber)'}}>{s.duration}</span>
+                <span className="fs-11" style={{color:'var(--text3)',fontStyle:'italic'}}>{s.assessment}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:'16px',padding:'16px 20px',background:'rgba(192,57,43,0.05)',border:'1px solid rgba(192,57,43,0.12)',borderRadius:'8px'}}>
+            <div className="mono fs-10 fw-600 mb-4" style={{color:'var(--red)'}}>⚠ CRITICAL SILENCE: Russian 1st Guards Tank Army</div>
+            <div className="fs-12" style={{color:'var(--text2)',lineHeight:1.6}}>
+              Social media activity from personnel dropped 93% over 12 days. Last comparable silence: January 2022 (pre-invasion buildup).
+              Combined with H1 evidence (field hospitals, ammunition stockpiling), this constitutes a high-confidence OPSEC indicator.
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='recruitment'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div style={{padding:'20px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              <div className="mono fs-9 ls-2 upper" style={{color:'var(--text3)'}}>
+                Anomalous Hiring Patterns — OSINT from LinkedIn, Indeed, Government Portals
+              </div>
+            </div>
+            <div className="recruit-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Organization</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Role Cluster</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Volume vs Baseline</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Signal</span>
+            </div>
+            {RECRUITMENT.map((r,i)=>{
+              const pct=parseInt(r.vol);
+              const col=pct>200?'var(--red)':pct>100?'var(--amber)':'var(--gold)';
+              return(
+                <div key={i} className="recruit-row">
+                  <span style={{color:'var(--text)',fontWeight:500}}>{r.org}</span>
+                  <span style={{color:'var(--text2)'}}>{r.cluster}</span>
+                  <span className="mono text-right tab-nums fw-600" style={{color:col}}>{r.vol}</span>
+                  <span className="fs-11" style={{color:'var(--cyan)'}}>{r.signal}</span>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+    </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CONTOUR 4: УЯЗВИМОСТИ — Fragility & Chokepoint Mapping
+// ═══════════════════════════════════════════════════════
+
+function ChokepointMap(){
+  const svgRef=useRef(null);
+  useEffect(()=>{
+    if(!svgRef.current)return;
+    const svg=d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    const w=svgRef.current.clientWidth||1100,h=360;
+    const proj=d3.geoNaturalEarth1().scale(w/5.8).translate([w/2,h/2]);
+
+    svg.append('path').datum(d3.geoGraticule().step([30,30])())
+      .attr('d',d3.geoPath().projection(proj)).attr('fill','none')
+      .attr('stroke','rgba(255,255,255,0.02)').attr('stroke-width',0.5);
+
+    // Shipping lanes (simplified great circle approximations)
+    const lanes=[
+      [[1,104],[6,80],[12,44],[30,32],[35,25],[36,0],[48,-5]], // Asia-Europe via Suez
+      [[1,104],[6,80],[-10,60],[-34,18],[0,-5],[35,-10],[48,-5]], // Asia-Europe via Cape
+      [[35,140],[24,120],[22,114],[1,104]], // East Asian coastal
+      [[30,32],[41,29],[43,28]], // Bosphorus approach
+      [[25,56],[26,57],[27,57]], // Hormuz
+    ];
+    lanes.forEach(lane=>{
+      const pts=lane.map(([lat,lon])=>proj([lon,lat])).filter(p=>p);
+      if(pts.length<2)return;
+      const line=d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveBasis);
+      svg.append('path').attr('d',line(pts)).attr('fill','none')
+        .attr('stroke','rgba(78,205,196,0.08)').attr('stroke-width',2).attr('stroke-dasharray','4,8');
+    });
+
+    CHOKEPOINTS.forEach((cp,i)=>{
+      const[x,y]=proj([cp.lon,cp.lat]);
+      if(!x)return;
+      const col=riskColor(cp.risk);
+
+      // Glow
+      const grad=svg.append('defs').append('radialGradient').attr('id',`cp-${i}`);
+      grad.append('stop').attr('offset','0%').attr('stop-color',col).attr('stop-opacity',cp.risk==='Critical'?0.2:0.1);
+      grad.append('stop').attr('offset','100%').attr('stop-color',col).attr('stop-opacity',0);
+      svg.append('circle').attr('cx',x).attr('cy',y).attr('r',25).attr('fill',`url(#cp-${i})`);
+
+      // Dot
+      svg.append('circle').attr('cx',x).attr('cy',y).attr('r',4).attr('fill',col).attr('opacity',0.9);
+      if(cp.risk!=='Normal'){
+        const p2=svg.append('circle').attr('cx',x).attr('cy',y).attr('r',4).attr('fill','none')
+          .attr('stroke',col).attr('stroke-width',1).attr('opacity',0);
+        function doPulse(){
+          p2.attr('r',4).attr('opacity',0.5)
+            .transition().duration(1800).delay(i*150)
+            .attr('r',16).attr('opacity',0).on('end',doPulse);
+        }
+        doPulse();
+      }
+
+      // Label
+      svg.append('text').attr('x',x+(x>w/2?-8:8)).attr('y',y-10)
+        .attr('text-anchor',x>w/2?'end':'start')
+        .attr('font-family',"'JetBrains Mono',monospace").attr('font-size','9px')
+        .attr('fill','rgba(232,230,227,0.5)').attr('letter-spacing','1px')
+        .text(cp.name);
+    });
+  },[]);
+  return <svg ref={svgRef} style={{width:'100%',height:'360px'}}/>;
+}
+
+function Contour4(){
+  const[tab,setTab]=useState('chokepoints');
+  return(
+    <section id="contour-3" className="section">
+      <FadeIn>
+        <div className="section-label">Contour 4</div>
+        <div className="section-title">УЯЗВИМОСТИ</div>
+        <div className="section-sub">Fragility & Chokepoint Mapping — Where the global system is brittle. Single points of failure before they break.</div>
+      </FadeIn>
+
+      <div className="tab-bar">
+        {['chokepoints','supply','sovereign'].map(t=>(
+          <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {{chokepoints:'Chokepoint Monitor',supply:'Supply Dependencies',sovereign:'Sovereign Stress'}[t]}
+          </button>
+        ))}
+      </div>
+
+      {tab==='chokepoints'&&(
+        <FadeIn>
+          <div className="glass p-20 mb-24">
+            <ChokepointMap/>
+          </div>
+          <div className="grid g4 gap-16">
+            {CHOKEPOINTS.map((cp,i)=>{
+              const col=riskColor(cp.risk);
+              const pctOfAvg=((cp.vessels/cp.avg)*100).toFixed(0);
+              return(
+                <div key={i} className="choke-card" style={{borderColor:cp.risk==='Critical'?'rgba(192,57,43,0.2)':cp.risk==='Elevated'?'rgba(212,168,67,0.12)':'rgba(255,255,255,0.04)'}}>
+                  <div style={{position:'absolute',top:0,left:0,right:0,height:'2px',background:col,opacity:0.6}}/>
+                  <div className="flex jc-sb ai-c mb-8">
+                    <span className="fw-500 fs-13">{cp.name}</span>
+                    <span className="mono fs-10 fw-600" style={{color:col,padding:'2px 8px',background:`${col}15`,borderRadius:'4px'}}>{cp.risk}</span>
+                  </div>
+                  <div className="mono fs-10 mb-8" style={{color:'var(--text3)'}}>{cp.share}</div>
+                  <div className="flex jc-sb ai-c mb-8">
+                    <span className="fs-11" style={{color:'var(--text3)'}}>Vessels/day</span>
+                    <span className="mono tab-nums fw-600" style={{color:pctOfAvg<90?col:'var(--text)'}}>{cp.vessels} <span className="fs-10 fw-300" style={{color:'var(--text3)'}}>/ {cp.avg} avg</span></span>
+                  </div>
+                  <ProgressBar value={cp.vessels} max={cp.avg*1.3} color={col}/>
+                  <div className="flex jc-sb ai-c" style={{marginTop:'8px'}}>
+                    <span className="fs-10" style={{color:'var(--text3)'}}>War risk</span>
+                    <span className="mono fs-10" style={{color:col}}>{cp.insurance}</span>
+                  </div>
+                  <div style={{marginTop:'8px'}}>
+                    <MiniSparkline data={cp.throughput} color={col} h={24}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='supply'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div style={{padding:'20px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              <div className="mono fs-9 ls-2 upper" style={{color:'var(--text3)'}}>Critical Supply Chain Dependencies — Single Points of Failure</div>
+            </div>
+            {SUPPLY_DEPS.map((s,i)=>{
+              const col=s.risk==='Critical'?'var(--red)':s.risk==='High'?'var(--amber)':'var(--gold)';
+              return(
+                <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr 80px 1fr 80px',gap:'12px',alignItems:'center',
+                  padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.03)',fontSize:'12px'}}>
+                  <span style={{color:'var(--text)',fontWeight:500}}>{s.resource}</span>
+                  <span style={{color:'var(--text2)'}}>{s.source}</span>
+                  <span className="mono text-center tab-nums fw-600" style={{color:col}}>{s.share}</span>
+                  <span style={{color:'var(--text3)'}}>{s.dest}</span>
+                  <span className="mono fs-10 fw-600 text-center" style={{color:col,padding:'2px 8px',background:`${col}15`,borderRadius:'4px'}}>{s.risk}</span>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='sovereign'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div className="sov-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Country</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>CDS 5Y (bps)</span>
+              <span className="mono fs-9 ls-1 upper text-center" style={{color:'var(--text3)'}}>Trend</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Reserves (mo)</span>
+              <span className="mono fs-9 ls-1 upper text-right" style={{color:'var(--text3)'}}>Debt/GDP</span>
+              <span className="mono fs-9 ls-1 upper text-center" style={{color:'var(--text3)'}}>Rating</span>
+            </div>
+            {SOVEREIGN_STRESS.map((s,i)=>{
+              const cdsCol=s.cds>1000?'var(--red)':s.cds>400?'var(--amber)':s.cds>200?'var(--gold)':'var(--text2)';
+              return(
+                <div key={i} className="sov-row">
+                  <span style={{color:'var(--text)',fontWeight:500}}>{s.country}</span>
+                  <span className="mono text-right tab-nums fw-600" style={{color:cdsCol}}>{s.cds.toLocaleString()}</span>
+                  <span className="text-center" style={{color:s.trend==='↑'?'var(--red)':s.trend==='↓'?'var(--green)':'var(--text3)'}}>{s.trend}</span>
+                  <span className="mono text-right tab-nums" style={{color:s.reserves<3?'var(--red)':s.reserves<6?'var(--amber)':'var(--text2)'}}>{s.reserves.toFixed(1)}</span>
+                  <span className="mono text-right tab-nums" style={{color:s.debt>80?'var(--red)':s.debt>60?'var(--amber)':'var(--text2)'}}>{s.debt}%</span>
+                  <span className="text-center" style={{fontSize:'16px'}}>{s.rating}</span>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+    </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CONTOUR 5: SYNTHESIS — Cross-Contour Signal Fusion
+// ═══════════════════════════════════════════════════════
+
+function ConvergenceCard({alert}){
+  const[exp,setExp]=useState(false);
+  const scoreCol=alert.score>=70?'var(--red)':alert.score>=50?'var(--gold)':'var(--cyan)';
+  return(
+    <div className={`conv-card ${alert.level}`} onClick={()=>setExp(!exp)} style={{cursor:'pointer'}}>
+      <div className="flex jc-sb ai-c mb-12">
+        <div className="flex ai-c gap-8">
+          <span style={{width:8,height:8,borderRadius:'50%',background:scoreCol}} className="pulse"/>
+          <span className="mono fs-10 ls-2 upper fw-600" style={{color:scoreCol}}>ALERT</span>
+        </div>
+        <div className="mono tab-nums" style={{fontSize:'28px',fontWeight:700,color:scoreCol}}>
+          <Counter target={alert.score} suffix="/100"/>
+        </div>
+      </div>
+      <div className="serif fw-600 mb-8" style={{fontSize:'22px'}}>{alert.title}</div>
+      <div className="mono fs-10 mb-16" style={{color:'var(--text3)'}}>Time horizon: {alert.horizon}</div>
+      <div className="fc gap-8 mb-16">
+        {alert.signals.map((s,i)=>(
+          <div key={i} className="flex gap-12 ai-c">
+            <span className="mono fs-10 fw-600" style={{
+              color:'var(--gold)',width:'24px',height:'24px',display:'flex',alignItems:'center',justifyContent:'center',
+              background:'rgba(212,168,67,0.08)',borderRadius:'6px',flexShrink:0
+            }}>C{s.contour}</span>
+            <div style={{flex:1}}>
+              <div className="fs-12" style={{color:'var(--text2)',lineHeight:1.4}}>{s.text}</div>
+            </div>
+            <div style={{width:'60px',flexShrink:0}}>
+              <ProgressBar value={s.conf} color={s.conf>70?'var(--gold)':'var(--text3)'}/>
+              <div className="mono fs-9 text-right" style={{color:'var(--text3)',marginTop:'2px'}}>{s.conf}%</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {exp&&(
+        <div style={{borderTop:'1px solid rgba(212,168,67,0.1)',paddingTop:'16px'}}>
+          <div className="mono fs-9 ls-2 upper mb-8" style={{color:'var(--gold-d)'}}>Recommended Action</div>
+          <div className="fs-13" style={{color:'var(--text)',lineHeight:1.6,fontWeight:400}}>{alert.action}</div>
+        </div>
+      )}
+      {!exp&&(
+        <div className="mono fs-10 text-center" style={{color:'var(--text3)',marginTop:'8px'}}>Click to expand</div>
+      )}
+    </div>
+  );
+}
+
+function BacktestCard(){
+  return(
+    <div style={{background:'linear-gradient(135deg,rgba(212,168,67,0.06),rgba(78,205,196,0.03))',
+      border:'1px solid rgba(212,168,67,0.2)',borderRadius:'12px',padding:'28px',position:'relative',overflow:'hidden'}}>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'2px',background:'linear-gradient(90deg,var(--gold),var(--cyan))'}}/>
+      <div className="flex ai-c gap-8 mb-12">
+        <span className="mono fs-9 ls-2 upper" style={{color:'var(--gold)',background:'rgba(212,168,67,0.1)',padding:'4px 10px',borderRadius:'4px'}}>Historical Validation</span>
+      </div>
+      <div className="serif fw-600 mb-8" style={{fontSize:'22px'}}>{BACKTEST.title}</div>
+      <div className="mono fw-700 mb-16" style={{fontSize:'16px',color:'var(--gold)'}}>
+        {BACKTEST.text}
+      </div>
+      <div className="fs-13 mb-16" style={{color:'var(--text2)',lineHeight:1.7}}>
+        {BACKTEST.details}
+      </div>
+      <div style={{background:'rgba(39,174,96,0.06)',border:'1px solid rgba(39,174,96,0.15)',borderRadius:'8px',padding:'16px 20px'}}>
+        <div className="mono fs-9 ls-2 upper mb-4" style={{color:'var(--green)'}}>Projected Action & Outcome</div>
+        <div className="fs-12" style={{color:'var(--text2)',lineHeight:1.6}}>{BACKTEST.action}</div>
+      </div>
+    </div>
+  );
+}
+
+function Contour5(){
+  const[tab,setTab]=useState('convergence');
+  return(
+    <section id="contour-4" className="section">
+      <FadeIn>
+        <div className="section-label">Contour 5</div>
+        <div className="section-title">SYNTHESIS</div>
+        <div className="section-sub">Cross-Contour Signal Fusion — The brain. When multiple contours light up simultaneously, the machine generates actionable intelligence.</div>
+      </FadeIn>
+
+      <div className="tab-bar">
+        {['convergence','actions','backtest'].map(t=>(
+          <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {{convergence:'Signal Convergence',actions:'Action Log',backtest:'Historical Validation'}[t]}
+          </button>
+        ))}
+      </div>
+
+      {tab==='convergence'&&(
+        <FadeIn>
+          <div className="grid g2 gap-20" style={{gridTemplateColumns:'1fr 1fr'}}>
+            <div className="fc gap-20">
+              {CONVERGENCE_ALERTS.slice(0,2).map((a,i)=>(
+                <ConvergenceCard key={i} alert={a}/>
+              ))}
+            </div>
+            <div className="fc gap-20">
+              {CONVERGENCE_ALERTS.slice(2).map((a,i)=>(
+                <ConvergenceCard key={i} alert={a}/>
+              ))}
+              <div className="glass p-24">
+                <div className="mono fs-9 ls-2 upper mb-16" style={{color:'var(--text3)'}}>Portfolio Impact — Gulf Escalation Scenario</div>
+                <div className="fc gap-8">
+                  {[
+                    {asset:'Energy Commodities',impact:'+12–18%',color:'var(--green)'},
+                    {asset:'Gold / Precious Metals',impact:'+6–10%',color:'var(--green)'},
+                    {asset:'Contemporary Art (Gulf origin)',impact:'+8–15%',color:'var(--green)'},
+                    {asset:'Old Masters',impact:'+3–5%',color:'var(--green)'},
+                    {asset:'European Equities',impact:'-5–8%',color:'var(--red)'},
+                    {asset:'EM Fixed Income',impact:'-8–14%',color:'var(--red)'},
+                    {asset:'Classic Cars',impact:'+2–4%',color:'var(--cyan)'},
+                    {asset:'Watches (Patek, AP)',impact:'+4–7%',color:'var(--green)'},
+                  ].map((d,i)=>(
+                    <div key={i} className="flex jc-sb ai-c" style={{padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,0.02)'}}>
+                      <span className="fs-12" style={{color:'var(--text2)'}}>{d.asset}</span>
+                      <span className="mono fs-12 fw-600 tab-nums" style={{color:d.color}}>{d.impact}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='actions'&&(
+        <FadeIn>
+          <div className="glass" style={{overflow:'hidden'}}>
+            <div className="action-row" style={{borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.01)'}}>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Time</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Thesis</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Asset</span>
+              <span className="mono fs-9 ls-1 upper" style={{color:'var(--text3)'}}>Entry</span>
+              <span className="mono fs-9 ls-1 upper text-center" style={{color:'var(--text3)'}}>Conf</span>
+              <span className="mono fs-9 ls-1 upper text-center" style={{color:'var(--text3)'}}>Status</span>
+            </div>
+            {ACTION_LOG.map((a,i)=>{
+              const sCol=a.status==='Active'?{bg:'rgba(39,174,96,0.12)',text:'var(--green)'}:
+                a.status==='New'?{bg:'rgba(212,168,67,0.12)',text:'var(--gold)'}:
+                {bg:'rgba(255,255,255,0.04)',text:'var(--text3)'};
+              return(
+                <div key={i} className="action-row">
+                  <span className="mono" style={{color:'var(--text3)'}}>{a.time}</span>
+                  <span className="fs-12" style={{color:'var(--text2)',lineHeight:1.3}}>{a.thesis}</span>
+                  <span className="mono fs-11 fw-500" style={{color:'var(--text)'}}>{a.asset}</span>
+                  <span className="mono fs-11 tab-nums" style={{color:'var(--cyan)'}}>{a.entry}</span>
+                  <span className="text-center">
+                    <ProgressBar value={a.conf} color={a.conf>65?'var(--gold)':'var(--text3)'}/>
+                    <span className="mono fs-9" style={{color:'var(--text3)'}}>{a.conf}%</span>
+                  </span>
+                  <span className="text-center">
+                    <span className="status-badge" style={{background:sCol.bg,color:sCol.text}}>{a.status}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </FadeIn>
+      )}
+
+      {tab==='backtest'&&(
+        <FadeIn>
+          <BacktestCard/>
+          <div style={{marginTop:'24px',textAlign:'center'}}>
+            <div className="mono fs-10 ls-2 upper" style={{color:'var(--text3)'}}>
+              Additional backtests available: COVID-19 Market Crash (Mar 2020) · Brexit Vote (Jun 2016) · Crimea Annexation (Mar 2014) · Arab Spring (Jan 2011)
+            </div>
+          </div>
+        </FadeIn>
+      )}
+    </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════
+
+function App(){
+  const[booted,setBooted]=useState(false);
+  const[active,setActive]=useState(0);
+
+  // Track active section on scroll
+  useEffect(()=>{
+    if(!booted)return;
+    const handler=()=>{
+      const sections=[0,1,2,3,4].map(i=>document.getElementById(`contour-${i}`));
+      const scrollY=window.scrollY+200;
+      for(let i=sections.length-1;i>=0;i--){
+        if(sections[i]&&sections[i].offsetTop<=scrollY){setActive(i);break}
+      }
+    };
+    window.addEventListener('scroll',handler);
+    return()=>window.removeEventListener('scroll',handler);
+  },[booted]);
+
+  if(!booted){
+    return <BootScreen onDone={()=>setBooted(true)}/>;
+  }
+
+  return(
+    <div>
+      <Nav active={active} setActive={setActive}/>
+      <Contour1/>
+      <Contour2/>
+      <Contour3/>
+      <Contour4/>
+      <Contour5/>
+
+      {/* Footer */}
+      <footer className="footer">
+        <FadeIn>
+          <div className="mono fs-9 ls-4 upper mb-16" style={{color:'var(--gold-d)'}}>Bloomsbury Technology</div>
+          <div className="serif" style={{fontSize:'28px',fontStyle:'italic',color:'var(--gold)',marginBottom:'20px'}}>
+            "Во время золотой лихорадки продавай лопаты."
+          </div>
+          <div className="mb-24">
+            <a href="mailto:eugene@bloomsbury.tech" className="mono fs-13" style={{color:'var(--cyan)',textDecoration:'none'}}>
+              Request Access → eugene@bloomsbury.tech
+            </a>
+          </div>
+          <div className="flex jc-c gap-32 mb-32">
+            {[
+              {l:'Founded',v:'2024'},{l:'HQ',v:'London'},{l:'Team',v:'LSE · Imperial · UCL'},
+              {l:'Focus',v:'Alt Assets × Geopolitics'},{l:'Engine',v:'Causal & Behavioral'}
+            ].map((x,i)=>(
+              <div key={i} className="text-center">
+                <div className="mono fs-9 ls-2 upper mb-4" style={{color:'var(--text3)'}}>{x.l}</div>
+                <div className="fs-12" style={{color:'var(--text2)'}}>{x.v}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mono fs-9 ls-1" style={{color:'rgba(255,255,255,0.12)'}}>
+            This is a conceptual demonstration. All indices, probabilities, anomalies, and trade ideas are illustrative.
+            The Bloomsbury Fault Line Tension Index (BFLTI) and MERIDIAN system are proprietary — methodology available under NDA.
+          </div>
+          <div className="mono fs-9 ls-1" style={{color:'rgba(255,255,255,0.06)',marginTop:'12px'}}>
+            MERIDIAN v0.9.1 · КОДОВОЕ СЛОВО: МЕРИДИАН · © 2024–2026 Bloomsbury Technology Ltd
+          </div>
+        </FadeIn>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
