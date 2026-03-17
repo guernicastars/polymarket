@@ -83,23 +83,23 @@ X ≜ ψ(Π) = { x ∈ ℝⁿ | ψ⁻¹(x) ∈ Π }
 
 In the formalization, `CausalEmbedding` bundles ψ with a proof of injectivity (`ψ_inj`).
 
-## 6. Causal Map f : ℝⁿ → ℝⁿ
+## 6. Causal Map f : ℝⁿ → ℝᵖ
 
-The **causal map** operates in the embedding space:
+The **causal map** maps from the embedding space to a (potentially different) output space:
 
 ```
-f : ℝⁿ → ℝⁿ
-Y ≜ f(X)    — predicted outcomes
+f : ℝⁿ → ℝᵖ
+Y ≜ f(X) ⊆ ℝᵖ    — predicted outcomes
 ```
 
-Given an embedded state x ∈ X, f(x) is the model's prediction of the next state (or final outcome).
+The output dimension p may differ from the embedding dimension n. For example, the embedding might be a 64-dimensional latent space (n=64) while the prediction target is a 3-dimensional outcome vector (p=3: probability, volume, volatility).
 
 ## 7. Squared-Error Loss
 
-The loss function evaluates prediction quality:
+The loss function evaluates prediction quality in the output space ℝᵖ:
 
 ```
-ℓ(y, ŷ) ≜ ‖y - ŷ‖² = Σᵢ (yᵢ - ŷᵢ)²
+ℓ(y, ŷ) ≜ ‖y - ŷ‖² = Σᵢ (yᵢ - ŷᵢ)²    where y, ŷ ∈ ℝᵖ
 ```
 
 **Proven properties:**
@@ -111,22 +111,22 @@ The loss function evaluates prediction quality:
 The central requirement: **the embedding must commute with the causal dynamics**.
 
 ```
-    Π ———g———→ Π
+    Π ———g———→ Π'
     |            |
-  ψ |            | ψ
+  ψ |            | ψ̂
     ↓            ↓
-   ℝⁿ ———f———→ ℝⁿ
+   ℝⁿ ———f———→ ℝᵖ
 ```
 
-For some abstract dynamics g : Π → Π, we require:
+Since f : ℝⁿ → ℝᵖ maps between different spaces, we need **two** embeddings: an input embedding ψ : Π → ℝⁿ and an output embedding ψ̂ : Π' → ℝᵖ. For some abstract dynamics g : Π → Π', we require:
 
 ```
-∀ x ∈ Π,  f(ψ(x)) = ψ(g(x))
+∀ x ∈ Π,  f(ψ(x)) = ψ̂(g(x))
 ```
 
-This says: it doesn't matter whether you first embed then apply f, or first apply g then embed — you get the same result. This is the `commutes` field of `CommutativeCausalEmbedding`.
+This says: it doesn't matter whether you first embed then apply f, or first apply g then embed via ψ̂ — you get the same result. This is the `commutes` field of `CommutativeCausalEmbedding`.
 
-**Why this matters:** If commutativity holds, the learned dynamics f in ℝⁿ faithfully represent the true dynamics g on the abstract outcome space. Predictions made in the embedding space correspond to real outcome transitions.
+**Why this matters:** If commutativity holds, the learned dynamics f faithfully represent the true dynamics g. The two embeddings ψ, ψ̂ can represent different representations of the world (e.g., ψ encodes current market state, ψ̂ encodes predicted outcome).
 
 ## 9. Homomorphism Property
 
@@ -156,59 +156,63 @@ These apply to the embedding ψ and causal map f — both should be continuous f
 
 ## 11. Gradient Decomposition
 
-The core calculus result. Given the composite prediction pipeline:
+The core calculus result. Given the composite prediction pipeline with three dimension parameters:
 
 ```
-x ∈ ℝᵐ  ──ψ──▸  z ∈ ℝⁿ  ──f──▸  ŷ ∈ ℝⁿ
+x ∈ ℝᵐ  ──ψ──▸  z ∈ ℝⁿ  ──f──▸  ŷ ∈ ℝᵖ
+         (n×m)           (p×n)
 ```
 
-The loss is L(x) = ‖f(ψ(x)) - y‖². By the chain rule, the gradient decomposes into **three factors**:
+where m is the abstract input dimension, n is the latent/embedding dimension, and p is the output dimension. The causal map f : ℝⁿ → ℝᵖ maps between potentially different spaces.
+
+The loss is L(x) = ‖f(ψ(x)) - y‖² where y ∈ ℝᵖ. By the chain rule, the gradient decomposes into **three factors**:
 
 ```
-∇ₓL  =  2  ·  Jψ(x)ᵀ  ·  Jf(z)ᵀ  ·  r
-         ↑        ↑           ↑        ↑
-       scalar  embedding    causal   residual
-               Jacobian    Jacobian
+∇ₓL  =  2  ·  Jψ(x)ᵀ  ·  Jf(z)ᵀ  ·  r       ∈ ℝᵐ
+         ↑      ↑            ↑         ↑
+       scalar  (m×n)        (n×p)     ℝᵖ
+              embedding    causal   residual
+              Jacobian     Jacobian
 ```
 
-where z = ψ(x) and r = f(ψ(x)) - y.
+where z = ψ(x) and r = f(ψ(x)) - y. The dimensions chain as: ℝᵖ →(Jfᵀ: n×p)→ ℝⁿ →(Jψᵀ: m×n)→ ℝᵐ.
 
 ### Three terms and their interpretations
 
-| Term | Formula | Interpretation |
-|------|---------|----------------|
-| **Residual** r | f(ψ(x)) - y | "How wrong is the prediction?" — a vector in ℝⁿ pointing from the target to the prediction |
-| **Causal backprop** Jf(z)ᵀ · r | ∂f/∂z transposed times residual | "How does the error propagate through the causal map?" — transforms the error signal from output space back through f's local linearization |
-| **Embedding backprop** Jψ(x)ᵀ · (Jf(z)ᵀ · r) | ∂ψ/∂x transposed times causal backprop | "How does the error reach the abstract input space?" — maps the causal error signal back through the embedding |
+| Term | Formula | Shape | Interpretation |
+|------|---------|-------|----------------|
+| **Residual** r | f(ψ(x)) - y | ℝᵖ | "How wrong is the prediction?" — a vector in the output space pointing from target to prediction |
+| **Causal backprop** Jf(z)ᵀ · r | (n×p) · ℝᵖ | ℝⁿ | "How does the error propagate through f?" — maps the ℝᵖ error back into the ℝⁿ latent space |
+| **Embedding backprop** Jψ(x)ᵀ · (Jf(z)ᵀ · r) | (m×n) · ℝⁿ | ℝᵐ | "How does the error reach the input space?" — maps the latent error back to ℝᵐ |
 
 ### Expanded index form
 
-Component j of the gradient expands to a double sum over the internal dimensions:
+Component j ∈ Fin m of the gradient expands to a double sum — over k ∈ Fin n (latent) and i ∈ Fin p (output):
 
 ```
-∂L/∂xⱼ = 2 · Σₖ Jψ(x)ₖⱼ · Σᵢ Jf(z)ᵢₖ · rᵢ
+∂L/∂xⱼ = 2 · Σₖ₌₁ⁿ Jψ(x)ₖⱼ · Σᵢ₌₁ᵖ Jf(z)ᵢₖ · rᵢ
 ```
 
 This is `grad_decomposition` in the formalization.
 
 ### Per-component attribution
 
-We can further decompose by asking: "how much does prediction error in output dimension i contribute to the gradient at input dimension j?"
+We can further decompose by asking: "how much does prediction error in output dimension i ∈ Fin p contribute to the gradient at input dimension j ∈ Fin m?"
 
 ```
-Aᵢⱼ = 2 · rᵢ · Σₖ Jf(z)ᵢₖ · Jψ(x)ₖⱼ
+Aᵢⱼ = 2 · rᵢ · Σₖ₌₁ⁿ Jf(z)ᵢₖ · Jψ(x)ₖⱼ
 ```
 
-The gradient is the sum of these attributions: ∂L/∂xⱼ = Σᵢ Aᵢⱼ
+The gradient is the sum of these attributions: ∂L/∂xⱼ = Σᵢ₌₁ᵖ Aᵢⱼ
 
 This is proven as `grad_eq_sum_attributions`.
 
 ### Composite Jacobian form
 
-Equivalently, using the chain-rule Jacobian J(f∘ψ) = Jf · Jψ:
+Equivalently, using the chain-rule Jacobian J(f∘ψ) = Jf · Jψ (a p × m matrix):
 
 ```
-∇ₓL = 2 · J(f∘ψ)(x)ᵀ · r
+∇ₓL = 2 · J(f∘ψ)(x)ᵀ · r     where J(f∘ψ)ᵀ : m × p,  r : ℝᵖ
 ```
 
 This collapses the two-Jacobian product into a single composite Jacobian, proven as `grad_via_composite_jacobian`.
