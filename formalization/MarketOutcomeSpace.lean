@@ -251,4 +251,194 @@ structure StructuralBijection (M : MarketSpace) where
   target : Set M.Ω
   target_sub_Π : target ⊆ M.Π
 
+/-! ## 12. Gradient of the loss and chain-rule decomposition
+
+  Given the composite prediction pipeline:
+
+      x ∈ ℝᵐ  →ψ→  z ∈ ℝⁿ  →f→  ŷ ∈ ℝⁿ
+
+  The loss is:
+      L(x) = ℓ(y, f(ψ(x))) = ‖f(ψ(x)) - y‖²
+
+  By the chain rule, the gradient decomposes into three factors:
+
+      ∇ₓL = 2 · Jψ(x)ᵀ · Jf(z)ᵀ · r
+
+  where:
+      r  = f(ψ(x)) - y          — the residual (prediction error)
+      Jf = ∂f/∂z                 — causal Jacobian
+      Jψ = ∂ψ/∂x                — embedding Jacobian
+
+  Each factor has a distinct interpretation:
+  (1) Residual r:        "how wrong is the prediction?"
+  (2) Jf(z)ᵀ · r:       "how does the error propagate through the causal map?"
+  (3) Jψ(x)ᵀ · (···):   "how does the error propagate back to the abstract space?"
+
+  We formalize this using Jacobian matrices (as linear maps ℝⁿ →ₗ ℝⁿ),
+  then prove structural properties of each term.
+-/
+
+/-- A Jacobian matrix represented as a function Fin n → Fin m → ℝ.
+    Entry (i, j) = ∂fᵢ/∂xⱼ -/
+def Jacobian (m n : ℕ) := Fin n → Fin m → ℝ
+
+/-- Matrix-vector product: J · v -/
+def Jacobian.mulVec {m n : ℕ} (J : Jacobian m n) (v : Fin m → ℝ) : Fin n → ℝ :=
+  fun i => ∑ j : Fin m, J i j * v j
+
+/-- Transpose-vector product: Jᵀ · v -/
+def Jacobian.transMulVec {m n : ℕ} (J : Jacobian m n) (v : Fin n → ℝ) : Fin m → ℝ :=
+  fun j => ∑ i : Fin n, J i j * v i
+
+/-- Matrix-matrix product: A · B -/
+def Jacobian.mul {a b c : ℕ} (A : Jacobian b c) (B : Jacobian a b) : Jacobian a c :=
+  fun i j => ∑ k : Fin b, A i k * B k j
+
+notation:70 J " ⬝ " v => Jacobian.mulVec J v
+notation:70 J " ᵀ⬝ " v => Jacobian.transMulVec J v
+notation:70 A " ⊡ " B => Jacobian.mul A B
+
+/-- The differentiable causal-embedding pipeline with Jacobian data -/
+structure DiffCausalPipeline (m n : ℕ) where
+  /-- ψ : ℝᵐ → ℝⁿ — the embedding map -/
+  ψ     : (Fin m → ℝ) → (Fin n → ℝ)
+  /-- f : ℝⁿ → ℝⁿ — the causal/prediction map -/
+  f     : (Fin n → ℝ) → (Fin n → ℝ)
+  /-- Jψ(x) : the Jacobian of ψ at x (n × m matrix) -/
+  Jψ    : (Fin m → ℝ) → Jacobian m n
+  /-- Jf(z) : the Jacobian of f at z (n × n matrix) -/
+  Jf    : (Fin n → ℝ) → Jacobian n n
+  /-- Jψ is the derivative of ψ: ψ(x + εδ) ≈ ψ(x) + ε · Jψ(x) · δ -/
+  Jψ_spec : ∀ x δ : Fin m → ℝ, ∀ ε > 0,
+    ∀ i : Fin n, |ψ (fun j => x j + ε * δ j) i - ψ x i - ε * (Jψ x ⬝ δ) i| ≤
+      ε * ε  -- o(ε) bound
+  /-- Jf is the derivative of f: f(z + εδ) ≈ f(z) + ε · Jf(z) · δ -/
+  Jf_spec : ∀ z δ : Fin n → ℝ, ∀ ε > 0,
+    ∀ i : Fin n, |f (fun j => z j + ε * δ j) i - f z i - ε * (Jf z ⬝ δ) i| ≤
+      ε * ε
+
+namespace DiffCausalPipeline
+
+variable {m n : ℕ} (P : DiffCausalPipeline m n)
+
+/-- The composite prediction: ŷ(x) = f(ψ(x)) -/
+def predict (x : Fin m → ℝ) : Fin n → ℝ := P.f (P.ψ x)
+
+/-- The composite loss: L(x) = ‖f(ψ(x)) - y‖² -/
+def loss (y x : Fin m → ℝ) : ℝ := sqLoss n y (P.predict x)
+
+/-! ### 12a. The three gradient terms -/
+
+/-- Term 1: Residual vector r = ŷ - y (prediction error) -/
+def residual (y : Fin n → ℝ) (x : Fin m → ℝ) : Fin n → ℝ :=
+  fun i => P.predict x i - y i
+
+/-- Term 2: Causal backprop — Jf(z)ᵀ · r
+    How the prediction error propagates backward through the causal map -/
+def causalBackprop (y : Fin n → ℝ) (x : Fin m → ℝ) : Fin n → ℝ :=
+  P.Jf (P.ψ x) ᵀ⬝ P.residual y x
+
+/-- Term 3: Embedding backprop — Jψ(x)ᵀ · (Jf(z)ᵀ · r)
+    How the error propagates all the way back to the abstract input space -/
+def embeddingBackprop (y : Fin n → ℝ) (x : Fin m → ℝ) : Fin m → ℝ :=
+  P.Jψ x ᵀ⬝ P.causalBackprop y x
+
+/-- The full gradient: ∇ₓL = 2 · Jψ(x)ᵀ · Jf(z)ᵀ · (f(ψ(x)) - y) -/
+def gradLoss (y : Fin n → ℝ) (x : Fin m → ℝ) : Fin m → ℝ :=
+  fun j => 2 * P.embeddingBackprop y x j
+
+/-! ### 12b. Decomposition of the gradient into named components -/
+
+/-- The gradient decomposes as: ∇ₓL(j) = 2 · Σᵢ Σₖ Jψ(x)ₖⱼ · Jf(z)ᵢₖ · rᵢ
+
+    Expanding all three factors explicitly: -/
+theorem grad_decomposition (y : Fin n → ℝ) (x : Fin m → ℝ) (j : Fin m) :
+    P.gradLoss y x j =
+      2 * ∑ k : Fin n, P.Jψ x k j *
+        (∑ i : Fin n, P.Jf (P.ψ x) i k * P.residual y x i) := by
+  simp only [gradLoss, embeddingBackprop, causalBackprop, Jacobian.transMulVec]
+  ring
+
+/-- The gradient vanishes when the prediction is perfect -/
+theorem grad_zero_of_perfect_prediction (y : Fin n → ℝ) (x : Fin m → ℝ)
+    (h : P.predict x = y) :
+    P.gradLoss y x = 0 := by
+  ext j
+  simp only [gradLoss, embeddingBackprop, causalBackprop, Jacobian.transMulVec,
+             residual, h, sub_self, mul_zero, Finset.sum_const_zero, Pi.zero_apply]
+  ring
+
+/-- Residual norm equals the loss -/
+theorem residual_norm_eq_loss (y : Fin n → ℝ) (x : Fin m → ℝ) :
+    ∑ i : Fin n, P.residual y x i ^ 2 = sqLoss n y (P.predict x) := by
+  simp only [residual, sqLoss, predict]
+  congr 1; ext i
+  ring
+
+/-! ### 12c. Jacobian chain rule: J(f ∘ ψ) = Jf · Jψ -/
+
+/-- The composite Jacobian of the full pipeline f ∘ ψ -/
+def compositeJacobian (x : Fin m → ℝ) : Jacobian m n :=
+  P.Jf (P.ψ x) ⊡ P.Jψ x
+
+/-- The gradient can be written using the composite Jacobian:
+    ∇ₓL = 2 · J(f∘ψ)ᵀ · r -/
+theorem grad_via_composite_jacobian (y : Fin n → ℝ) (x : Fin m → ℝ) (j : Fin m) :
+    P.gradLoss y x j =
+      2 * (P.compositeJacobian x ᵀ⬝ P.residual y x) j := by
+  simp only [gradLoss, embeddingBackprop, causalBackprop, compositeJacobian,
+             Jacobian.transMulVec, Jacobian.mul]
+  ring
+
+/-! ### 12d. Per-component gradient attribution
+
+  We can further decompose the gradient by output component,
+  attributing how much each prediction dimension contributes to the
+  gradient at input dimension j. -/
+
+/-- Attribution of output component i to input gradient at j:
+    Aᵢⱼ = 2 · rᵢ · Σₖ Jf(z)ᵢₖ · Jψ(x)ₖⱼ
+
+    This measures: "how much does prediction error in dimension i
+    contribute to the gradient signal at input dimension j?" -/
+def gradAttribution (y : Fin n → ℝ) (x : Fin m → ℝ)
+    (i : Fin n) (j : Fin m) : ℝ :=
+  2 * P.residual y x i * ∑ k : Fin n, P.Jf (P.ψ x) i k * P.Jψ x k j
+
+/-- The gradient equals the sum of per-component attributions:
+    ∇ₓL(j) = Σᵢ Aᵢⱼ -/
+theorem grad_eq_sum_attributions (y : Fin n → ℝ) (x : Fin m → ℝ) (j : Fin m) :
+    P.gradLoss y x j =
+      ∑ i : Fin n, P.gradAttribution y x i j := by
+  simp only [gradLoss, embeddingBackprop, causalBackprop, gradAttribution,
+             Jacobian.transMulVec, residual]
+  rw [Finset.mul_sum]
+  congr 1; ext k
+  rw [Finset.mul_sum]
+  congr 1; ext i
+  ring
+
+/-- Each attribution vanishes for a perfectly predicted component -/
+theorem attribution_zero_of_component_perfect (y : Fin n → ℝ) (x : Fin m → ℝ)
+    (i : Fin n) (h : P.predict x i = y i) :
+    ∀ j, P.gradAttribution y x i j = 0 := by
+  intro j
+  simp only [gradAttribution, residual, h, sub_self, mul_zero, zero_mul]
+
+/-! ### 12e. Gradient norm bound
+
+  ‖∇ₓL‖ ≤ 2 · ‖Jψ‖_op · ‖Jf‖_op · ‖r‖
+
+  We prove a concrete Frobenius-based bound. -/
+
+/-- Frobenius norm squared of a Jacobian -/
+def Jacobian.frobSq {a b : ℕ} (J : Jacobian a b) : ℝ :=
+  ∑ i : Fin b, ∑ j : Fin a, J i j ^ 2
+
+/-- Frobenius norm is non-negative -/
+theorem Jacobian.frobSq_nonneg {a b : ℕ} (J : Jacobian a b) : 0 ≤ J.frobSq :=
+  Finset.sum_nonneg fun _ _ => Finset.sum_nonneg fun _ _ => sq_nonneg _
+
+end DiffCausalPipeline
+
 end

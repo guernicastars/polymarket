@@ -154,6 +154,83 @@ The bottom of the board records the standard analytic foundations:
 
 These apply to the embedding ψ and causal map f — both should be continuous for the framework to be well-behaved. The formalization includes a proof that convergent sequences are bounded (`SeqConvergesTo.bounded`).
 
+## 11. Gradient Decomposition
+
+The core calculus result. Given the composite prediction pipeline:
+
+```
+x ∈ ℝᵐ  ──ψ──▸  z ∈ ℝⁿ  ──f──▸  ŷ ∈ ℝⁿ
+```
+
+The loss is L(x) = ‖f(ψ(x)) - y‖². By the chain rule, the gradient decomposes into **three factors**:
+
+```
+∇ₓL  =  2  ·  Jψ(x)ᵀ  ·  Jf(z)ᵀ  ·  r
+         ↑        ↑           ↑        ↑
+       scalar  embedding    causal   residual
+               Jacobian    Jacobian
+```
+
+where z = ψ(x) and r = f(ψ(x)) - y.
+
+### Three terms and their interpretations
+
+| Term | Formula | Interpretation |
+|------|---------|----------------|
+| **Residual** r | f(ψ(x)) - y | "How wrong is the prediction?" — a vector in ℝⁿ pointing from the target to the prediction |
+| **Causal backprop** Jf(z)ᵀ · r | ∂f/∂z transposed times residual | "How does the error propagate through the causal map?" — transforms the error signal from output space back through f's local linearization |
+| **Embedding backprop** Jψ(x)ᵀ · (Jf(z)ᵀ · r) | ∂ψ/∂x transposed times causal backprop | "How does the error reach the abstract input space?" — maps the causal error signal back through the embedding |
+
+### Expanded index form
+
+Component j of the gradient expands to a double sum over the internal dimensions:
+
+```
+∂L/∂xⱼ = 2 · Σₖ Jψ(x)ₖⱼ · Σᵢ Jf(z)ᵢₖ · rᵢ
+```
+
+This is `grad_decomposition` in the formalization.
+
+### Per-component attribution
+
+We can further decompose by asking: "how much does prediction error in output dimension i contribute to the gradient at input dimension j?"
+
+```
+Aᵢⱼ = 2 · rᵢ · Σₖ Jf(z)ᵢₖ · Jψ(x)ₖⱼ
+```
+
+The gradient is the sum of these attributions: ∂L/∂xⱼ = Σᵢ Aᵢⱼ
+
+This is proven as `grad_eq_sum_attributions`.
+
+### Composite Jacobian form
+
+Equivalently, using the chain-rule Jacobian J(f∘ψ) = Jf · Jψ:
+
+```
+∇ₓL = 2 · J(f∘ψ)(x)ᵀ · r
+```
+
+This collapses the two-Jacobian product into a single composite Jacobian, proven as `grad_via_composite_jacobian`.
+
+### Key proven properties
+
+| Theorem | Statement |
+|---------|-----------|
+| `grad_zero_of_perfect_prediction` | ∇ₓL = 0 when f(ψ(x)) = y |
+| `residual_norm_eq_loss` | ‖r‖² = L(x) |
+| `attribution_zero_of_component_perfect` | Aᵢⱼ = 0 when prediction dimension i is exact |
+| `grad_eq_sum_attributions` | ∇ₓL(j) = Σᵢ Aᵢⱼ |
+| `grad_via_composite_jacobian` | Equivalence of factored and composite forms |
+
+### Practical meaning for prediction markets
+
+Each factor tells you something different about why the model is updating:
+
+- **Large ‖r‖**: the model is badly wrong about some market — gradient is large regardless of Jacobian structure
+- **Large ‖Jfᵀ · r‖ but small ‖r‖**: the causal map amplifies small errors — sensitive dynamics, potential instability
+- **Large ‖Jψᵀ · (Jfᵀ · r)‖ but small ‖Jfᵀ · r‖**: the embedding compresses causal error into specific input directions — reveals which abstract features (price, volume, OBI, etc.) drive the update
+
 ---
 
 ## Connection to Polymarket
