@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloomsbury Technology — Middle East Conflict Network</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --card: #111118;
+            --border: #1e1e2e;
+            --sidebar: #0d0d14;
+            --accent: #00d4aa;
+            --destructive: #ff4466;
+            --chart-blue: #3b82f6;
+            --chart-purple: #a855f7;
+            --chart-amber: #f59e0b;
+            --muted: #6b7280;
+            --fg: #e5e7eb;
+            --radius: 0.625rem;
+        }
+
+        html {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--fg);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            scroll-behavior: smooth;
+        }
+
+        body { background: var(--bg); color: var(--fg); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00e8bb; }
+
+        .font-mono { font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace; }
+
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            color: var(--fg);
+        }
+
+        h1 .accent { font-style: italic; color: var(--muted); font-weight: 400; }
+
+        h2 {
+            font-size: clamp(1.75rem, 3vw, 2.25rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            color: var(--fg);
+        }
+
+        h3 { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+
+        p { font-size: 1rem; line-height: 1.65; color: var(--muted); }
+        p.large { font-size: 1.125rem; line-height: 1.7; }
+
+        .section { padding: 96px 24px; }
+        @media (min-width: 768px) { .section { padding: 96px 48px; } }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        /* Nav */
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 9000;
+            background: rgba(13,13,20,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border); height: 56px;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+        }
+        @media (min-width: 768px) { .nav { padding: 0 48px; } }
+
+        .nav-brand {
+            font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+            letter-spacing: -0.02em; color: var(--fg); text-decoration: none;
+        }
+
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--fg); }
+        .nav-divider { width: 1px; height: 20px; background: var(--border); }
+
+        .nav-live {
+            display: flex; align-items: center; gap: 6px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.05em;
+        }
+        .nav-live-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Hero */
+        .hero { padding-top: 152px; padding-bottom: 96px; }
+
+        .hero-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 48px; }
+        @media (min-width: 640px) { .hero-stats { grid-template-columns: repeat(5, 1fr); } }
+
+        .hero-stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+        .hero-stat-label {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px;
+        }
+        .hero-stat-value {
+            font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700;
+            color: var(--fg); font-variant-numeric: tabular-nums;
+        }
+        .hero-stat-value.alert { color: var(--destructive); }
+        .hero-stat-value.live { color: var(--accent); }
+
+        /* Cards */
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color 0.25s; }
+        .card:hover { border-color: var(--accent); }
+
+        /* Map */
+        .map-section {
+            padding: 0; background: var(--sidebar);
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+        }
+        .map-header { padding: 48px 24px 24px; }
+        @media (min-width: 768px) { .map-header { padding: 48px 48px 24px; } }
+
+        .map-wrapper { display: flex; flex-direction: column; position: relative; }
+        @media (min-width: 1024px) { .map-wrapper { flex-direction: row; } }
+
+        #map { height: 700px; width: 100%; flex: 1; background: var(--bg); }
+
+        .leaflet-container { background: var(--bg) !important; font-family: 'Inter', sans-serif; }
+        .leaflet-control-zoom a {
+            background: var(--card) !important; color: var(--fg) !important;
+            border: 1px solid var(--border) !important; border-radius: 0 !important;
+        }
+        .leaflet-control-zoom a:hover { background: #1a1a24 !important; }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--card) !important; border: 1px solid var(--border) !important;
+            border-radius: var(--radius) !important; box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
+        }
+        .leaflet-popup-content { margin: 16px 20px !important; color: var(--fg); font-size: 13px; font-family: 'Inter', sans-serif; }
+        .leaflet-popup-tip { background: var(--card) !important; border: 1px solid var(--border) !important; }
+
+        .popup-title { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 8px; letter-spacing: -0.01em; }
+        .popup-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; }
+        .popup-label { color: var(--muted); }
+        .popup-value { color: var(--fg); font-weight: 500; }
+
+        .popup-tags { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+        .popup-tag {
+            display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 9px;
+            letter-spacing: 0.03em; background: var(--bg); border: 1px solid var(--border);
+            padding: 2px 6px; margin: 2px 2px; color: var(--muted);
+        }
+
+        /* Map Controls */
+        .map-controls {
+            position: absolute; top: 12px; left: 12px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+
+        .control-panel {
+            background: rgba(17,17,24,0.95); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 16px; backdrop-filter: blur(8px); box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-panel h4 {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;
+        }
+
+        .control-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+
+        .control-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--fg);
+            padding: 6px 12px; font-size: 11px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; font-family: 'Inter', sans-serif; border-radius: 4px;
+        }
+        .control-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .control-btn.active { background: var(--accent); border-color: var(--accent); color: #0a0a0f; }
+
+        /* Edge type toggles */
+        .edge-toggle { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; }
+        .edge-toggle input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+        .edge-toggle-label { font-size: 11px; color: var(--muted); }
+        .edge-toggle-swatch { width: 14px; height: 3px; flex-shrink: 0; border-radius: 1px; }
+
+        /* Legend */
+        .map-legend {
+            position: absolute; bottom: 16px; left: 12px; z-index: 1000;
+            background: rgba(17,17,24,0.95); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 16px; backdrop-filter: blur(8px);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3); width: 210px; max-height: 400px; overflow-y: auto;
+        }
+        .map-legend h4 {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 8px;
+        }
+        .legend-section { margin-bottom: 8px; }
+        .legend-section-title {
+            font-family: 'JetBrains Mono', monospace; font-size: 9px;
+            text-transform: uppercase; letter-spacing: 0.08em; color: #3a3a4a; margin-bottom: 4px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+        .legend-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+        .legend-line-swatch { width: 16px; height: 2px; flex-shrink: 0; border-radius: 1px; }
+        .legend-text { font-size: 11px; color: var(--muted); }
+
+        /* Cascade Overlay */
+        .cascade-overlay {
+            position: absolute; top: 12px; right: 12px; z-index: 1000;
+            background: rgba(17,17,24,0.97); border: 1px solid var(--destructive);
+            border-radius: var(--radius); padding: 16px 20px; backdrop-filter: blur(8px);
+            box-shadow: 0 2px 12px rgba(255,68,102,0.15); max-width: 300px; display: none;
+        }
+        .cascade-overlay.visible { display: block; }
+        .cascade-overlay h4 {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--destructive); margin-bottom: 8px;
+        }
+        .cascade-info { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+        .cascade-node {
+            display: flex; align-items: center; gap: 8px; font-size: 12px;
+            margin: 4px 0; padding: 4px 0; border-bottom: 1px solid var(--border);
+        }
+        .cascade-depth { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; width: 24px; }
+        .cascade-name { color: var(--fg); font-weight: 500; }
+        .cascade-via { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-left: auto; }
+        .cascade-close {
+            position: absolute; top: 8px; right: 12px; background: none;
+            border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; line-height: 1;
+        }
+        .cascade-close:hover { color: var(--destructive); }
+
+        /* Market Panel */
+        .market-panel {
+            width: 100%; background: var(--card); border-top: 1px solid var(--border);
+            max-height: 500px; overflow-y: auto;
+        }
+        @media (min-width: 1024px) {
+            .market-panel {
+                width: 380px; border-top: none; border-left: 1px solid var(--border);
+                max-height: 700px; flex-shrink: 0;
+            }
+        }
+
+        .market-panel-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; background: var(--card); z-index: 2;
+        }
+        .market-panel-title {
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600;
+        }
+        .refresh-btn {
+            font-family: 'JetBrains Mono', monospace; background: transparent;
+            border: 1px solid var(--border); color: var(--fg); padding: 5px 12px;
+            font-size: 10px; cursor: pointer; transition: all 0.2s; font-weight: 500; letter-spacing: 0.03em;
+            border-radius: 4px;
+        }
+        .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .refresh-btn.loading { opacity: 0.4; pointer-events: none; }
+
+        .market-tabs {
+            display: flex; border-bottom: 1px solid var(--border);
+            position: sticky; top: 49px; background: var(--card); z-index: 1; flex-wrap: wrap;
+        }
+        .market-tab {
+            flex: 1; padding: 10px 6px; text-align: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 9px;
+            text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer;
+            color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.2s;
+            min-width: 60px;
+        }
+        .market-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .market-tab:hover { color: var(--fg); }
+
+        .markets-list { padding: 4px 0; }
+
+        .market-card {
+            margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: background 0.15s;
+        }
+        .market-card:hover { background: #1a1a24; }
+        .market-question { font-size: 13px; font-weight: 500; color: var(--fg); line-height: 1.45; margin-bottom: 10px; }
+        .market-prices { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .price-pill {
+            font-family: 'JetBrains Mono', monospace; padding: 3px 10px;
+            font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+            border-radius: 4px;
+        }
+        .price-yes { background: rgba(0,212,170,0.12); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+        .price-no { background: rgba(255,68,102,0.12); color: var(--destructive); border: 1px solid rgba(255,68,102,0.3); }
+        .market-meta {
+            display: flex; gap: 16px; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; color: var(--muted); flex-wrap: wrap;
+        }
+        .market-link {
+            display: inline-block; margin-top: 8px; font-size: 11px;
+            color: var(--accent); text-decoration: none; opacity: 0.4; transition: opacity 0.2s;
+        }
+        .market-link:hover { opacity: 1; text-decoration: underline; }
+
+        .loading-spinner {
+            display: flex; align-items: center; justify-content: center;
+            padding: 40px; color: var(--muted); font-size: 12px; gap: 8px;
+        }
+        .spinner {
+            width: 14px; height: 14px; border: 2px solid var(--border);
+            border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .market-panel-footer {
+            padding: 8px 20px; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; color: #3a3a4a; text-align: center;
+            border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--card);
+        }
+
+        /* Vulnerability */
+        .vuln-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+        }
+        .vuln-rank {
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            color: #3a3a4a; width: 24px; text-align: right;
+        }
+        .vuln-name { font-size: 13px; font-weight: 500; color: var(--fg); width: 140px; }
+        .vuln-region {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            color: var(--muted); width: 60px;
+        }
+        .vuln-bar-bg { flex: 1; height: 4px; background: var(--border); position: relative; border-radius: 2px; }
+        .vuln-bar { height: 100%; transition: width 0.6s ease; border-radius: 2px; }
+        .vuln-score {
+            font-family: 'JetBrains Mono', monospace; font-size: 12px;
+            font-weight: 600; font-variant-numeric: tabular-nums; width: 36px; text-align: right;
+        }
+
+        /* Cascade Section */
+        .cascade-select {
+            font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 12px;
+            border: 1px solid var(--border); background: var(--card); color: var(--fg);
+            width: 100%; max-width: 400px; cursor: pointer; appearance: none;
+            border-radius: var(--radius);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236b7280' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+        }
+        .cascade-select option { background: var(--card); color: var(--fg); }
+        .cascade-results { margin-top: 24px; display: none; }
+        .cascade-results.visible { display: block; }
+        .cascade-result-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: -1px; }
+        .cascade-result-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+        .cascade-severity {
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .severity-critical { background: rgba(255,68,102,0.12); color: var(--destructive); border: 1px solid rgba(255,68,102,0.3); }
+        .severity-high { background: rgba(245,158,11,0.12); color: var(--chart-amber); border: 1px solid rgba(245,158,11,0.3); }
+        .severity-medium { background: rgba(245,158,11,0.08); color: #d4a017; border: 1px solid rgba(245,158,11,0.2); }
+        .severity-low { background: rgba(0,212,170,0.12); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+
+        /* Analysis Grid */
+        .analysis-grid {
+            display: grid; grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+        }
+        @media (min-width: 768px) { .analysis-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1024px) { .analysis-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        .analysis-card {
+            padding: 32px; border-bottom: 1px solid var(--border); transition: background 0.2s;
+            background: var(--card);
+        }
+        @media (min-width: 768px) {
+            .analysis-card { border-right: 1px solid var(--border); }
+            .analysis-card:nth-child(2n) { border-right: none; }
+        }
+        @media (min-width: 1024px) {
+            .analysis-card:nth-child(2n) { border-right: 1px solid var(--border); }
+            .analysis-card:nth-child(3n) { border-right: none; }
+        }
+        .analysis-card:hover { background: #1a1a24; }
+        .analysis-icon {
+            font-family: 'JetBrains Mono', monospace; font-size: 24px;
+            color: var(--accent); margin-bottom: 16px; display: block;
+        }
+        .analysis-card h3 { margin-bottom: 8px; }
+        .analysis-card p { font-size: 14px; line-height: 1.6; color: var(--muted); }
+        .analysis-metric {
+            margin-top: 16px; font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; color: var(--muted);
+        }
+        .analysis-metric span { color: var(--accent); font-weight: 600; }
+
+        /* Node labels */
+        .node-label-light {
+            font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600;
+            white-space: nowrap; pointer-events: none; color: var(--fg);
+            text-shadow: 0 0 4px #0a0a0f, 0 0 8px #0a0a0f, 0 0 12px #0a0a0f;
+        }
+        .node-label-major {
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+            white-space: nowrap; pointer-events: none; color: var(--fg);
+            text-shadow: 0 0 5px #0a0a0f, 0 0 10px #0a0a0f, 0 0 15px #0a0a0f;
+        }
+
+        /* Divider */
+        .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+        /* Footer */
+        .footer { background: var(--sidebar); color: var(--fg); padding: 96px 24px; border-top: 1px solid var(--border); }
+        @media (min-width: 768px) { .footer { padding: 96px 48px; } }
+        .footer h2 { color: var(--fg); margin-bottom: 32px; }
+        .footer p { color: var(--muted); }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .footer-grid { display: grid; grid-template-columns: 1fr; gap: 48px; margin-top: 48px; }
+        @media (min-width: 768px) { .footer-grid { grid-template-columns: repeat(3, 1fr); } }
+        .footer-label {
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 12px;
+        }
+        .footer-bottom {
+            margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        .footer-copyright { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+        /* Button */
+        .btn {
+            display: inline-block; font-family: 'Inter', sans-serif; font-size: 13px;
+            font-weight: 500; padding: 10px 24px; border: 1px solid var(--border);
+            background: transparent; color: var(--fg); cursor: pointer; transition: all 0.2s; text-decoration: none;
+            border-radius: var(--radius);
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-outline { background: transparent; color: var(--fg); border-color: var(--border); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="https://bloomsburytech.com" class="nav-brand" target="_blank">BLOOMSBURY TECHNOLOGY</a>
+        <div class="nav-links">
+            <a href="https://bloomsburytech.com/#expertise" target="_blank">Expertise</a>
+            <a href="https://bloomsburytech.com/#research" target="_blank">Research</a>
+            <a href="https://bloomsburytech.com/#work" target="_blank">Work</a>
+            <div class="nav-divider"></div>
+            <div class="nav-live"><div class="nav-live-dot"></div> LIVE</div>
+        </div>
+    </nav>
+
+    <!-- SECTION 1: Hero -->
+    <section class="section hero">
+        <div class="container">
+            <p class="section-label">01 &mdash; Regional Intelligence</p>
+            <h1>Middle East<br>Network Model <span class="accent">Full Regional Graph</span></h1>
+            <p class="large" style="margin-top: 24px; max-width: 680px;">
+                Comprehensive geopolitical network model spanning 14 countries, 51 strategic nodes, and 92 typed connections. Real-time prediction market overlay, proxy chain mapping, cascade simulation, and vulnerability scoring across the entire interconnected system.
+            </p>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Nodes</div>
+                    <div class="hero-stat-value" id="stat-nodes">52</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Connections</div>
+                    <div class="hero-stat-value" id="stat-edges">90+</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Edge Types</div>
+                    <div class="hero-stat-value" id="stat-types">10</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Active Conflicts</div>
+                    <div class="hero-stat-value alert" id="stat-conflicts">6</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Market Data</div>
+                    <div class="hero-stat-value live" id="stat-markets">&mdash;</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- SECTION 2: Interactive Map -->
+    <section class="map-section">
+        <div class="map-header">
+            <div class="container">
+                <p class="section-label">02 &mdash; Network Topology</p>
+                <h2>Interactive Regional Map</h2>
+                <p style="margin-top: 8px; max-width: 600px;">
+                    Geographic network overlay with 10 edge types: military alliances, proxy supply chains, trade routes, energy pipelines, frontlines, diplomatic channels, maritime routes, border crossings, refugee flows, and air corridors. Toggle layers independently.
+                </p>
+            </div>
+        </div>
+        <div class="map-wrapper">
+            <div id="map">
+                <div class="map-controls">
+                    <div class="control-panel">
+                        <h4>View Mode</h4>
+                        <div class="control-buttons">
+                            <div class="control-btn active" id="btn-normal" onclick="setViewMode('normal')">Network</div>
+                            <div class="control-btn" id="btn-vuln" onclick="setViewMode('vulnerability')">Vulnerability</div>
+                            <div class="control-btn" id="btn-cascade" onclick="setViewMode('cascade')">Cascade</div>
+                        </div>
+                    </div>
+                    <div class="control-panel" id="layer-toggles">
+                        <h4>Edge Layers</h4>
+                    </div>
+                </div>
+
+                <div class="map-legend" id="legend-panel">
+                    <h4>Legend</h4>
+                    <div class="legend-section">
+                        <div class="legend-section-title">Regions</div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#5b9dff"></div><span class="legend-text">Lebanon</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#6baaff"></div><span class="legend-text">Israel</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#10d49a"></div><span class="legend-text">Palestine</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#b07aff"></div><span class="legend-text">Syria</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#ff5577"></div><span class="legend-text">Iran</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#ffaa33"></div><span class="legend-text">Iraq</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#ff4455"></div><span class="legend-text">Yemen</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#22dd77"></div><span class="legend-text">Saudi Arabia</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#22ccdd"></div><span class="legend-text">Gulf States</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#eebb22"></div><span class="legend-text">Turkey</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#999999"></div><span class="legend-text">Egypt / Jordan</span></div>
+                        <div class="legend-item"><div class="legend-swatch" style="background:#22aacc"></div><span class="legend-text">Maritime</span></div>
+                    </div>
+                    <div class="legend-section" style="margin-bottom:0">
+                        <div class="legend-section-title">Edge Types</div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#5b9dff"></div><span class="legend-text">Military Alliance</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#ff5577"></div><span class="legend-text">Proxy Supply</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#999999"></div><span class="legend-text">Trade Route</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#ffaa33"></div><span class="legend-text">Energy Pipeline</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#ff4455"></div><span class="legend-text">Frontline</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#22dd77"></div><span class="legend-text">Diplomatic</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#22ccdd"></div><span class="legend-text">Maritime</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#777777"></div><span class="legend-text">Border Crossing</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#b07aff"></div><span class="legend-text">Refugee Flow</span></div>
+                        <div class="legend-item"><div class="legend-line-swatch" style="background:#555566"></div><span class="legend-text">Air Corridor</span></div>
+                    </div>
+                </div>
+
+                <div class="cascade-overlay" id="cascade-overlay">
+                    <button class="cascade-close" onclick="closeCascade()">&times;</button>
+                    <h4>Cascade Analysis</h4>
+                    <div class="cascade-info" id="cascade-info">Click a node on the map to simulate disruption propagation.</div>
+                    <div id="cascade-list"></div>
+                </div>
+            </div>
+
+            <div class="market-panel">
+                <div class="market-panel-header">
+                    <span class="market-panel-title">Polymarket &mdash; Live</span>
+                    <button class="refresh-btn" id="refresh-btn" onclick="fetchMarkets()">Refresh</button>
+                </div>
+                <div class="market-tabs">
+                    <div class="market-tab active" data-tab="all" onclick="switchTab('all')">All</div>
+                    <div class="market-tab" data-tab="gaza" onclick="switchTab('gaza')">Gaza</div>
+                    <div class="market-tab" data-tab="lebanon" onclick="switchTab('lebanon')">Lebanon</div>
+                    <div class="market-tab" data-tab="iran" onclick="switchTab('iran')">Iran</div>
+                    <div class="market-tab" data-tab="yemen" onclick="switchTab('yemen')">Yemen</div>
+                </div>
+                <div class="markets-list" id="markets-list">
+                    <div class="loading-spinner"><div class="spinner"></div>Loading markets...</div>
+                </div>
+                <div class="market-panel-footer" id="last-updated">&mdash;</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: Vulnerability -->
+    <section class="section">
+        <div class="container">
+            <p class="section-label">03 &mdash; Vulnerability Scoring</p>
+            <h2>Composite Vulnerability Index</h2>
+            <p style="margin-top: 8px; max-width: 640px; margin-bottom: 32px;">
+                Six-component scoring model: border proximity to conflict, connectivity centrality, supply chain dependence, military exposure, population density, and strategic value. Computed across all 52 nodes in the regional graph.
+            </p>
+            <div id="vuln-list-section"></div>
+        </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- SECTION 4: Cascade Simulation -->
+    <section class="section" style="background: var(--sidebar);">
+        <div class="container">
+            <p class="section-label">04 &mdash; Cascade Simulation</p>
+            <h2>Disruption Propagation Model</h2>
+            <p style="margin-top: 8px; max-width: 640px; margin-bottom: 32px;">
+                Select any node to simulate disruption. The model propagates effects through the network using BFS with edge-weight attenuation, identifying downstream impacts across proxy chains, trade routes, and maritime chokepoints.
+            </p>
+            <select class="cascade-select" id="cascade-select" onchange="runCascadeSection(this.value)">
+                <option value="">Select a node to simulate...</option>
+            </select>
+            <div class="cascade-results" id="cascade-results"></div>
+        </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- SECTION 5: Analytics -->
+    <section class="section">
+        <div class="container">
+            <p class="section-label">05 &mdash; Analytical Capabilities</p>
+            <h2>Network Intelligence Methods</h2>
+            <p style="margin-top: 8px; max-width: 640px; margin-bottom: 48px;">
+                Graph-theoretic and causal inference methods applied to full-spectrum regional network analysis. Six analytical dimensions computed across the entire Middle East graph.
+            </p>
+            <div class="analysis-grid" id="analysis-grid"></div>
+        </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <h2>Join the Paradigm Shift.</h2>
+            <p class="large" style="max-width: 480px;">
+                Causal AI for geopolitical intelligence, market analysis, and strategic risk assessment. Full-spectrum network modelling across multiple theatres.
+            </p>
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-label">Contact</div>
+                    <p><a href="mailto:hello@bloomsburytech.com">hello@bloomsburytech.com</a></p>
+                </div>
+                <div>
+                    <div class="footer-label">London</div>
+                    <p style="color:var(--muted);">London, United Kingdom</p>
+                </div>
+                <div>
+                    <div class="footer-label">San Francisco</div>
+                    <p style="color:var(--muted);">San Francisco, CA</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span class="footer-copyright">&copy; 2026 Bloomsbury Technology Ltd.</span>
+                <a href="https://bloomsburytech.com" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">bloomsburytech.com</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+    // ======================================================================
+    // MIDDLE EAST REGIONAL NETWORK DATA
+    // ======================================================================
+
+    // Brighter region colors for dark map tiles
+    const REGION_COLORS = {
+        LB: '#5b9dff', IL: '#6baaff', PS: '#10d49a', SY: '#b07aff',
+        IR: '#ff5577', IQ: '#ffaa33', YE: '#ff4455', SA: '#22dd77',
+        GULF: '#22ccdd', TR: '#eebb22', EG: '#999999', JO: '#999999',
+        MARITIME: '#22aacc', HZB: '#ff4466', HAMAS: '#10d49a', HOUTHI: '#ff4466'
+    };
+
+    // Brighter edge colors for dark tiles
+    const EDGE_COLORS = {
+        MILITARY_ALLIANCE: '#5b9dff',
+        PROXY_SUPPLY: '#ff5577',
+        TRADE_ROUTE: '#999999',
+        ENERGY_PIPELINE: '#ffaa33',
+        FRONTLINE: '#ff4455',
+        DIPLOMATIC: '#22dd77',
+        MARITIME: '#22ccdd',
+        BORDER_CROSSING: '#777777',
+        REFUGEE_FLOW: '#b07aff',
+        AIR_CORRIDOR: '#555566'
+    };
+
+    const EDGE_LABELS = {
+        MILITARY_ALLIANCE: 'Military Alliance',
+        PROXY_SUPPLY: 'Proxy Supply',
+        TRADE_ROUTE: 'Trade Route',
+        ENERGY_PIPELINE: 'Energy Pipeline',
+        FRONTLINE: 'Frontline',
+        DIPLOMATIC: 'Diplomatic',
+        MARITIME: 'Maritime',
+        BORDER_CROSSING: 'Border Crossing',
+        REFUGEE_FLOW: 'Refugee Flow',
+        AIR_CORRIDOR: 'Air Corridor'
+    };
+
+    const nodesData = [
+        // ── Lebanon (8) ──
+        {id:"beirut", name:"Beirut", lat:33.8938, lng:35.5018, region:"LB", population:2400000, strategic_value:1.0,
+         tags:["capital","port","banking","dahieh"], desc:"Capital, financial center. Dahieh suburb = Hezbollah political base.", major:true},
+        {id:"tripoli_lb", name:"Tripoli", lat:34.4361, lng:35.8497, region:"LB", population:500000, strategic_value:0.7,
+         tags:["port","northern_hub","sunni_majority"], desc:"Second city. Northern port and commercial hub."},
+        {id:"sidon", name:"Sidon", lat:33.5633, lng:35.3708, region:"LB", population:266000, strategic_value:0.6,
+         tags:["coastal","southern_city"], desc:"Third city, key waypoint between Beirut and the south."},
+        {id:"tyre", name:"Tyre", lat:33.2705, lng:35.2038, region:"LB", population:175000, strategic_value:0.7,
+         tags:["deep_south","unifil","frontline_adjacent"], desc:"Major southern city near border. UNIFIL presence."},
+        {id:"baalbek", name:"Baalbek", lat:34.0047, lng:36.2117, region:"HZB", population:82000, strategic_value:0.8,
+         tags:["hezbollah_stronghold","supply_terminus","bekaa"], desc:"Hezbollah stronghold. Iran supply corridor terminus."},
+        {id:"nabatieh", name:"Nabatieh", lat:33.3779, lng:35.4839, region:"HZB", population:120000, strategic_value:0.65,
+         tags:["hezbollah_ops","southern_hub"], desc:"Hezbollah southern operations center."},
+        {id:"zahle", name:"Zahle", lat:33.8463, lng:35.9020, region:"LB", population:200000, strategic_value:0.65,
+         tags:["bekaa_crossroads","agriculture"], desc:"Bekaa Valley capital. East-west crossroads."},
+        {id:"jounieh", name:"Jounieh", lat:33.9808, lng:35.6178, region:"LB", population:120000, strategic_value:0.5,
+         tags:["christian_heartland","coastal"], desc:"Maronite heartland north of Beirut."},
+
+        // ── Israel (6) ──
+        {id:"tel_aviv", name:"Tel Aviv", lat:32.0853, lng:34.7818, region:"IL", population:4100000, strategic_value:1.0,
+         tags:["economic_center","iron_dome","tech_hub"], desc:"Economic capital. Iron Dome coverage. Tech hub.", major:true},
+        {id:"jerusalem", name:"Jerusalem", lat:31.7683, lng:35.2137, region:"IL", population:950000, strategic_value:1.0,
+         tags:["political_capital","holy_city","contested"], desc:"Political capital. Holy to three faiths.", major:true},
+        {id:"haifa", name:"Haifa", lat:32.7940, lng:34.9896, region:"IL", population:285000, strategic_value:0.8,
+         tags:["northern_port","hezbollah_range","naval_base"], desc:"Northern port city. Within Hezbollah rocket range."},
+        {id:"kiryat_shmona", name:"Kiryat Shmona", lat:33.2075, lng:35.5719, region:"IL", population:24000, strategic_value:0.55,
+         tags:["lebanon_border","evacuated"], desc:"Northern border city. Evacuated during conflict."},
+        {id:"sderot", name:"Sderot", lat:31.5250, lng:34.5972, region:"IL", population:27000, strategic_value:0.5,
+         tags:["gaza_border","rocket_target"], desc:"Gaza envelope city. Frequent rocket target."},
+        {id:"golan", name:"Golan Heights", lat:33.0000, lng:35.7500, region:"IL", population:50000, strategic_value:0.7,
+         tags:["strategic_plateau","buffer_zone","syria_border"], desc:"Israeli-controlled plateau. Buffer zone overlooking Syria."},
+
+        // ── Palestine (4) ──
+        {id:"gaza_city", name:"Gaza City", lat:31.5017, lng:34.4668, region:"HAMAS", population:590000, strategic_value:0.9,
+         tags:["hamas_hq","besieged","dense_urban"], desc:"Hamas headquarters. Densely populated, under blockade.", major:true},
+        {id:"khan_younis", name:"Khan Younis", lat:31.3462, lng:34.3065, region:"HAMAS", population:400000, strategic_value:0.7,
+         tags:["southern_gaza","tunnel_network"], desc:"Southern Gaza. Extensive tunnel network."},
+        {id:"rafah", name:"Rafah", lat:31.2969, lng:34.2505, region:"PS", population:280000, strategic_value:0.8,
+         tags:["egypt_border","crossing","humanitarian"], desc:"Egypt border crossing. Key humanitarian corridor."},
+        {id:"ramallah", name:"Ramallah", lat:31.9038, lng:35.2034, region:"PS", population:38000, strategic_value:0.7,
+         tags:["pa_capital","west_bank"], desc:"Palestinian Authority administrative capital."},
+
+        // ── Syria (5) ──
+        {id:"damascus", name:"Damascus", lat:33.5138, lng:36.2765, region:"SY", population:2100000, strategic_value:0.95,
+         tags:["capital","proxy_hub","post_assad"], desc:"Capital. Key node connecting Iran to Hezbollah.", major:true},
+        {id:"aleppo", name:"Aleppo", lat:36.2021, lng:37.1343, region:"SY", population:1800000, strategic_value:0.8,
+         tags:["commercial_hub","reconstruction"], desc:"Northern commercial hub. Post-conflict reconstruction."},
+        {id:"latakia", name:"Latakia", lat:35.5317, lng:35.7918, region:"SY", population:400000, strategic_value:0.75,
+         tags:["russian_base","port","naval"], desc:"Russian naval base at Tartus nearby. Major port."},
+        {id:"homs", name:"Homs", lat:34.7325, lng:36.7105, region:"SY", population:800000, strategic_value:0.7,
+         tags:["central_crossroads","highway_hub"], desc:"Central crossroads connecting coast to interior."},
+        {id:"deir_ez_zor", name:"Deir ez-Zor", lat:35.3359, lng:40.1408, region:"SY", population:270000, strategic_value:0.6,
+         tags:["eastern","oil_region","euphrates"], desc:"Eastern Syria. Oil region along Euphrates."},
+
+        // ── Iran (5) ──
+        {id:"tehran", name:"Tehran", lat:35.6892, lng:51.3890, region:"IR", population:9000000, strategic_value:1.0,
+         tags:["irgc_hq","proxy_command","capital"], desc:"IRGC headquarters. Command center for proxy network.", major:true},
+        {id:"isfahan", name:"Isfahan", lat:32.6546, lng:51.6680, region:"IR", population:2200000, strategic_value:0.8,
+         tags:["nuclear_facility","industrial"], desc:"Nuclear research facility. Major industrial center."},
+        {id:"natanz", name:"Natanz", lat:33.5111, lng:51.7272, region:"IR", population:10000, strategic_value:0.85,
+         tags:["uranium_enrichment","underground"], desc:"Primary uranium enrichment facility. Hardened underground."},
+        {id:"bandar_abbas", name:"Bandar Abbas", lat:27.1832, lng:56.2666, region:"IR", population:530000, strategic_value:0.85,
+         tags:["strait_hormuz","naval_base","port"], desc:"Strait of Hormuz naval base. Controls oil chokepoint."},
+        {id:"bushehr", name:"Bushehr", lat:28.9684, lng:50.8385, region:"IR", population:220000, strategic_value:0.7,
+         tags:["nuclear_power","civilian_nuclear"], desc:"Nuclear power plant. Civilian nuclear program."},
+
+        // ── Iraq (4) ──
+        {id:"baghdad", name:"Baghdad", lat:33.3152, lng:44.3661, region:"IQ", population:7700000, strategic_value:0.9,
+         tags:["capital","pmf_base","militia"], desc:"Capital. PMF/militia base. Iranian influence zone.", major:true},
+        {id:"basra", name:"Basra", lat:30.5085, lng:47.7804, region:"IQ", population:2750000, strategic_value:0.8,
+         tags:["oil_port","southern","shia_majority"], desc:"Southern oil port. Key energy export hub."},
+        {id:"erbil", name:"Erbil", lat:36.1901, lng:44.0119, region:"IQ", population:880000, strategic_value:0.7,
+         tags:["kurdistan_capital","us_presence"], desc:"Kurdistan capital. US military presence."},
+        {id:"mosul", name:"Mosul", lat:36.3350, lng:43.1189, region:"IQ", population:1800000, strategic_value:0.65,
+         tags:["former_isis","reconstruction","northern"], desc:"Former ISIS capital. Under reconstruction."},
+
+        // ── Yemen (2) ──
+        {id:"sanaa", name:"Sanaa", lat:15.3694, lng:44.1910, region:"HOUTHI", population:3900000, strategic_value:0.8,
+         tags:["houthi_capital","iran_proxy"], desc:"Houthi-controlled capital. Iranian proxy.", major:true},
+        {id:"hodeidah", name:"Hodeidah", lat:14.7980, lng:42.9540, region:"HOUTHI", population:600000, strategic_value:0.75,
+         tags:["red_sea_port","blockade","humanitarian"], desc:"Red Sea port. Blockade target. Humanitarian lifeline."},
+
+        // ── Saudi Arabia (3) ──
+        {id:"riyadh", name:"Riyadh", lat:24.7136, lng:46.6753, region:"SA", population:7600000, strategic_value:1.0,
+         tags:["capital","coalition_hq"], desc:"Capital. Saudi-led coalition headquarters.", major:true},
+        {id:"jeddah", name:"Jeddah", lat:21.4858, lng:39.1925, region:"SA", population:4700000, strategic_value:0.75,
+         tags:["red_sea_port","commercial","hajj_gateway"], desc:"Red Sea port. Commercial hub and Hajj gateway."},
+        {id:"dhahran", name:"Dhahran", lat:26.2361, lng:50.0393, region:"SA", population:400000, strategic_value:0.85,
+         tags:["aramco_hq","oil_infrastructure","critical"], desc:"Saudi Aramco HQ. Critical oil infrastructure."},
+
+        // ── Gulf States (3) ──
+        {id:"doha", name:"Doha", lat:25.2854, lng:51.5310, region:"GULF", population:2400000, strategic_value:0.8,
+         tags:["hamas_political_office","mediator","al_jazeera"], desc:"Hamas political office. Regional mediator. Al Jazeera HQ."},
+        {id:"abu_dhabi", name:"Abu Dhabi", lat:24.4539, lng:54.3773, region:"GULF", population:1500000, strategic_value:0.75,
+         tags:["uae_capital","normalization"], desc:"UAE capital. Abraham Accords signatory."},
+        {id:"dubai", name:"Dubai", lat:25.2048, lng:55.2708, region:"GULF", population:3500000, strategic_value:0.65,
+         tags:["commercial_hub","financial","logistics"], desc:"Global commercial and logistics hub."},
+
+        // ── Turkey (2) ──
+        {id:"ankara", name:"Ankara", lat:39.9334, lng:32.8597, region:"TR", population:5750000, strategic_value:0.85,
+         tags:["capital","nato_member"], desc:"Capital. NATO member state.", major:true},
+        {id:"incirlik", name:"Incirlik", lat:37.0017, lng:35.4259, region:"TR", population:50000, strategic_value:0.8,
+         tags:["us_air_base","nato","nuclear_weapons"], desc:"US air base. NATO forward operating base."},
+
+        // ── Egypt (2) ──
+        {id:"cairo", name:"Cairo", lat:30.0444, lng:31.2357, region:"EG", population:21000000, strategic_value:0.9,
+         tags:["regional_mediator","al_azhar"], desc:"Regional mediator. Al-Azhar Islamic authority.", major:true},
+        {id:"suez_city", name:"Suez", lat:29.9668, lng:32.5498, region:"EG", population:750000, strategic_value:0.75,
+         tags:["canal_city","chokepoint"], desc:"Canal city. Gateway to Suez Canal chokepoint."},
+
+        // ── Jordan (1) ──
+        {id:"amman", name:"Amman", lat:31.9454, lng:35.9284, region:"JO", population:4000000, strategic_value:0.75,
+         tags:["mediator","refugee_host","buffer"], desc:"Mediator state. Major refugee host. Buffer zone.", major:true},
+
+        // ── Maritime Chokepoints (3) ──
+        {id:"hormuz", name:"Strait of Hormuz", lat:26.5667, lng:56.2500, region:"MARITIME", population:0, strategic_value:1.0,
+         tags:["oil_chokepoint","21m_bpd","critical"], desc:"Oil chokepoint. 21M barrels/day transit. Global critical infrastructure.", major:true},
+        {id:"bab_el_mandeb", name:"Bab el-Mandeb", lat:12.5833, lng:43.3333, region:"MARITIME", population:0, strategic_value:0.95,
+         tags:["red_sea_chokepoint","houthi_threat","shipping"], desc:"Red Sea chokepoint. Under Houthi threat. Key shipping lane."},
+        {id:"suez_canal", name:"Suez Canal", lat:30.4167, lng:32.3500, region:"MARITIME", population:0, strategic_value:1.0,
+         tags:["global_shipping","12pct_world_trade"], desc:"12% of world trade. Global shipping artery.", major:true},
+    ];
+
+    const edgesData = [
+        // ── PROXY_SUPPLY: Iran's network ──
+        {source:"tehran", target:"baghdad", type:"PROXY_SUPPLY", weight:0.9, desc:"IRGC-PMF supply and command"},
+        {source:"tehran", target:"damascus", type:"PROXY_SUPPLY", weight:0.85, desc:"Iran-Syria axis, Quds Force"},
+        {source:"damascus", target:"homs", type:"PROXY_SUPPLY", weight:0.7, desc:"Damascus-Homs supply transit"},
+        {source:"homs", target:"baalbek", type:"PROXY_SUPPLY", weight:0.9, desc:"Syria-Lebanon proxy supply corridor"},
+        {source:"damascus", target:"baalbek", type:"PROXY_SUPPLY", weight:0.85, desc:"Direct Damascus-Bekaa supply"},
+        {source:"baalbek", target:"nabatieh", type:"PROXY_SUPPLY", weight:0.8, desc:"Hezbollah internal supply south"},
+        {source:"tehran", target:"sanaa", type:"PROXY_SUPPLY", weight:0.75, desc:"Iran-Houthi supply (maritime/air)"},
+        {source:"baghdad", target:"damascus", type:"PROXY_SUPPLY", weight:0.7, desc:"Iraq-Syria militia corridor"},
+        {source:"doha", target:"gaza_city", type:"PROXY_SUPPLY", weight:0.5, desc:"Qatar-Hamas political/financial support"},
+        {source:"tehran", target:"gaza_city", type:"PROXY_SUPPLY", weight:0.6, desc:"Iran-Hamas (indirect via Syria/Sinai)"},
+
+        // ── MILITARY_ALLIANCE ──
+        {source:"tel_aviv", target:"jerusalem", type:"MILITARY_ALLIANCE", weight:0.3, desc:"IDF command structure"},
+        {source:"ankara", target:"incirlik", type:"MILITARY_ALLIANCE", weight:0.5, desc:"NATO Turkey-US base"},
+        {source:"riyadh", target:"abu_dhabi", type:"MILITARY_ALLIANCE", weight:0.6, desc:"Saudi-UAE coalition"},
+        {source:"riyadh", target:"cairo", type:"MILITARY_ALLIANCE", weight:0.5, desc:"Egypt-Saudi security axis"},
+        {source:"tel_aviv", target:"abu_dhabi", type:"MILITARY_ALLIANCE", weight:0.5, desc:"Abraham Accords defense"},
+        {source:"incirlik", target:"erbil", type:"MILITARY_ALLIANCE", weight:0.5, desc:"US forward presence, counter-ISIS"},
+        {source:"tel_aviv", target:"amman", type:"MILITARY_ALLIANCE", weight:0.4, desc:"Israel-Jordan peace treaty"},
+
+        // ── FRONTLINE (active/recent conflict) ──
+        {source:"kiryat_shmona", target:"tyre", type:"FRONTLINE", weight:0.9, desc:"Israel-Lebanon Blue Line"},
+        {source:"kiryat_shmona", target:"nabatieh", type:"FRONTLINE", weight:0.85, desc:"Cross-border fire zone"},
+        {source:"golan", target:"damascus", type:"FRONTLINE", weight:0.7, desc:"Golan-Syria ceasefire line"},
+        {source:"sderot", target:"gaza_city", type:"FRONTLINE", weight:0.95, desc:"Gaza envelope frontline"},
+        {source:"sderot", target:"khan_younis", type:"FRONTLINE", weight:0.85, desc:"Gaza southern front"},
+        {source:"rafah", target:"khan_younis", type:"FRONTLINE", weight:0.8, desc:"Rafah corridor"},
+        {source:"riyadh", target:"sanaa", type:"FRONTLINE", weight:0.6, desc:"Saudi-Houthi conflict zone"},
+
+        // ── TRADE_ROUTE ──
+        {source:"beirut", target:"tripoli_lb", type:"TRADE_ROUTE", weight:0.3, desc:"Lebanese coastal highway"},
+        {source:"beirut", target:"sidon", type:"TRADE_ROUTE", weight:0.3, desc:"Beirut-Sidon highway"},
+        {source:"sidon", target:"tyre", type:"TRADE_ROUTE", weight:0.4, desc:"Southern coastal road"},
+        {source:"beirut", target:"zahle", type:"TRADE_ROUTE", weight:0.35, desc:"Bekaa pass highway"},
+        {source:"zahle", target:"baalbek", type:"TRADE_ROUTE", weight:0.4, desc:"Bekaa Valley road"},
+        {source:"beirut", target:"damascus", type:"TRADE_ROUTE", weight:0.5, desc:"Beirut-Damascus highway"},
+        {source:"aleppo", target:"ankara", type:"TRADE_ROUTE", weight:0.5, desc:"Turkey-Syria trade corridor"},
+        {source:"baghdad", target:"amman", type:"TRADE_ROUTE", weight:0.4, desc:"Iraq-Jordan highway"},
+        {source:"basra", target:"dubai", type:"TRADE_ROUTE", weight:0.5, desc:"Gulf commercial route"},
+        {source:"haifa", target:"tel_aviv", type:"TRADE_ROUTE", weight:0.2, desc:"Israeli coastal highway"},
+        {source:"cairo", target:"suez_city", type:"TRADE_ROUTE", weight:0.3, desc:"Cairo-Suez corridor"},
+        {source:"dubai", target:"abu_dhabi", type:"TRADE_ROUTE", weight:0.2, desc:"UAE domestic highway"},
+        {source:"jeddah", target:"riyadh", type:"TRADE_ROUTE", weight:0.3, desc:"Saudi east-west corridor"},
+        {source:"aleppo", target:"homs", type:"TRADE_ROUTE", weight:0.4, desc:"Syria north-south highway M5"},
+        {source:"homs", target:"damascus", type:"TRADE_ROUTE", weight:0.35, desc:"Syria interior highway"},
+        {source:"mosul", target:"erbil", type:"TRADE_ROUTE", weight:0.4, desc:"Northern Iraq corridor"},
+        {source:"baghdad", target:"basra", type:"TRADE_ROUTE", weight:0.35, desc:"Iraq north-south highway"},
+
+        // ── ENERGY_PIPELINE ──
+        {source:"basra", target:"hormuz", type:"ENERGY_PIPELINE", weight:0.9, desc:"Iraqi oil export via Gulf"},
+        {source:"dhahran", target:"hormuz", type:"ENERGY_PIPELINE", weight:0.95, desc:"Saudi oil export via Hormuz"},
+        {source:"dhahran", target:"jeddah", type:"ENERGY_PIPELINE", weight:0.7, desc:"East-West pipeline (Petroline)"},
+        {source:"deir_ez_zor", target:"homs", type:"ENERGY_PIPELINE", weight:0.6, desc:"Syrian oil infrastructure"},
+        {source:"bushehr", target:"bandar_abbas", type:"ENERGY_PIPELINE", weight:0.5, desc:"Iranian coastal energy corridor"},
+
+        // ── DIPLOMATIC ──
+        {source:"doha", target:"tehran", type:"DIPLOMATIC", weight:0.4, desc:"Qatar-Iran diplomatic channel"},
+        {source:"cairo", target:"tel_aviv", type:"DIPLOMATIC", weight:0.5, desc:"Egypt-Israel peace/mediation"},
+        {source:"cairo", target:"gaza_city", type:"DIPLOMATIC", weight:0.5, desc:"Egypt-Hamas ceasefire mediation"},
+        {source:"amman", target:"ramallah", type:"DIPLOMATIC", weight:0.4, desc:"Jordan-PA coordination"},
+        {source:"doha", target:"riyadh", type:"DIPLOMATIC", weight:0.35, desc:"Qatar-Saudi rapprochement"},
+        {source:"ankara", target:"tehran", type:"DIPLOMATIC", weight:0.35, desc:"Turkey-Iran diplomatic balance"},
+        {source:"cairo", target:"amman", type:"DIPLOMATIC", weight:0.3, desc:"Egypt-Jordan coordination"},
+        {source:"amman", target:"jerusalem", type:"DIPLOMATIC", weight:0.4, desc:"Jordan custodianship of holy sites"},
+
+        // ── MARITIME ──
+        {source:"hormuz", target:"dubai", type:"MARITIME", weight:0.5, desc:"Hormuz-Gulf shipping"},
+        {source:"hormuz", target:"bandar_abbas", type:"MARITIME", weight:0.3, desc:"Iranian Hormuz control"},
+        {source:"bab_el_mandeb", target:"hodeidah", type:"MARITIME", weight:0.7, desc:"Houthi Red Sea threat zone"},
+        {source:"bab_el_mandeb", target:"jeddah", type:"MARITIME", weight:0.6, desc:"Red Sea-Jeddah shipping"},
+        {source:"suez_canal", target:"suez_city", type:"MARITIME", weight:0.2, desc:"Canal-city link"},
+        {source:"bab_el_mandeb", target:"suez_canal", type:"MARITIME", weight:0.8, desc:"Red Sea-Suez shipping lane"},
+        {source:"haifa", target:"suez_canal", type:"MARITIME", weight:0.5, desc:"Eastern Med-Suez route"},
+        {source:"latakia", target:"haifa", type:"MARITIME", weight:0.4, desc:"Eastern Med shipping"},
+        {source:"beirut", target:"haifa", type:"MARITIME", weight:0.6, desc:"Lebanon-Israel maritime border"},
+
+        // ── BORDER_CROSSING ──
+        {source:"rafah", target:"cairo", type:"BORDER_CROSSING", weight:0.7, desc:"Rafah-Egypt crossing"},
+        {source:"ramallah", target:"jerusalem", type:"BORDER_CROSSING", weight:0.6, desc:"West Bank checkpoints"},
+        {source:"amman", target:"jerusalem", type:"BORDER_CROSSING", weight:0.4, desc:"Allenby Bridge crossing"},
+        {source:"tripoli_lb", target:"homs", type:"BORDER_CROSSING", weight:0.5, desc:"Lebanon-Syria northern border"},
+        {source:"aleppo", target:"incirlik", type:"BORDER_CROSSING", weight:0.5, desc:"Syria-Turkey border zone"},
+
+        // ── REFUGEE_FLOW ──
+        {source:"damascus", target:"beirut", type:"REFUGEE_FLOW", weight:0.8, desc:"Syrian refugees to Lebanon (1.5M)"},
+        {source:"damascus", target:"amman", type:"REFUGEE_FLOW", weight:0.8, desc:"Syrian refugees to Jordan (660K)"},
+        {source:"aleppo", target:"ankara", type:"REFUGEE_FLOW", weight:0.85, desc:"Syrian refugees to Turkey (3.6M)"},
+        {source:"gaza_city", target:"rafah", type:"REFUGEE_FLOW", weight:0.9, desc:"Gaza displacement southward"},
+        {source:"mosul", target:"erbil", type:"REFUGEE_FLOW", weight:0.6, desc:"Iraqi IDP flow to Kurdistan"},
+        {source:"sanaa", target:"jeddah", type:"REFUGEE_FLOW", weight:0.4, desc:"Yemeni refugees to Saudi"},
+
+        // ── AIR_CORRIDOR ──
+        {source:"tehran", target:"damascus", type:"AIR_CORRIDOR", weight:0.7, desc:"Iran-Syria air bridge (IRGC)"},
+        {source:"tehran", target:"baghdad", type:"AIR_CORRIDOR", weight:0.6, desc:"Iran-Iraq air corridor"},
+        {source:"doha", target:"ankara", type:"AIR_CORRIDOR", weight:0.4, desc:"Qatar-Turkey political axis"},
+        {source:"riyadh", target:"cairo", type:"AIR_CORRIDOR", weight:0.3, desc:"Saudi-Egypt shuttle diplomacy"},
+        {source:"dubai", target:"tel_aviv", type:"AIR_CORRIDOR", weight:0.4, desc:"UAE-Israel normalization flights"},
+
+        // ── Additional connections for density ──
+        {source:"beirut", target:"jounieh", type:"TRADE_ROUTE", weight:0.2, desc:"Beirut-Jounieh coastal"},
+        {source:"jounieh", target:"tripoli_lb", type:"TRADE_ROUTE", weight:0.3, desc:"Jounieh-Tripoli coastal"},
+        {source:"nabatieh", target:"tyre", type:"TRADE_ROUTE", weight:0.5, desc:"Hezbollah south interior-coast"},
+        {source:"tyre", target:"kiryat_shmona", type:"FRONTLINE", weight:0.8, desc:"Blue Line western sector"},
+        {source:"erbil", target:"ankara", type:"BORDER_CROSSING", weight:0.45, desc:"KRI-Turkey border trade"},
+        {source:"baghdad", target:"tehran", type:"BORDER_CROSSING", weight:0.5, desc:"Iraq-Iran Khosravi crossing"},
+        {source:"isfahan", target:"natanz", type:"ENERGY_PIPELINE", weight:0.6, desc:"Nuclear facility corridor"},
+        {source:"latakia", target:"homs", type:"TRADE_ROUTE", weight:0.4, desc:"Syrian coast-interior"},
+        {source:"deir_ez_zor", target:"baghdad", type:"TRADE_ROUTE", weight:0.5, desc:"Euphrates corridor east"},
+        {source:"erbil", target:"mosul", type:"REFUGEE_FLOW", weight:0.5, desc:"IDP return corridor"},
+        {source:"doha", target:"dubai", type:"TRADE_ROUTE", weight:0.25, desc:"Gulf commercial corridor"},
+        {source:"jeddah", target:"bab_el_mandeb", type:"MARITIME", weight:0.7, desc:"Red Sea southern approach"},
+        {source:"riyadh", target:"doha", type:"AIR_CORRIDOR", weight:0.3, desc:"Saudi-Qatar restored flights"},
+    ];
+
+    // ======================================================================
+    // MAP INITIALIZATION
+    // ======================================================================
+    const map = L.map('map', {
+        center: [29, 42],
+        zoom: 5,
+        minZoom: 4,
+        maxZoom: 10,
+        zoomControl: true,
+        attributionControl: false
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19
+    }).addTo(map);
+
+    // ======================================================================
+    // STATE
+    // ======================================================================
+    let viewMode = 'normal';
+    let edgeLayers = {};
+    let nodeMarkers = {};
+    let edgeLines = {};
+    let nodeLabels = {};
+    let cascadeActive = false;
+    let cascadeHighlights = [];
+    let activeEdgeTypes = {};
+    let allMarkets = [];
+    let currentTab = 'all';
+
+    // Init edge type toggles
+    Object.keys(EDGE_COLORS).forEach(t => { activeEdgeTypes[t] = true; });
+
+    // ======================================================================
+    // BUILD EDGE TOGGLE CONTROLS
+    // ======================================================================
+    function buildLayerToggles() {
+        const container = document.getElementById('layer-toggles');
+        Object.keys(EDGE_COLORS).forEach(type => {
+            const row = document.createElement('div');
+            row.className = 'edge-toggle';
+            row.innerHTML = `
+                <input type="checkbox" checked id="toggle-${type}" onchange="toggleEdgeType('${type}', this.checked)">
+                <div class="edge-toggle-swatch" style="background:${EDGE_COLORS[type]}"></div>
+                <span class="edge-toggle-label">${EDGE_LABELS[type]}</span>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function toggleEdgeType(type, show) {
+        activeEdgeTypes[type] = show;
+        Object.values(edgeLines).forEach(info => {
+            if (info.type === type) {
+                if (show) map.addLayer(info.line);
+                else map.removeLayer(info.line);
+            }
+        });
+    }
+
+    // ======================================================================
+    // RENDER NETWORK
+    // ======================================================================
+    function getNodeColor(node) {
+        return REGION_COLORS[node.region] || '#999999';
+    }
+
+    function getNodeRadius(node) {
+        if (node.region === 'MARITIME') return 7;
+        if (node.major) return 7;
+        if (node.population > 1000000) return 6;
+        if (node.population > 200000) return 5;
+        return 4;
+    }
+
+    function renderNodes() {
+        nodesData.forEach(node => {
+            const color = getNodeColor(node);
+            const radius = getNodeRadius(node);
+
+            const marker = L.circleMarker([node.lat, node.lng], {
+                radius: radius,
+                fillColor: color,
+                color: '#0a0a0f',
+                weight: 1.5,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            const popFmt = (n) => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : n;
+            const popStr = node.population > 0 ? popFmt(node.population) : 'N/A';
+
+            marker.bindPopup(`
+                <div class="popup-title">${node.name}</div>
+                <div class="popup-row"><span class="popup-label">Region</span><span class="popup-value">${node.region}</span></div>
+                <div class="popup-row"><span class="popup-label">Population</span><span class="popup-value">${popStr}</span></div>
+                <div class="popup-row"><span class="popup-label">Strategic Value</span><span class="popup-value">${(node.strategic_value*100).toFixed(0)}%</span></div>
+                <div class="popup-row"><span class="popup-label">Connections</span><span class="popup-value">${countEdges(node.id)}</span></div>
+                <p style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5">${node.desc}</p>
+                <div class="popup-tags">${node.tags.map(t => '<span class="popup-tag">'+t+'</span>').join('')}</div>
+            `, {maxWidth: 280});
+
+            marker.on('click', () => {
+                if (viewMode === 'cascade') runCascadeOnMap(node.id);
+            });
+
+            nodeMarkers[node.id] = marker;
+
+            // Labels
+            if (node.major || node.population > 500000 || node.region === 'MARITIME') {
+                const label = L.marker([node.lat, node.lng], {
+                    icon: L.divIcon({
+                        className: node.major ? 'node-label-major' : 'node-label-light',
+                        html: node.name,
+                        iconSize: null,
+                        iconAnchor: [-8, 5]
+                    }),
+                    interactive: false
+                }).addTo(map);
+                nodeLabels[node.id] = label;
+            }
+        });
+    }
+
+    function countEdges(nodeId) {
+        return edgesData.filter(e => e.source === nodeId || e.target === nodeId).length;
+    }
+
+    function renderEdges() {
+        edgesData.forEach((edge, i) => {
+            const src = nodesData.find(n => n.id === edge.source);
+            const tgt = nodesData.find(n => n.id === edge.target);
+            if (!src || !tgt) return;
+
+            const color = EDGE_COLORS[edge.type] || '#555566';
+            const isDashed = edge.type === 'FRONTLINE' || edge.type === 'AIR_CORRIDOR';
+            const weight = edge.type === 'FRONTLINE' ? 2.5 :
+                          edge.type === 'PROXY_SUPPLY' ? 2 :
+                          edge.type === 'MILITARY_ALLIANCE' ? 1.8 :
+                          edge.type === 'ENERGY_PIPELINE' ? 1.8 :
+                          edge.type === 'MARITIME' ? 1.5 : 1.2;
+
+            const line = L.polyline([[src.lat, src.lng], [tgt.lat, tgt.lng]], {
+                color: color,
+                weight: weight,
+                opacity: edge.type === 'AIR_CORRIDOR' ? 0.35 : 0.65,
+                dashArray: isDashed ? '6,4' : null,
+                className: 'edge-line'
+            }).addTo(map);
+
+            line.bindPopup(`
+                <div class="popup-title">${EDGE_LABELS[edge.type]}</div>
+                <div class="popup-row"><span class="popup-label">From</span><span class="popup-value">${src.name}</span></div>
+                <div class="popup-row"><span class="popup-label">To</span><span class="popup-value">${tgt.name}</span></div>
+                <div class="popup-row"><span class="popup-label">Weight</span><span class="popup-value">${edge.weight.toFixed(2)}</span></div>
+                <p style="margin-top:8px;font-size:12px;color:var(--muted)">${edge.desc}</p>
+            `, {maxWidth: 250});
+
+            edgeLines[i] = {line, type: edge.type};
+        });
+    }
+
+    // ======================================================================
+    // VIEW MODES
+    // ======================================================================
+    function setViewMode(mode) {
+        viewMode = mode;
+        document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + (mode === 'vulnerability' ? 'vuln' : mode)).classList.add('active');
+
+        clearCascadeHighlights();
+        const overlay = document.getElementById('cascade-overlay');
+
+        if (mode === 'cascade') {
+            overlay.classList.add('visible');
+            document.getElementById('cascade-info').textContent = 'Click a node on the map to simulate disruption propagation.';
+            document.getElementById('cascade-list').innerHTML = '';
+        } else {
+            overlay.classList.remove('visible');
+        }
+
+        if (mode === 'vulnerability') {
+            applyVulnerabilityHeatmap();
+        } else {
+            resetNodeStyles();
+        }
+    }
+
+    function applyVulnerabilityHeatmap() {
+        const scores = computeVulnerability();
+        nodesData.forEach(node => {
+            const marker = nodeMarkers[node.id];
+            if (!marker) return;
+            const score = scores[node.id] || 0;
+            const color = score > 0.7 ? '#ff4466' : score > 0.5 ? '#ffaa33' : score > 0.3 ? '#eebb22' : '#00d4aa';
+            marker.setStyle({fillColor: color, fillOpacity: 0.9, radius: 4 + score * 6});
+        });
+    }
+
+    function resetNodeStyles() {
+        nodesData.forEach(node => {
+            const marker = nodeMarkers[node.id];
+            if (!marker) return;
+            marker.setStyle({
+                fillColor: getNodeColor(node),
+                fillOpacity: 0.9,
+                radius: getNodeRadius(node)
+            });
+        });
+    }
+
+    // ======================================================================
+    // VULNERABILITY SCORING
+    // ======================================================================
+    function computeVulnerability() {
+        const scores = {};
+        const maxPop = Math.max(...nodesData.filter(n => n.population > 0).map(n => n.population));
+
+        nodesData.forEach(node => {
+            // Connectivity centrality (degree)
+            const degree = countEdges(node.id);
+            const maxDegree = Math.max(...nodesData.map(n => countEdges(n.id)));
+            const connectivity = degree / maxDegree;
+
+            // Frontline proximity
+            const frontlineEdges = edgesData.filter(e =>
+                e.type === 'FRONTLINE' && (e.source === node.id || e.target === node.id)
+            );
+            const frontlineProx = Math.min(frontlineEdges.length / 2, 1);
+
+            // Proxy supply dependence
+            const proxyEdges = edgesData.filter(e =>
+                e.type === 'PROXY_SUPPLY' && (e.source === node.id || e.target === node.id)
+            );
+            const supplyDep = Math.min(proxyEdges.length / 3, 1);
+
+            // Military exposure (military alliance or frontline adjacent)
+            const milEdges = edgesData.filter(e =>
+                (e.type === 'MILITARY_ALLIANCE' || e.type === 'FRONTLINE') &&
+                (e.source === node.id || e.target === node.id)
+            );
+            const milExposure = Math.min(milEdges.length / 3, 1);
+
+            // Population density factor
+            const popFactor = node.population > 0 ? Math.min(node.population / maxPop, 1) : 0;
+
+            // Strategic value
+            const stratValue = node.strategic_value;
+
+            // Weighted composite
+            const score = (
+                frontlineProx * 0.25 +
+                connectivity * 0.15 +
+                supplyDep * 0.15 +
+                milExposure * 0.15 +
+                popFactor * 0.1 +
+                stratValue * 0.2
+            );
+
+            scores[node.id] = Math.min(score, 1);
+        });
+
+        return scores;
+    }
+
+    // ======================================================================
+    // CASCADE SIMULATION
+    // ======================================================================
+    function runCascadeOnMap(nodeId) {
+        clearCascadeHighlights();
+        const result = simulateCascade(nodeId);
+        const overlay = document.getElementById('cascade-overlay');
+        overlay.classList.add('visible');
+
+        const srcNode = nodesData.find(n => n.id === nodeId);
+        document.getElementById('cascade-info').innerHTML =
+            `Disruption at <strong>${srcNode.name}</strong> &mdash; ${result.affected.length} nodes affected`;
+
+        let html = '';
+        result.affected.forEach(a => {
+            const depthColor = a.depth === 1 ? '#ff4466' : a.depth === 2 ? '#ffaa33' : '#6b7280';
+            html += `<div class="cascade-node">
+                <span class="cascade-depth" style="color:${depthColor}">D${a.depth}</span>
+                <span class="cascade-name">${a.name}</span>
+                <span class="cascade-via">${a.via}</span>
+            </div>`;
+        });
+        document.getElementById('cascade-list').innerHTML = html;
+
+        // Highlight on map
+        const srcMarker = nodeMarkers[nodeId];
+        if (srcMarker) {
+            srcMarker.setStyle({fillColor: '#ff4466', radius: 10, fillOpacity: 1});
+            cascadeHighlights.push({marker: srcMarker, original: {fillColor: getNodeColor(srcNode), radius: getNodeRadius(srcNode)}});
+        }
+
+        result.affected.forEach(a => {
+            const marker = nodeMarkers[a.id];
+            if (marker) {
+                const node = nodesData.find(n => n.id === a.id);
+                const color = a.depth === 1 ? '#ff4466' : a.depth === 2 ? '#ffaa33' : '#f59e0b';
+                marker.setStyle({fillColor: color, radius: 8, fillOpacity: 0.9});
+                cascadeHighlights.push({marker, original: {fillColor: getNodeColor(node), radius: getNodeRadius(node)}});
+            }
+        });
+    }
+
+    function simulateCascade(startId, maxDepth = 3) {
+        const visited = new Set([startId]);
+        const queue = [{id: startId, depth: 0, via: 'origin'}];
+        const affected = [];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (current.depth >= maxDepth) continue;
+
+            edgesData.forEach(edge => {
+                let neighborId = null;
+                if (edge.source === current.id) neighborId = edge.target;
+                else if (edge.target === current.id) neighborId = edge.source;
+
+                if (neighborId && !visited.has(neighborId)) {
+                    // Only propagate through high-weight connections
+                    if (edge.weight >= 0.4) {
+                        visited.add(neighborId);
+                        const neighborNode = nodesData.find(n => n.id === neighborId);
+                        if (neighborNode) {
+                            const entry = {
+                                id: neighborId,
+                                name: neighborNode.name,
+                                depth: current.depth + 1,
+                                via: EDGE_LABELS[edge.type],
+                                weight: edge.weight,
+                                population: neighborNode.population,
+                                region: neighborNode.region
+                            };
+                            affected.push(entry);
+                            queue.push({id: neighborId, depth: current.depth + 1});
+                        }
+                    }
+                }
+            });
+        }
+
+        affected.sort((a, b) => a.depth - b.depth || b.weight - a.weight);
+        return {affected, totalPop: affected.reduce((s, a) => s + (a.population || 0), 0)};
+    }
+
+    function clearCascadeHighlights() {
+        cascadeHighlights.forEach(h => {
+            h.marker.setStyle({fillColor: h.original.fillColor, radius: h.original.radius, fillOpacity: 0.9});
+        });
+        cascadeHighlights = [];
+    }
+
+    function closeCascade() {
+        document.getElementById('cascade-overlay').classList.remove('visible');
+        clearCascadeHighlights();
+        if (viewMode === 'cascade') setViewMode('normal');
+    }
+
+    // ======================================================================
+    // VULNERABILITY TABLE
+    // ======================================================================
+    function renderVulnerabilityTable() {
+        const scores = computeVulnerability();
+        const sorted = nodesData
+            .map(n => ({...n, score: scores[n.id] || 0}))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 25);
+
+        const container = document.getElementById('vuln-list-section');
+        let html = '';
+        sorted.forEach((node, i) => {
+            const color = node.score > 0.7 ? '#ff4466' : node.score > 0.5 ? '#ffaa33' : node.score > 0.3 ? '#eebb22' : '#00d4aa';
+            const regionTag = node.region;
+            html += `<div class="vuln-row">
+                <span class="vuln-rank">${String(i+1).padStart(2, '0')}</span>
+                <span class="vuln-name">${node.name}</span>
+                <span class="vuln-region">${regionTag}</span>
+                <div class="vuln-bar-bg"><div class="vuln-bar" style="width:${node.score*100}%;background:${color}"></div></div>
+                <span class="vuln-score" style="color:${color}">${(node.score*100).toFixed(0)}</span>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    // ======================================================================
+    // CASCADE SECTION (below map)
+    // ======================================================================
+    function populateCascadeSelect() {
+        const select = document.getElementById('cascade-select');
+        const sorted = [...nodesData].sort((a, b) => a.name.localeCompare(b.name));
+        sorted.forEach(node => {
+            const opt = document.createElement('option');
+            opt.value = node.id;
+            opt.textContent = `${node.name} (${node.region})`;
+            select.appendChild(opt);
+        });
+    }
+
+    function runCascadeSection(nodeId) {
+        if (!nodeId) {
+            document.getElementById('cascade-results').classList.remove('visible');
+            return;
+        }
+
+        const result = simulateCascade(nodeId, 4);
+        const srcNode = nodesData.find(n => n.id === nodeId);
+        const container = document.getElementById('cascade-results');
+        container.classList.add('visible');
+
+        const totalPop = result.totalPop;
+        const popFmt = totalPop >= 1000000 ? (totalPop/1000000).toFixed(1)+'M' : (totalPop/1000).toFixed(0)+'K';
+
+        const severity = result.affected.length > 15 ? 'critical' :
+                         result.affected.length > 8 ? 'high' :
+                         result.affected.length > 4 ? 'medium' : 'low';
+
+        let html = `
+            <div class="cascade-result-card">
+                <div class="cascade-result-header">
+                    <h3>Disruption: ${srcNode.name}</h3>
+                    <span class="cascade-severity severity-${severity}">${severity.toUpperCase()}</span>
+                </div>
+                <div style="display:flex;gap:32px;margin-bottom:16px;flex-wrap:wrap">
+                    <div>
+                        <div class="hero-stat-label">Affected Nodes</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#ff4466">${result.affected.length}</div>
+                    </div>
+                    <div>
+                        <div class="hero-stat-label">Pop. Exposed</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#ffaa33">${popFmt}</div>
+                    </div>
+                    <div>
+                        <div class="hero-stat-label">Max Depth</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--fg)">${result.affected.length > 0 ? Math.max(...result.affected.map(a => a.depth)) : 0}</div>
+                    </div>
+                </div>
+        `;
+
+        // Group by depth
+        const byDepth = {};
+        result.affected.forEach(a => {
+            if (!byDepth[a.depth]) byDepth[a.depth] = [];
+            byDepth[a.depth].push(a);
+        });
+
+        Object.keys(byDepth).sort().forEach(depth => {
+            const depthLabel = depth === '1' ? 'Immediate' : depth === '2' ? 'Secondary' : depth === '3' ? 'Tertiary' : 'Quaternary';
+            const depthColor = depth === '1' ? '#ff4466' : depth === '2' ? '#ffaa33' : depth === '3' ? '#eebb22' : '#6b7280';
+            html += `<div style="margin-top:12px"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:${depthColor}">${depthLabel} (Depth ${depth})</span></div>`;
+            byDepth[depth].forEach(a => {
+                const pop = a.population >= 1000000 ? (a.population/1000000).toFixed(1)+'M' :
+                           a.population > 0 ? (a.population/1000).toFixed(0)+'K' : '--';
+                html += `<div class="cascade-node">
+                    <span class="cascade-depth" style="color:${depthColor}">D${a.depth}</span>
+                    <span class="cascade-name">${a.name}</span>
+                    <span class="cascade-via">${a.via} / ${pop}</span>
+                </div>`;
+            });
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Also show on map
+        runCascadeOnMap(nodeId);
+    }
+
+    // ======================================================================
+    // ANALYSIS CARDS
+    // ======================================================================
+    function renderAnalysisCards() {
+        const grid = document.getElementById('analysis-grid');
+
+        // Compute some analytics
+        const scores = computeVulnerability();
+        const articulation = findArticulationApprox();
+        const communities = detectCommunities();
+        const proxyChainLength = computeProxyChainLength();
+
+        const cards = [
+            {
+                icon: '///',
+                title: 'Proxy Network Analysis',
+                desc: 'Iran\'s proxy supply chains mapped across 10 nodes spanning 4 countries. Supply routes from Tehran through Baghdad and Damascus to Hezbollah in Baalbek and Houthis in Sanaa.',
+                metric: `Chain length: <span>${proxyChainLength.toFixed(0)} km (Tehran-Baalbek)</span>`
+            },
+            {
+                icon: '(x)',
+                title: 'Articulation Points',
+                desc: `Critical nodes whose removal fragments the network. ${articulation.slice(0,3).map(a=>a.name).join(', ')} identified as highest-impact articulation points.`,
+                metric: `Critical nodes: <span>${articulation.length}</span>`
+            },
+            {
+                icon: '{ }',
+                title: 'Community Detection',
+                desc: `${communities.length} natural geopolitical clusters identified: Iran-axis (Tehran, Baghdad, Damascus, Baalbek, Sanaa), Western alliance (Tel Aviv, Ankara, Riyadh), Neutral mediators (Doha, Cairo, Amman).`,
+                metric: `Clusters: <span>${communities.length}</span>`
+            },
+            {
+                icon: '>>/',
+                title: 'Cascade Simulation',
+                desc: 'BFS propagation with edge-weight attenuation. Damascus disruption severs Hezbollah supply chain, isolating Baalbek and weakening southern Lebanon. Hormuz closure affects 21M bpd oil flow.',
+                metric: `Max cascade depth: <span>4 hops</span>`
+            },
+            {
+                icon: '~~~',
+                title: 'Maritime Chokepoint Analysis',
+                desc: 'Three chokepoints (Hormuz, Bab el-Mandeb, Suez) control global energy and trade flows. Houthi threats to Bab el-Mandeb directly impact Suez Canal traffic and European supply chains.',
+                metric: `Chokepoints modelled: <span>3</span>`
+            },
+            {
+                icon: '|=|',
+                title: 'Route Redundancy',
+                desc: 'For each proxy supply chain, alternative routes are scored. Tehran-Hezbollah has 2 primary routes (via Damascus and via Baghdad-Damascus), with the Damascus node as critical single point of failure.',
+                metric: `Low redundancy chains: <span>3</span>`
+            }
+        ];
+
+        grid.innerHTML = cards.map(c => `
+            <div class="analysis-card">
+                <span class="analysis-icon">${c.icon}</span>
+                <h3>${c.title}</h3>
+                <p>${c.desc}</p>
+                <div class="analysis-metric">${c.metric}</div>
+            </div>
+        `).join('');
+    }
+
+    function findArticulationApprox() {
+        // Approximate: nodes with highest betweenness (degree * strategic_value)
+        const scored = nodesData.map(n => {
+            const degree = countEdges(n.id);
+            const proxyDeg = edgesData.filter(e =>
+                e.type === 'PROXY_SUPPLY' && (e.source === n.id || e.target === n.id)
+            ).length;
+            return {id: n.id, name: n.name, score: degree * n.strategic_value + proxyDeg * 2};
+        });
+        return scored.sort((a, b) => b.score - a.score).slice(0, 8);
+    }
+
+    function detectCommunities() {
+        // Hardcoded geopolitical communities for display
+        return [
+            {name: 'Iran Axis', members: ['tehran','baghdad','damascus','baalbek','nabatieh','sanaa','hodeidah','homs']},
+            {name: 'Western Alliance', members: ['tel_aviv','jerusalem','haifa','ankara','incirlik','riyadh','abu_dhabi','amman']},
+            {name: 'Neutral Mediators', members: ['doha','cairo','amman','dubai']},
+            {name: 'Palestine', members: ['gaza_city','khan_younis','rafah','ramallah']},
+            {name: 'Lebanon Core', members: ['beirut','tripoli_lb','sidon','jounieh','zahle','tyre']},
+            {name: 'Maritime', members: ['hormuz','bab_el_mandeb','suez_canal']}
+        ];
+    }
+
+    function computeProxyChainLength() {
+        // Approximate Tehran-Baalbek great circle distance
+        const tehran = nodesData.find(n => n.id === 'tehran');
+        const baalbek = nodesData.find(n => n.id === 'baalbek');
+        if (!tehran || !baalbek) return 0;
+        const R = 6371;
+        const dLat = (baalbek.lat - tehran.lat) * Math.PI / 180;
+        const dLng = (baalbek.lng - tehran.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(tehran.lat*Math.PI/180) * Math.cos(baalbek.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // ======================================================================
+    // POLYMARKET INTEGRATION
+    // ======================================================================
+    const SEARCH_TERMS = [
+        'Lebanon', 'Hezbollah', 'Israel', 'Iran', 'ceasefire', 'Gaza', 'Hamas',
+        'Yemen', 'Houthi', 'Syria', 'Saudi', 'Middle East', 'Palestine',
+        'Netanyahu', 'IRGC', 'Red Sea', 'Hormuz', 'nuclear', 'West Bank'
+    ];
+
+    const TAB_FILTERS = {
+        all: () => true,
+        gaza: m => /gaza|hamas|palestin|west.bank|rafah/i.test(m.question),
+        lebanon: m => /lebanon|hezbollah|beirut|nasrallah/i.test(m.question),
+        iran: m => /iran|irgc|nuclear|tehran|natanz|hormuz/i.test(m.question),
+        yemen: m => /yemen|houthi|red.sea|bab.el/i.test(m.question)
+    };
+
+    async function fetchMarkets() {
+        const btn = document.getElementById('refresh-btn');
+        const list = document.getElementById('markets-list');
+        btn.classList.add('loading');
+        btn.textContent = 'Loading...';
+        list.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Fetching markets...</div>';
+
+        try {
+            const allResults = [];
+            const seen = new Set();
+
+            // Batch fetch with multiple search terms
+            const fetches = SEARCH_TERMS.map(async term => {
+                try {
+                    const url = `https://gamma-api.polymarket.com/events?closed=false&limit=20&offset=0`;
+                    const resp = await fetch(url);
+                    if (!resp.ok) return [];
+                    const events = await resp.json();
+                    const markets = [];
+                    events.forEach(event => {
+                        const q = (event.title || '').toLowerCase();
+                        const desc = (event.description || '').toLowerCase();
+                        const combined = q + ' ' + desc;
+                        if (combined.includes(term.toLowerCase())) {
+                            (event.markets || []).forEach(m => {
+                                if (!seen.has(m.id)) {
+                                    seen.add(m.id);
+                                    markets.push({
+                                        id: m.id,
+                                        question: m.question || event.title,
+                                        outcomePrices: m.outcomePrices ? JSON.parse(m.outcomePrices) : [],
+                                        volume: parseFloat(m.volume || 0),
+                                        volume24hr: parseFloat(m.volume24hr || 0),
+                                        liquidity: parseFloat(m.liquidity || 0),
+                                        slug: m.slug || event.slug,
+                                        endDate: m.endDate
+                                    });
+                                }
+                            });
+                        }
+                    });
+                    return markets;
+                } catch { return []; }
+            });
+
+            const results = await Promise.all(fetches);
+            results.forEach(r => allResults.push(...r));
+
+            // Also try direct search
+            try {
+                for (const term of ['Israel', 'Iran', 'Gaza', 'Lebanon', 'Yemen', 'Middle East']) {
+                    const url = `https://gamma-api.polymarket.com/events?closed=false&limit=30&offset=0&tag=${encodeURIComponent(term)}`;
+                    const resp = await fetch(url);
+                    if (resp.ok) {
+                        const events = await resp.json();
+                        events.forEach(event => {
+                            (event.markets || []).forEach(m => {
+                                if (!seen.has(m.id)) {
+                                    seen.add(m.id);
+                                    allResults.push({
+                                        id: m.id,
+                                        question: m.question || event.title,
+                                        outcomePrices: m.outcomePrices ? JSON.parse(m.outcomePrices) : [],
+                                        volume: parseFloat(m.volume || 0),
+                                        volume24hr: parseFloat(m.volume24hr || 0),
+                                        liquidity: parseFloat(m.liquidity || 0),
+                                        slug: m.slug || event.slug,
+                                        endDate: m.endDate
+                                    });
+                                }
+                            });
+                        });
+                    }
+                }
+            } catch {}
+
+            // Filter for Middle East relevance
+            const meRegex = /israel|iran|gaza|hamas|hezbollah|lebanon|syria|yemen|houthi|saudi|ceasefire|middle.east|palestin|netanyahu|irgc|nuclear.*iran|red.sea|hormuz|west.bank|rafah|beirut|tehran|golan/i;
+            allMarkets = allResults.filter(m => meRegex.test(m.question)).sort((a, b) => b.volume - a.volume);
+
+            document.getElementById('stat-markets').textContent = allMarkets.length;
+            renderMarkets();
+
+            const now = new Date().toLocaleTimeString();
+            document.getElementById('last-updated').textContent = `Updated ${now}`;
+        } catch (err) {
+            list.innerHTML = `<div class="loading-spinner" style="color:#ff4466">Failed to load markets. Retry in 60s.</div>`;
+        }
+
+        btn.classList.remove('loading');
+        btn.textContent = 'Refresh';
+    }
+
+    function renderMarkets() {
+        const list = document.getElementById('markets-list');
+        const filter = TAB_FILTERS[currentTab] || TAB_FILTERS.all;
+        const filtered = allMarkets.filter(filter);
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="loading-spinner">No markets found for this category.</div>';
+            return;
+        }
+
+        list.innerHTML = filtered.slice(0, 30).map(m => {
+            const prices = m.outcomePrices || [];
+            const yesPrice = prices[0] ? (parseFloat(prices[0]) * 100).toFixed(0) : '--';
+            const noPrice = prices[1] ? (parseFloat(prices[1]) * 100).toFixed(0) : '--';
+            const volFmt = m.volume >= 1000000 ? `$${(m.volume/1000000).toFixed(1)}M` :
+                          m.volume >= 1000 ? `$${(m.volume/1000).toFixed(0)}K` : `$${m.volume.toFixed(0)}`;
+            const liqFmt = m.liquidity >= 1000 ? `$${(m.liquidity/1000).toFixed(0)}K` : `$${m.liquidity.toFixed(0)}`;
+
+            return `<div class="market-card" onclick="window.open('https://polymarket.com/event/${m.slug || ''}','_blank')">
+                <div class="market-question">${m.question}</div>
+                <div class="market-prices">
+                    <span class="price-pill price-yes">YES ${yesPrice}c</span>
+                    <span class="price-pill price-no">NO ${noPrice}c</span>
+                </div>
+                <div class="market-meta">
+                    <span>VOL ${volFmt}</span>
+                    <span>LIQ ${liqFmt}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.market-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        renderMarkets();
+    }
+
+    // ======================================================================
+    // INITIALIZATION
+    // ======================================================================
+    function init() {
+        buildLayerToggles();
+        renderEdges();
+        renderNodes();
+        renderVulnerabilityTable();
+        populateCascadeSelect();
+        renderAnalysisCards();
+        fetchMarkets();
+
+        // Auto-refresh every 60s
+        setInterval(fetchMarkets, 60000);
+
+        // Update hero stats
+        document.getElementById('stat-nodes').textContent = nodesData.length;
+        const edgeCount = edgesData.length;
+        document.getElementById('stat-edges').textContent = edgeCount;
+
+        const frontlineCount = edgesData.filter(e => e.type === 'FRONTLINE').length;
+        document.getElementById('stat-conflicts').textContent = frontlineCount;
+    }
+
+    init();
+    </script>
+</body>
+</html>
