@@ -1541,6 +1541,36 @@
         yemen: m => /yemen|houthi|red.sea|bab.el/i.test(m.question)
     };
 
+    // CORS proxy for browser requests (Gamma API has no CORS headers)
+    const CORS_PROXIES = [
+        '', // try direct first (works from localhost / same-origin)
+        'https://corsproxy.io/?url=',
+        'https://api.allorigins.win/raw?url='
+    ];
+    async function fetchWithProxy(url) {
+        for (const proxy of CORS_PROXIES) {
+            try {
+                const proxyUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                const resp = await fetch(proxyUrl);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                return await resp.json();
+            } catch(e) { continue; }
+        }
+        return null;
+    }
+
+    // Fallback markets shown when API is unreachable
+    const FALLBACK_MARKETS = [
+        {id:'f1',question:'Israel x Hamas ceasefire cancelled by June 30?',outcomePrices:['0.26','0.74'],volume:4000000,volume24hr:50000,liquidity:100000,slug:'israel-x-hamas-ceasefire-cancelled-by'},
+        {id:'f2',question:'Israel x Hamas Ceasefire Phase II by June 30?',outcomePrices:['0.44','0.56'],volume:2000000,volume24hr:30000,liquidity:80000,slug:'israel-x-hamas-ceasefire-phase-ii-by'},
+        {id:'f3',question:'Netanyahu out by end of 2026?',outcomePrices:['0.48','0.52'],volume:798000,volume24hr:20000,liquidity:60000,slug:'netanyahu-out-by'},
+        {id:'f4',question:'Israel strike on Damascus by June 30?',outcomePrices:['0.15','0.85'],volume:500000,volume24hr:10000,liquidity:40000,slug:'israel-strike-on-damascus-by'},
+        {id:'f5',question:'Will Israel annex Gaza territory by June 30 2026?',outcomePrices:['0.08','0.92'],volume:400000,volume24hr:8000,liquidity:30000,slug:'will-israel-annex-gaza-territory'},
+        {id:'f6',question:'Will Hamas agree to disarm by June 30?',outcomePrices:['0.24','0.76'],volume:250000,volume24hr:5000,liquidity:20000,slug:'will-hamas-agree-to-disarm-by'},
+        {id:'f7',question:'Israel x Syria security agreement by December 31?',outcomePrices:['0.10','0.90'],volume:108000,volume24hr:3000,liquidity:15000,slug:'israel-x-syria-security-agreement-by'},
+        {id:'f8',question:'Will Israel launch major ground offensive in Gaza?',outcomePrices:['0.12','0.88'],volume:300000,volume24hr:7000,liquidity:25000,slug:'will-israel-launch-major-ground-offensive-in-gaza-by'},
+    ];
+
     async function fetchMarkets() {
         const btn = document.getElementById('refresh-btn');
         const list = document.getElementById('markets-list');
@@ -1553,15 +1583,13 @@
             const seen = new Set();
             const meRegex = /israel|iran|gaza|hamas|hezbollah|lebanon|syria|yemen|houthi|saudi|ceasefire|middle.east|palestin|netanyahu|irgc|nuclear|red.sea|hormuz|west.bank|rafah|beirut|tehran|golan|annex|damascus|strike.*iran|strike.*israel/i;
 
-            // Fetch 500 events in one shot and filter client-side
-            // (Gamma API tag/title_contains params don't reliably filter)
+            // Fetch 500 events and filter client-side
             const offsets = [0, 500];
             for (const offset of offsets) {
                 try {
                     const url = `https://gamma-api.polymarket.com/events?closed=false&limit=500&offset=${offset}`;
-                    const resp = await fetch(url);
-                    if (!resp.ok) continue;
-                    const events = await resp.json();
+                    const events = await fetchWithProxy(url);
+                    if (!events || !events.length) break;
                     if (!events.length) break;
                     events.forEach(event => {
                         const title = (event.title || '').toLowerCase();
@@ -1591,13 +1619,24 @@
 
             allMarkets = allResults.sort((a, b) => b.volume - a.volume);
 
+            // Fallback to cached markets if API returned nothing
+            if (allMarkets.length === 0) {
+                console.warn('No live markets found, using fallback data');
+                allMarkets = FALLBACK_MARKETS;
+            }
+
             document.getElementById('stat-markets').textContent = allMarkets.length;
             renderMarkets();
 
             const now = new Date().toLocaleTimeString();
-            document.getElementById('last-updated').textContent = `Updated ${now}`;
+            const label = allResults.length > 0 ? `Updated ${now}` : `Fallback data — ${now}`;
+            document.getElementById('last-updated').textContent = label;
         } catch (err) {
-            list.innerHTML = `<div class="loading-spinner" style="color:#ff4466">Failed to load markets. Retry in 60s.</div>`;
+            console.error('Market fetch error:', err);
+            allMarkets = FALLBACK_MARKETS;
+            document.getElementById('stat-markets').textContent = allMarkets.length;
+            renderMarkets();
+            document.getElementById('last-updated').textContent = 'Using fallback data';
         }
 
         btn.classList.remove('loading');
