@@ -173,13 +173,13 @@
 
         /* Map Controls */
         .map-controls {
-            position: absolute; top: 12px; left: 12px; z-index: 1000;
-            display: flex; flex-direction: column; gap: 8px;
+            position: absolute; top: 12px; left: 50px; z-index: 1000;
+            display: flex; flex-direction: row; gap: 8px; align-items: flex-start;
         }
 
         .control-panel {
             background: rgba(17,17,24,0.95); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 14px 16px; backdrop-filter: blur(8px); box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+            border-radius: var(--radius); padding: 10px 14px; backdrop-filter: blur(8px); box-shadow: 0 2px 12px rgba(0,0,0,0.3);
         }
 
         .control-panel h4 {
@@ -198,31 +198,37 @@
         .control-btn.active { background: var(--accent); border-color: var(--accent); color: #0a0a0f; }
 
         /* Edge type toggles */
-        .edge-toggle { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; }
-        .edge-toggle input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
-        .edge-toggle-label { font-size: 11px; color: var(--muted); }
-        .edge-toggle-swatch { width: 14px; height: 3px; flex-shrink: 0; border-radius: 1px; }
+        #layer-toggles .edge-toggles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+        .edge-toggle { display: flex; align-items: center; gap: 4px; margin: 1px 0; cursor: pointer; }
+        .edge-toggle input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; width: 12px; height: 12px; }
+        .edge-toggle-label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+        .edge-toggle-swatch { width: 12px; height: 2px; flex-shrink: 0; border-radius: 1px; }
 
         /* Legend */
         .map-legend {
-            position: absolute; bottom: 16px; left: 12px; z-index: 1000;
+            position: absolute; bottom: 16px; right: 12px; z-index: 1000;
             background: rgba(17,17,24,0.95); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 14px 16px; backdrop-filter: blur(8px);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.3); width: 210px; max-height: 400px; overflow-y: auto;
+            border-radius: var(--radius); padding: 10px 14px; backdrop-filter: blur(8px);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3); width: 180px;
         }
+        .map-legend.collapsed .legend-body { display: none; }
         .map-legend h4 {
             font-family: 'JetBrains Mono', monospace; font-size: 10px;
-            text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
         }
-        .legend-section { margin-bottom: 8px; }
+        .map-legend h4 .toggle-arrow { font-size: 12px; transition: transform 0.2s; }
+        .map-legend.collapsed h4 .toggle-arrow { transform: rotate(-90deg); }
+        .legend-body { margin-top: 8px; }
+        .legend-section { margin-bottom: 6px; }
         .legend-section-title {
             font-family: 'JetBrains Mono', monospace; font-size: 9px;
-            text-transform: uppercase; letter-spacing: 0.08em; color: #3a3a4a; margin-bottom: 4px;
+            text-transform: uppercase; letter-spacing: 0.08em; color: #3a3a4a; margin-bottom: 3px;
         }
-        .legend-item { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-        .legend-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
-        .legend-line-swatch { width: 16px; height: 2px; flex-shrink: 0; border-radius: 1px; }
-        .legend-text { font-size: 11px; color: var(--muted); }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+        .legend-swatch { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+        .legend-line-swatch { width: 14px; height: 2px; flex-shrink: 0; border-radius: 1px; }
+        .legend-text { font-size: 10px; color: var(--muted); }
 
         /* Cascade Overlay */
         .cascade-overlay {
@@ -534,7 +540,8 @@
                 </div>
 
                 <div class="map-legend" id="legend-panel">
-                    <h4>Legend</h4>
+                    <h4 onclick="document.getElementById('legend-panel').classList.toggle('collapsed')">Legend <span class="toggle-arrow">▼</span></h4>
+                    <div class="legend-body">
                     <div class="legend-section">
                         <div class="legend-section-title">Regions</div>
                         <div class="legend-item"><div class="legend-swatch" style="background:#5b9dff"></div><span class="legend-text">Lebanon</span></div>
@@ -563,6 +570,7 @@
                         <div class="legend-item"><div class="legend-line-swatch" style="background:#b07aff"></div><span class="legend-text">Refugee Flow</span></div>
                         <div class="legend-item"><div class="legend-line-swatch" style="background:#555566"></div><span class="legend-text">Air Corridor</span></div>
                     </div>
+                    </div><!-- /legend-body -->
                 </div>
 
                 <div class="cascade-overlay" id="cascade-overlay">
@@ -985,6 +993,8 @@
     // ======================================================================
     function buildLayerToggles() {
         const container = document.getElementById('layer-toggles');
+        const grid = document.createElement('div');
+        grid.className = 'edge-toggles-grid';
         Object.keys(EDGE_COLORS).forEach(type => {
             const row = document.createElement('div');
             row.className = 'edge-toggle';
@@ -993,8 +1003,9 @@
                 <div class="edge-toggle-swatch" style="background:${EDGE_COLORS[type]}"></div>
                 <span class="edge-toggle-label">${EDGE_LABELS[type]}</span>
             `;
-            container.appendChild(row);
+            grid.appendChild(row);
         });
+        container.appendChild(grid);
     }
 
     function toggleEdgeType(type, show) {
