@@ -41,6 +41,7 @@ class BaseAgent(ABC):
         self._model: Optional[nn.Module] = None
         self._optimizer: Optional[torch.optim.Optimizer] = None
         self._training_points: Optional[Tensor] = None
+        self._calibration_scale: float = 1.0  # set via calibrate_evidence()
 
     @property
     def model(self) -> nn.Module:
@@ -77,6 +78,8 @@ class BaseAgent(ABC):
         """
         if method == "mc_dropout":
             return self._evidence_mc_dropout(x)
+        elif method == "calibrated":
+            return self._evidence_calibrated(x)
         elif method == "kernel":
             return self._evidence_kernel(x)
         else:
@@ -97,6 +100,30 @@ class BaseAgent(ABC):
 
         self.model.eval()
         return evidence
+
+    def calibrate_evidence(self, x_val: Tensor, y_val: Tensor):
+        """Calibrate evidence using validation accuracy.
+
+        Scales MC dropout evidence by (1 / val_mse), so agents that are
+        confidently WRONG get downweighted. Call after training, before
+        using method='calibrated'.
+        """
+        self.model.eval()
+        with torch.no_grad():
+            y_pred = self.predict(x_val)
+            mse = (y_pred - y_val).pow(2).mean().item()
+        # Scale: good models (low MSE) get high multiplier
+        self._calibration_scale = 1.0 / (mse + 1e-6)
+
+    def _evidence_calibrated(self, x: Tensor) -> Tensor:
+        """MC dropout evidence scaled by validation accuracy.
+
+        Fixes the 'confidently wrong' problem: raw MC dropout gives high
+        evidence to models with low variance regardless of accuracy.
+        Multiplying by 1/val_mse penalizes models that are confident but wrong.
+        """
+        raw_evidence = self._evidence_mc_dropout(x)
+        return raw_evidence * self._calibration_scale
 
     def _evidence_kernel(self, x: Tensor, bandwidth: float = 1.0) -> Tensor:
         """Kernel density: effective sample size in neighbourhood of x."""

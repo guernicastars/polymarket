@@ -1,0 +1,21 @@
+ladder_key,event_slug,category,n_markets,n_thresholds,curve_brier_final,atm_brier_final,abs_mean_proxy_error_final,monotonicity_violation_rate_final,adjacent_arbitrage_gross_edge_final,max_adjacent_arbitrage_edge_final,tail_fit_winner_final
+nba-den-mem-2026-01-25::nuggets vs. grizzlies: o/u {threshold},nba-den-mem-2026-01-25,Sports,16,16,0.13009366703126693,0.25,7.142000020592235,0.06666666666666667,0.19799996960776467,0.17999997450776617,insufficient
+dota2-tundra-bb4-2026-03-22::total kills over/under {threshold} in game 1?,dota2-tundra-bb4-2026-03-22,Esports,14,14,0.0015789179054950982,0.00999999999999998,0.3599328023892454,0.15384615384615385,0.17251119960179168,0.0875111996017918,tie
+lol-wb-ig1-2026-02-25::total kills over/under {threshold} in game 1?,lol-wb-ig1-2026-02-25,Esports,14,14,0.023754749999999988,0.20249999999999996,1.6980000000000004,0.15384615384615385,0.8079999999999999,0.43999999999999995,tie
+dota2-ave-ngx-2026-04-13::total kills over/under {threshold} in game 1?,dota2-ave-ngx-2026-04-13,Esports,13,13,0.00020176923076923074,0.0004,0.0519999999999996,0.0,0.038,0.019,tie
+nba-okc-phi-2026-03-23::thunder vs. 76ers: o/u {threshold},nba-okc-phi-2026-03-23,Sports,13,13,0.19175712709741863,0.25,2.549999884299922,0.0,0.010000000000000009,0.010000000000000009,insufficient
+nba-ind-orl-2026-03-23::pacers vs. magic: o/u {threshold},nba-ind-orl-2026-03-23,Sports,13,13,0.23585002221513923,0.24009999999999998,1.4199999053904264,0.0,0.0,0.0,insufficient
+nba-was-bos-2026-03-14::wizards vs. celtics: o/u {threshold},nba-was-bos-2026-03-14,Sports,13,13,0.3176142864044857,0.24009999999999998,3.4400000039800034,0.0,5.3300002189615725e-09,5.3300002189615725e-09,insufficient
+lol-dnf-drx-2026-02-19::total kills over/under {threshold} in game 2?,lol-dnf-drx-2026-02-19,Esports,12,12,1.661062265937226e-05,0.00018032747191246712,0.009428606476937773,0.0,0.01242860647693822,0.01242860647693822,insufficient
+dota2-z10-lynx-2026-04-13::total kills over/under {threshold} in game 1?,dota2-z10-lynx-2026-04-13,Games,12,12,3.425000000000007e-05,0.0004000000000000007,0.08899999999999864,0.0,0.0,0.0,insufficient
+lol-mkoi-sk-2026-04-11::total kills over/under {threshold} in game 1?,lol-mkoi-sk-2026-04-11,Esports,12,12,0.009999999999999995,0.009999999999999995,1.2000000000000028,0.0,0.0,0.0,insufficient
+nba-dal-ind-2026-02-22::mavericks vs. pacers: o/u {threshold},nba-dal-ind-2026-02-22,Sports,12,12,0.198885713997672,0.22089988513192996,2.1982857488457057,0.09090909090909091,0.030000034560004774,0.030000034560004774,insufficient
+nba-det-phi-2026-04-04::pistons vs. 76ers: o/u {threshold},nba-det-phi-2026-04-04,Sports,12,12,0.2264500124864988,0.27040000000000003,1.4600000389265801,0.0,0.0,0.0,insufficient
+nba-cha-was-2026-02-22::hornets vs. wizards: o/u {threshold},nba-cha-was-2026-02-22,Sports,12,12,0.33628289138102674,0.28090000000000004,2.2700000000000102,0.0,0.0,0.0,insufficient
+dota2-gl-pari-2026-03-23::total kills over/under {threshold} in game 2?,dota2-gl-pari-2026-03-23,Esports,11,11,1.0000000000000019e-06,1.0000000000000019e-06,0.02400000000000091,0.0,0.0,0.0,insufficient
+lol-dnf-drx-2026-02-19::total kills over/under {threshold} in game 4?,lol-dnf-drx-2026-02-19,Esports,11,11,1e-05,0.0001,0.010000000000005116,0.0,0.0,0.0,insufficient
+dota2-gl-vpp-2026-04-06::total kills over/under {threshold} in game 1?,dota2-gl-vpp-2026-04-06,Esports,11,11,0.010849936995045413,0.11933930694549955,2.109731301939064,0.1,0.34445521698984305,0.34445521698984305,insufficient
+nba-det-tor-2026-03-15::pistons vs. raptors: o/u {threshold},nba-det-tor-2026-03-15,Sports,11,11,0.21228000058824,0.25,1.8000000034199957,0.0,0.009999996579999615,0.009999996579999615,insufficient
+nba-mem-det-2026-03-13::grizzlies vs. pistons: o/u {threshold},nba-mem-det-2026-03-13,Sports,11,11,0.21477500097440017,0.24009999999999998,1.3600000046399998,0.0,0.0,0.0,insufficient
+nba-det-min-2026-03-28::pistons vs. timberwolves: o/u {threshold},nba-det-min-2026-03-28,Sports,11,11,0.22484000201196816,0.2601,1.9399999984879912,0.0,0.0,0.0,insufficient
+nba-min-phi-2026-04-03::timberwolves vs. 76ers: o/u {threshold},nba-min-phi-2026-04-03,Sports,11,11,0.22736667166466693,0.24010001499400072,0.9700000153000019,0.0,0.0,0.0,insufficient

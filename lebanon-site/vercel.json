@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/grid", "destination": "/grid.html" },
+    { "source": "/network", "destination": "/index.html" }
+  ]
+}

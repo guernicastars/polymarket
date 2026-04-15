@@ -1,0 +1,26 @@
+\begin{thebibliography}{3}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Arora and Malpani(2026)]{arora2026predictionmarketbench}
+Avi Arora and Ritesh Malpani.
+\newblock Predictionmarketbench: A swe-bench-style framework for backtesting
+  trading agents on prediction markets.
+\newblock \emph{arXiv preprint arXiv:2602.00133}, 2026.
+
+\bibitem[Brier(1950)]{brier1950verification}
+Glenn~W. Brier.
+\newblock Verification of forecasts expressed in terms of probability.
+\newblock \emph{Monthly Weather Review}, 78\penalty0 (1):\penalty0 1--3, 1950.
+
+\bibitem[Karger et~al.(2024)Karger, Bastani, Chen, Jacobs, Halawi, Zhang, and
+  Tetlock]{karger2024forecastbench}
+Ezra Karger, Houtan Bastani, Yueh-Han Chen, Zachary Jacobs, Danny Halawi, Fred
+  Zhang, and Philip~E. Tetlock.
+\newblock Forecastbench: A dynamic benchmark of {AI} forecasting capabilities.
+\newblock \emph{arXiv preprint arXiv:2409.19839}, 2024.
+
+\end{thebibliography}

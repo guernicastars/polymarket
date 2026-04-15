@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-04-15T09:10:33.267304+00:00",
+  "n_final": 45311,
+  "n_24h": 25036,
+  "n_168h": 6390,
+  "final_1_2_relative_overpricing": 3.4832056953415127,
+  "h24_0_2_relative_overpricing": 4.922952060708599,
+  "h24_0_10_relative_overpricing": 1.7357591155690717,
+  "h24_0_10_bias_2026_02": 0.008786743607006414,
+  "h24_0_10_bias_2026_03": 0.004984282016354136,
+  "h24_0_10_bias_2026_04": 0.004461394794604485,
+  "top_24h_category": "Bitcoin",
+  "second_24h_category": "Weather",
+  "artifacts": {
+    "bin_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/longshot_bias/bin_metrics.csv",
+    "monthly_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/longshot_bias/monthly_metrics.csv",
+    "category_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/longshot_bias/category_metrics.csv"
+  }
+}

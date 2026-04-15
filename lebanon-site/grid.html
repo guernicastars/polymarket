@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloomsbury Technology — Lebanon Grid Resilience</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --card: #111118;
+            --border: #1e1e2e;
+            --sidebar: #0d0d14;
+            --accent: #00d4aa;
+            --destructive: #ff4466;
+            --chart-blue: #3b82f6;
+            --chart-purple: #a855f7;
+            --amber: #f59e0b;
+            --muted: #6b7280;
+            --fg: #e5e7eb;
+            --fg-dim: #9ca3af;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        /* ===== NAV ===== */
+        .nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 9000;
+            background: rgba(13,13,20,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        @media (min-width: 768px) { .nav { padding: 0 48px; } }
+        .nav-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: -0.03em;
+            color: var(--fg);
+            text-decoration: none;
+        }
+        .nav-links {
+            display: none;
+            gap: 32px;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+        }
+        @media (min-width: 768px) { .nav-links { display: flex; } }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--fg); }
+        .nav-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-radius: 6px;
+        }
+        .nav-btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            padding: 140px 24px 96px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--border);
+        }
+        @media (min-width: 768px) { .hero { padding: 160px 48px 96px; } }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 72px);
+            font-weight: 400;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 16px;
+            color: var(--fg);
+        }
+        .hero h1 em {
+            font-style: italic;
+            color: var(--muted);
+        }
+        .hero-sub {
+            font-size: 18px;
+            font-weight: 300;
+            color: var(--muted);
+            max-width: 640px;
+            line-height: 1.7;
+            margin-bottom: 48px;
+        }
+        .hero-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+        }
+        .hero-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hero-stat-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+        }
+        .hero-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+        .badge-proto {
+            display: inline-block;
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+        }
+
+        /* ===== SECTION HEADERS ===== */
+        .section {
+            padding: 96px 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--border);
+        }
+        @media (min-width: 768px) { .section { padding: 96px 48px; } }
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 24px;
+        }
+        .section-title {
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            color: var(--fg);
+        }
+        .section-desc {
+            font-size: 16px;
+            font-weight: 300;
+            color: var(--muted);
+            max-width: 600px;
+            line-height: 1.7;
+            margin-bottom: 48px;
+        }
+
+        /* ===== MAP SECTION ===== */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .leaflet-container { background: #0a0a0f !important; }
+
+        /* ===== METRICS GRID ===== */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 48px;
+        }
+        .metric-card {
+            background: var(--card);
+            padding: 24px;
+            transition: background 0.2s;
+        }
+        .metric-card:hover { background: #16161e; }
+        .metric-card.critical { background: rgba(255,68,102,0.08); }
+        .metric-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--fg);
+            line-height: 1;
+        }
+        .metric-value.good { color: var(--accent); }
+        .metric-value.warn { color: var(--amber); }
+        .metric-value.bad { color: var(--destructive); }
+        .metric-sub {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* ===== INFRASTRUCTURE LIST ===== */
+        .infra-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 48px;
+        }
+        @media (min-width: 768px) { .infra-grid { grid-template-columns: 1fr 1fr; } }
+        .infra-group-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+        .infra-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+        .infra-item:hover { background: rgba(255,255,255,0.02); margin: 0 -12px; padding: 12px; border-radius: 6px; }
+        .infra-item.destroyed { background: rgba(255,68,102,0.06); margin: 0 -12px; padding: 12px; border-radius: 6px; }
+        .infra-item.degraded { background: rgba(245,158,11,0.06); margin: 0 -12px; padding: 12px; border-radius: 6px; }
+        .infra-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .infra-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .infra-dot.operational { background: var(--accent); }
+        .infra-dot.destroyed { background: var(--destructive); }
+        .infra-dot.degraded { background: var(--amber); }
+        .infra-dot.offline { background: var(--muted); }
+        .infra-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--fg);
+        }
+        .infra-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+        .btn-destroy {
+            padding: 6px 14px;
+            border: 1px solid var(--destructive);
+            background: transparent;
+            color: var(--destructive);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            border-radius: 6px;
+        }
+        .btn-destroy:hover {
+            background: var(--destructive);
+            color: var(--bg);
+        }
+        .btn-restore {
+            padding: 6px 14px;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            border-radius: 6px;
+        }
+        .btn-restore:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        .btn-reset {
+            padding: 12px 24px;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.15s;
+            width: 100%;
+            margin-top: 32px;
+            border-radius: 10px;
+        }
+        .btn-reset:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        /* ===== SCENARIOS ===== */
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 768px) { .scenarios-grid { grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; } }
+        .scenario-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        @media (min-width: 768px) { .scenario-card { border: none; border-radius: 0; } }
+        .scenario-card:hover { border-color: var(--accent); }
+        @media (min-width: 768px) { .scenario-card:hover { background: #16161e; } }
+        .scenario-card.active { background: rgba(0,212,170,0.06); border-color: var(--accent); }
+        @media (min-width: 768px) { .scenario-card.active { background: rgba(0,212,170,0.06); } }
+        .scenario-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--fg);
+        }
+        .scenario-desc {
+            font-size: 14px;
+            font-weight: 300;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .scenario-impact {
+            display: flex;
+            gap: 24px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .scenario-impact-item {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+        .scenario-impact-item .val {
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        /* ===== ANALYSIS SECTION ===== */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+        }
+        @media (min-width: 768px) { .analysis-grid { grid-template-columns: 1fr 1fr; } }
+        .analysis-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 32px;
+            background: var(--card);
+            transition: border-color 0.2s;
+        }
+        .analysis-card:hover { border-color: var(--accent); }
+        .analysis-card-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .analysis-card-icon {
+            font-size: 24px;
+            color: var(--amber);
+            margin-bottom: 16px;
+        }
+        .analysis-card p {
+            font-size: 14px;
+            font-weight: 300;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        /* ===== VULNERABILITY ===== */
+        .vuln-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .vuln-item:last-child { border-bottom: none; }
+        .vuln-name {
+            font-size: 13px;
+            color: var(--fg-dim);
+            min-width: 120px;
+        }
+        .vuln-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .vuln-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+        .vuln-score {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* ===== RECONFIG LOG ===== */
+        .reconfig-log {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 16px;
+            background: var(--card);
+        }
+        .reconfig-log-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .reconfig-entry {
+            font-size: 13px;
+            color: var(--muted);
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.6;
+        }
+        .reconfig-entry:last-child { border-bottom: none; }
+        .reconfig-entry .highlight { color: var(--fg); font-weight: 600; }
+        .reconfig-entry .warning { color: var(--destructive); font-weight: 600; }
+        .reconfig-entry .ok { color: var(--accent); font-weight: 600; }
+
+        /* ===== LEAFLET OVERRIDES ===== */
+        .leaflet-popup-content-wrapper {
+            background: var(--card) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 10px !important;
+            color: var(--fg) !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        .leaflet-popup-tip {
+            background: var(--card) !important;
+            border-left: 1px solid var(--border) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+        .leaflet-popup-close-button { color: var(--muted) !important; font-size: 18px !important; }
+        .popup-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--fg);
+        }
+        .popup-detail {
+            font-size: 12px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .popup-status {
+            display: inline-block;
+            padding: 2px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 8px;
+            border-radius: 4px;
+        }
+        .popup-status.operational { background: rgba(0,212,170,0.12); color: var(--accent); }
+        .popup-status.destroyed { background: rgba(255,68,102,0.12); color: var(--destructive); }
+        .popup-status.degraded { background: rgba(245,158,11,0.12); color: var(--amber); }
+        .popup-status.isolated { background: rgba(107,114,128,0.15); color: var(--muted); }
+
+        .leaflet-control-zoom a {
+            background: var(--card) !important;
+            color: var(--fg) !important;
+            border-color: var(--border) !important;
+            border-radius: 6px !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: #16161e !important;
+        }
+
+        /* ===== FLOW ANIMATION ===== */
+        @keyframes flow-dash {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -24; }
+        }
+
+        /* ===== NOTIFICATION ===== */
+        .notification {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 28px;
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+        .tab {
+            padding: 12px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        .tab:hover { color: var(--fg-dim); }
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--sidebar);
+            border-top: 1px solid var(--border);
+            color: var(--fg);
+            padding: 96px 24px;
+        }
+        @media (min-width: 768px) { .footer { padding: 96px 48px; } }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+        .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            flex-wrap: wrap;
+            gap: 32px;
+        }
+        .footer h2 {
+            font-size: clamp(28px, 4vw, 48px);
+            font-weight: 400;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            color: var(--fg);
+        }
+        .footer-links {
+            display: flex;
+            gap: 48px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+        .footer-links a {
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover { color: var(--accent); }
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* ===== DARK TOOLTIP OVERRIDE ===== */
+        .dark-tooltip {
+            background: var(--card) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--fg) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+            padding: 8px 12px !important;
+            border-radius: 6px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 11px !important;
+        }
+        .dark-tooltip::before { border-top-color: var(--border) !important; }
+        .leaflet-tooltip { border-radius: 6px !important; }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+    <a href="https://bloomsburytech.com" class="nav-logo">BLOOMSBURY TECHNOLOGY</a>
+    <div class="nav-links">
+        <a href="https://bloomsburytech.com/expertise">Expertise</a>
+        <a href="https://bloomsburytech.com/research">Research</a>
+        <a href="https://bloomsburytech.com/work">Work</a>
+        <a href="https://bloomsburytech.com" class="nav-btn">bloomsburytech.com</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <h1>Lebanon Grid<br><em>Resilience</em></h1>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:24px;">Lebanon Electricity Grid</p>
+    <p class="hero-sub">
+        Network intelligence for critical infrastructure protection. Simulate attacks, visualize cascading failures, optimize reconfiguration.
+    </p>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <span class="hero-stat-label">Generation Capacity</span>
+            <span class="hero-stat-value">2,094 MW</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-label">Peak Demand</span>
+            <span class="hero-stat-value">3,000 MW</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-label">Grid Connectivity</span>
+            <span class="hero-stat-value">100%</span>
+        </div>
+        <div class="hero-stat">
+            <span class="hero-stat-label">Status</span>
+            <span class="badge-proto">Prototype</span>
+        </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:24px;font-weight:300;">PROTOTYPE -- Demonstrating analytical capability</p>
+</section>
+
+<!-- INTERACTIVE GRID MAP -->
+<section class="section">
+    <div class="section-label">01 -- Interactive Grid Map</div>
+    <h2 class="section-title">Grid Topology</h2>
+    <p class="section-desc">
+        Lebanon's power grid modeled with 7 generation nodes, 9 distribution substations, and 20 transmission lines. Click nodes on the map for details.
+    </p>
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+</section>
+
+<!-- RESILIENCE METRICS -->
+<section class="section" id="metricsSection">
+    <div class="section-label">02 -- Resilience Metrics</div>
+    <h2 class="section-title">System Status</h2>
+    <div class="metrics-grid">
+        <div class="metric-card" id="mc-gen">
+            <div class="metric-label">Total Generation</div>
+            <div class="metric-value" id="mv-gen">2,094</div>
+            <div class="metric-sub" id="ms-gen">MW of 2,094 MW capacity</div>
+        </div>
+        <div class="metric-card" id="mc-demand">
+            <div class="metric-label">Demand Met</div>
+            <div class="metric-value good" id="mv-demand">69.8%</div>
+            <div class="metric-sub" id="ms-demand">Pre-crisis baseline</div>
+        </div>
+        <div class="metric-card" id="mc-conn">
+            <div class="metric-label">Grid Connectivity</div>
+            <div class="metric-value" id="mv-conn">100%</div>
+            <div class="metric-sub" id="ms-conn">All zones connected</div>
+        </div>
+        <div class="metric-card" id="mc-iso">
+            <div class="metric-label">Isolated Zones</div>
+            <div class="metric-value good" id="mv-iso">0</div>
+            <div class="metric-sub" id="ms-iso">of 9 distribution zones</div>
+        </div>
+        <div class="metric-card" id="mc-crit">
+            <div class="metric-label">Critical Node</div>
+            <div class="metric-value" id="mv-crit" style="font-size:18px">Bsalim</div>
+            <div class="metric-sub" id="ms-crit">Highest disruption if lost</div>
+        </div>
+    </div>
+</section>
+
+<!-- ATTACK SIMULATION -->
+<section class="section">
+    <div class="section-label">03 -- Attack Simulation</div>
+    <h2 class="section-title">Infrastructure Control</h2>
+    <p class="section-desc">
+        Destroy or restore individual nodes to simulate targeted strikes and observe cascading effects across the grid.
+    </p>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="tab-infra" onclick="switchTab('tab-infra')">Infrastructure</button>
+        <button class="tab" data-tab="tab-analysis" onclick="switchTab('tab-analysis')">Analysis</button>
+    </div>
+
+    <div class="tab-content active" id="tab-infra">
+        <div class="infra-grid" id="infraGrid"></div>
+        <button class="btn-reset" onclick="resetAll()">Reset All Infrastructure</button>
+    </div>
+    <div class="tab-content" id="tab-analysis">
+        <div id="analysisContent"></div>
+    </div>
+</section>
+
+<!-- PRESET SCENARIOS -->
+<section class="section">
+    <div class="section-label">04 -- Preset Scenarios</div>
+    <h2 class="section-title">Attack Scenarios</h2>
+    <p class="section-desc">
+        Pre-configured attack scenarios demonstrating different infrastructure vulnerability profiles. Click to simulate.
+    </p>
+    <div class="scenarios-grid" id="scenariosGrid"></div>
+</section>
+
+<!-- VULNERABILITY ANALYSIS -->
+<section class="section">
+    <div class="section-label">05 -- Vulnerability Analysis</div>
+    <h2 class="section-title">Critical Node Ranking</h2>
+    <p class="section-desc">
+        Ranked by disruption impact: the megawatts of demand lost if each node were destroyed, including cascading isolation effects.
+    </p>
+    <div id="vulnPanel" style="max-width:640px;"></div>
+</section>
+
+<!-- ANALYTICAL METHODS -->
+<section class="section">
+    <div class="section-label">06 -- Analytical Methods</div>
+    <h2 class="section-title">Analytical Toolkit</h2>
+    <p class="section-desc">
+        Adapted from our West Africa infrastructure resilience project. The same graph-theoretic methods applied to Lebanon's grid topology.
+    </p>
+    <div class="analysis-grid">
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x2227;</div>
+            <div class="analysis-card-title">Articulation Points</div>
+            <p>Substations whose failure fragments the grid into disconnected components. These are the single points of failure that defense strategy must protect.</p>
+        </div>
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x2702;</div>
+            <div class="analysis-card-title">Min-Cut Analysis</div>
+            <p>For each load zone, the minimum set of transmission lines whose destruction would isolate it. Shows structural vulnerability independent of generation capacity.</p>
+        </div>
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x21C4;</div>
+            <div class="analysis-card-title">Route Redundancy</div>
+            <p>How many alternative paths exist from each plant to each substation. Low redundancy indicates fragile connections vulnerable to single-line disruption.</p>
+        </div>
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x25A0;</div>
+            <div class="analysis-card-title">Community Detection</div>
+            <p>Natural grid clusters that form quasi-independent sub-grids. These communities reveal which regions could operate autonomously during partial grid failure.</p>
+        </div>
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x0394;</div>
+            <div class="analysis-card-title">Opportunity Signals</div>
+            <p>Gap between structural capacity (what the topology supports) and actual throughput. Identifies underutilized infrastructure and bottlenecks limiting power delivery.</p>
+        </div>
+        <div class="analysis-card">
+            <div class="analysis-card-icon">&#x21BB;</div>
+            <div class="analysis-card-title">Cascade Simulation</div>
+            <p>When a line exceeds capacity, it trips -- redistributing load to remaining paths. If those paths also overload, the cascade continues until equilibrium or blackout.</p>
+        </div>
+    </div>
+</section>
+
+<!-- RECONFIGURATION SUGGESTIONS -->
+<section class="section" id="reconfigSection" style="display:none;">
+    <div class="section-label">07 -- Reconfiguration</div>
+    <h2 class="section-title">Suggested Actions</h2>
+    <p class="section-desc">
+        After infrastructure damage, the system identifies alternative routing and compensation strategies.
+    </p>
+    <div id="reconfigContent"></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-top">
+            <h2>Network Intelligence<br>for Critical Infrastructure.</h2>
+            <div class="footer-links">
+                <div>
+                    <a href="https://bloomsburytech.com/expertise">Expertise</a><br>
+                    <a href="https://bloomsburytech.com/research">Research</a><br>
+                    <a href="https://bloomsburytech.com/work">Work</a>
+                </div>
+                <div>
+                    <a href="https://www.linkedin.com/company/bloomsbury-technology/" target="_blank" rel="noopener noreferrer">LinkedIn</a><br>
+                    <a href="mailto:eugene.shcherbinin@bloomsburytech.com">Contact</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 Bloomsbury Technology Ltd.</span>
+            <span>PROTOTYPE -- For demonstration purposes</span>
+        </div>
+    </div>
+</footer>
+
+<!-- NOTIFICATION -->
+<div class="notification" id="notification"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ============================================================
+// LEBANON ELECTRICITY GRID -- DATA MODEL
+// ============================================================
+
+const TOTAL_DEMAND = 3000; // MW peak
+
+const PLANTS = [
+    { id: 'zouk', name: 'Zouk Power Plant', type: 'thermal', capacity: 607, lat: 34.0167, lng: 35.6167, status: 'operational' },
+    { id: 'jiyeh', name: 'Jiyeh Power Plant', type: 'thermal', capacity: 346, lat: 33.6667, lng: 35.4000, status: 'operational' },
+    { id: 'deir_ammar', name: 'Deir Ammar', type: 'combined_cycle', capacity: 435, lat: 34.4667, lng: 36.0000, status: 'operational' },
+    { id: 'zahrani', name: 'Zahrani', type: 'combined_cycle', capacity: 435, lat: 33.5000, lng: 35.3167, status: 'operational' },
+    { id: 'baalbek', name: 'Baalbek', type: 'thermal', capacity: 60, lat: 34.0047, lng: 36.2117, status: 'operational' },
+    { id: 'litani', name: 'Litani Hydro (Markaba)', type: 'hydro', capacity: 190, lat: 33.3500, lng: 35.5500, status: 'operational' },
+    { id: 'kadisha', name: 'Kadisha Hydro', type: 'hydro', capacity: 21, lat: 34.2500, lng: 35.9000, status: 'operational' },
+];
+
+const SUBSTATIONS = [
+    { id: 'bsalim', name: 'Bsalim Hub', demand: 800, lat: 33.8833, lng: 35.5833, status: 'operational' },
+    { id: 'bauchrieh', name: 'Bauchrieh', demand: 400, lat: 33.8833, lng: 35.5500, status: 'operational' },
+    { id: 'jamhour', name: 'Jamhour', demand: 500, lat: 33.8333, lng: 35.5333, status: 'operational' },
+    { id: 'beddawi', name: 'Beddawi (Tripoli)', demand: 350, lat: 34.4333, lng: 35.8333, status: 'operational' },
+    { id: 'ksara', name: 'Ksara (Bekaa)', demand: 200, lat: 33.8167, lng: 35.8833, status: 'operational' },
+    { id: 'sidon', name: 'Sidon', demand: 300, lat: 33.5500, lng: 35.3833, status: 'operational' },
+    { id: 'tyre', name: 'Tyre', demand: 200, lat: 33.2700, lng: 35.2000, status: 'operational' },
+    { id: 'nabatieh', name: 'Nabatieh', demand: 150, lat: 33.3779, lng: 35.4839, status: 'operational' },
+    { id: 'halba', name: 'Halba (Akkar)', demand: 150, lat: 34.5500, lng: 36.0833, status: 'operational' },
+];
+
+const LINES = [
+    { id: 'l1', from: 'deir_ammar', to: 'beddawi', voltage: 220, capacity: 400, status: 'operational' },
+    { id: 'l2', from: 'deir_ammar', to: 'halba', voltage: 220, capacity: 250, status: 'operational' },
+    { id: 'l3', from: 'beddawi', to: 'zouk', voltage: 220, capacity: 500, status: 'operational' },
+    { id: 'l4', from: 'zouk', to: 'bsalim', voltage: 220, capacity: 600, status: 'operational' },
+    { id: 'l5', from: 'bsalim', to: 'bauchrieh', voltage: 220, capacity: 400, status: 'operational' },
+    { id: 'l6', from: 'bsalim', to: 'jamhour', voltage: 220, capacity: 450, status: 'operational' },
+    { id: 'l7', from: 'jiyeh', to: 'jamhour', voltage: 220, capacity: 350, status: 'operational' },
+    { id: 'l8', from: 'jiyeh', to: 'sidon', voltage: 220, capacity: 350, status: 'operational' },
+    { id: 'l9', from: 'zahrani', to: 'sidon', voltage: 220, capacity: 400, status: 'operational' },
+    { id: 'l10', from: 'zahrani', to: 'nabatieh', voltage: 220, capacity: 300, status: 'operational' },
+    { id: 'l11', from: 'nabatieh', to: 'tyre', voltage: 66, capacity: 180, status: 'operational' },
+    { id: 'l12', from: 'litani', to: 'nabatieh', voltage: 66, capacity: 200, status: 'operational' },
+    { id: 'l13', from: 'litani', to: 'tyre', voltage: 66, capacity: 150, status: 'operational' },
+    { id: 'l14', from: 'baalbek', to: 'ksara', voltage: 66, capacity: 80, status: 'operational' },
+    { id: 'l15', from: 'ksara', to: 'bsalim', voltage: 220, capacity: 300, status: 'operational' },
+    { id: 'l16', from: 'kadisha', to: 'beddawi', voltage: 66, capacity: 50, status: 'operational' },
+    { id: 'l17', from: 'ksara', to: 'jamhour', voltage: 66, capacity: 120, status: 'operational' },
+    { id: 'l18', from: 'deir_ammar', to: 'baalbek', voltage: 66, capacity: 100, status: 'operational' },
+    { id: 'l19', from: 'litani', to: 'ksara', voltage: 66, capacity: 120, status: 'operational' },
+    { id: 'l20', from: 'zahrani', to: 'tyre', voltage: 66, capacity: 200, status: 'operational' },
+];
+
+const SCENARIOS = [
+    {
+        id: 'south',
+        title: 'Southern Infrastructure Attack',
+        desc: 'Strikes on Zahrani plant, Tyre and Nabatieh substations. Severs power to all areas south of Sidon.',
+        targets: ['zahrani', 'tyre', 'nabatieh'],
+    },
+    {
+        id: 'beirut_suburbs',
+        title: 'Beirut Suburbs Strike',
+        desc: 'Jiyeh plant and Jamhour substation destroyed. Southern Beirut suburbs lose direct power supply.',
+        targets: ['jiyeh', 'jamhour'],
+    },
+    {
+        id: 'border_zone',
+        title: 'Full Border Zone',
+        desc: 'Everything south of Litani River destroyed. Zahrani, Litani hydro, Tyre, Nabatieh all offline.',
+        targets: ['zahrani', 'litani', 'tyre', 'nabatieh'],
+    },
+    {
+        id: 'tripoli',
+        title: 'Northern Corridor Attack',
+        desc: 'Deir Ammar plant and Beddawi substation struck. North Lebanon isolated.',
+        targets: ['deir_ammar', 'beddawi', 'halba'],
+    },
+    {
+        id: 'backbone',
+        title: 'Backbone Severed',
+        desc: 'Zouk and Bsalim hit -- central backbone destroyed. Cascading failures across entire grid.',
+        targets: ['zouk', 'bsalim'],
+    }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+
+let allNodes = {};
+let lineState = {};
+let mapMarkers = {};
+let mapLines = {};
+let currentTab = 'tab-infra';
+let reconfigLog = [];
+let activeScenario = null;
+
+function initState() {
+    PLANTS.forEach(p => { allNodes[p.id] = { ...p, nodeType: 'plant' }; });
+    SUBSTATIONS.forEach(s => { allNodes[s.id] = { ...s, nodeType: 'substation' }; });
+    LINES.forEach(l => { lineState[l.id] = { ...l }; });
+}
+
+// ============================================================
+// POWER FLOW ENGINE
+// ============================================================
+
+function getOperationalPlants() {
+    return PLANTS.filter(p => allNodes[p.id].status === 'operational');
+}
+function getOperationalSubstations() {
+    return SUBSTATIONS.filter(s => allNodes[s.id].status === 'operational');
+}
+function getOperationalLines() {
+    return LINES.filter(l => {
+        const ls = lineState[l.id];
+        if (ls.status !== 'operational') return false;
+        return allNodes[l.from].status === 'operational' && allNodes[l.to].status === 'operational';
+    });
+}
+
+function buildGraph() {
+    const adj = {};
+    Object.keys(allNodes).forEach(id => {
+        if (allNodes[id].status === 'operational') adj[id] = [];
+    });
+    getOperationalLines().forEach(l => {
+        if (adj[l.from] && adj[l.to]) {
+            adj[l.from].push({ to: l.to, capacity: l.capacity, lineId: l.id });
+            adj[l.to].push({ to: l.from, capacity: l.capacity, lineId: l.id });
+        }
+    });
+    return adj;
+}
+
+function findComponents(adj) {
+    const visited = new Set();
+    const components = [];
+    Object.keys(adj).forEach(node => {
+        if (!visited.has(node)) {
+            const comp = [];
+            const queue = [node];
+            while (queue.length > 0) {
+                const n = queue.shift();
+                if (visited.has(n)) continue;
+                visited.add(n);
+                comp.push(n);
+                (adj[n] || []).forEach(e => {
+                    if (!visited.has(e.to)) queue.push(e.to);
+                });
+            }
+            components.push(comp);
+        }
+    });
+    return components;
+}
+
+function calculatePowerFlow() {
+    const adj = buildGraph();
+    const components = findComponents(adj);
+    const lineLoads = {};
+    LINES.forEach(l => { lineLoads[l.id] = 0; });
+    const zoneStatus = {};
+    let totalGeneration = 0;
+    let totalDemandMet = 0;
+    let totalDemand = 0;
+    const suggestions = [];
+    const cascadeLines = [];
+
+    components.forEach(comp => {
+        let compGen = 0, compDemand = 0;
+        const compPlants = [], compSubs = [];
+
+        comp.forEach(nodeId => {
+            const node = allNodes[nodeId];
+            if (node.nodeType === 'plant') { compGen += node.capacity; compPlants.push(node); }
+            else { compDemand += node.demand; compSubs.push(node); }
+        });
+
+        totalGeneration += compGen;
+        totalDemand += compDemand;
+        const ratio = compDemand > 0 ? Math.min(1, compGen / compDemand) : 0;
+        totalDemandMet += compDemand * ratio;
+
+        compSubs.forEach(s => {
+            zoneStatus[s.id] = {
+                powerRatio: ratio,
+                hasGenerator: compPlants.length > 0,
+                isolated: compPlants.length === 0 && compSubs.length <= 1
+            };
+        });
+
+        if (compPlants.length > 0 && compSubs.length > 0) {
+            compSubs.forEach(sub => {
+                const path = bfsPath(adj, compPlants.map(p => p.id), sub.id);
+                if (path && path.length > 1) {
+                    const load = sub.demand * ratio;
+                    for (let i = 0; i < path.length - 1; i++) {
+                        const edge = (adj[path[i]] || []).find(e => e.to === path[i+1]);
+                        if (edge) lineLoads[edge.lineId] = (lineLoads[edge.lineId] || 0) + load;
+                    }
+                }
+            });
+        }
+    });
+
+    let cascadeOccurred = false;
+    LINES.forEach(l => {
+        const load = lineLoads[l.id] || 0;
+        const pct = l.capacity > 0 ? load / l.capacity : 0;
+        if (pct > 1.0 && lineState[l.id].status === 'operational') {
+            cascadeLines.push(l);
+            cascadeOccurred = true;
+        }
+    });
+
+    const isolatedZones = Object.entries(zoneStatus).filter(([_, z]) => !z.hasGenerator);
+    if (isolatedZones.length > 0) {
+        isolatedZones.forEach(([zoneId, _]) => {
+            const zone = allNodes[zoneId];
+            const opPlants = getOperationalPlants();
+            if (opPlants.length > 0) {
+                const nearest = opPlants.reduce((best, p) => {
+                    const d = haversine(zone.lat, zone.lng, p.lat, p.lng);
+                    return d < best.d ? { plant: p, d } : best;
+                }, { plant: null, d: Infinity });
+                if (nearest.plant) {
+                    suggestions.push(`Route power from <span class="highlight">${nearest.plant.name}</span> to compensate for loss at <span class="warning">${zone.name}</span>`);
+                }
+            }
+        });
+    }
+
+    const overloaded = LINES.filter(l => {
+        const load = lineLoads[l.id] || 0;
+        return l.capacity > 0 && (load / l.capacity) > 0.8 && lineState[l.id].status === 'operational';
+    });
+    overloaded.forEach(l => {
+        const pct = Math.round((lineLoads[l.id] / l.capacity) * 100);
+        suggestions.push(`Line <span class="warning">${allNodes[l.from].name} &rarr; ${allNodes[l.to].name}</span> at ${pct}% capacity -- bottleneck risk`);
+    });
+
+    return {
+        totalGeneration, totalDemand, totalDemandMet,
+        demandPercent: totalDemand > 0 ? (totalDemandMet / TOTAL_DEMAND * 100) : 0,
+        lineLoads, zoneStatus, components, cascadeLines, cascadeOccurred, suggestions,
+        isolatedCount: components.filter(c => {
+            return c.some(n => allNodes[n].nodeType === 'substation') && !c.some(n => allNodes[n].nodeType === 'plant');
+        }).length,
+    };
+}
+
+function bfsPath(adj, sources, target) {
+    const visited = new Set();
+    const prev = {};
+    const queue = [...sources];
+    sources.forEach(s => { visited.add(s); prev[s] = null; });
+    while (queue.length > 0) {
+        const node = queue.shift();
+        if (node === target) {
+            const path = [];
+            let curr = target;
+            while (curr !== null) { path.unshift(curr); curr = prev[curr]; }
+            return path;
+        }
+        (adj[node] || []).forEach(e => {
+            if (!visited.has(e.to)) { visited.add(e.to); prev[e.to] = node; queue.push(e.to); }
+        });
+    }
+    return null;
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function findArticulationPoints() {
+    const adj = buildGraph();
+    const nodes = Object.keys(adj);
+    const results = [];
+    nodes.forEach(testNode => {
+        if (allNodes[testNode].status !== 'operational') return;
+        const tempAdj = {};
+        nodes.forEach(n => {
+            if (n === testNode) return;
+            tempAdj[n] = (adj[n] || []).filter(e => e.to !== testNode);
+        });
+        const origComponents = findComponents(adj);
+        const newComponents = findComponents(tempAdj);
+        const node = allNodes[testNode];
+        let disruptionScore = 0;
+        if (newComponents.length > origComponents.length) {
+            newComponents.forEach(comp => {
+                const hasGen = comp.some(n => allNodes[n]?.nodeType === 'plant' && n !== testNode);
+                if (!hasGen) {
+                    comp.forEach(n => {
+                        if (allNodes[n]?.nodeType === 'substation') disruptionScore += allNodes[n].demand;
+                    });
+                }
+            });
+        }
+        if (node.nodeType === 'plant') disruptionScore += node.capacity;
+        else disruptionScore += node.demand;
+        results.push({ id: testNode, name: node.name, score: disruptionScore, type: node.nodeType });
+    });
+    return results.sort((a, b) => b.score - a.score);
+}
+
+// ============================================================
+// MAP
+// ============================================================
+
+const map = L.map('map', {
+    center: [33.85, 35.65],
+    zoom: 9,
+    zoomControl: false,
+    attributionControl: false
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 17,
+}).addTo(map);
+
+function createPlantIcon(plant) {
+    const colors = {
+        operational: '#f59e0b',
+        destroyed: '#ff4466',
+        degraded: '#f59e0b',
+        offline: '#6b7280',
+    };
+    const color = colors[plant.status] || colors.operational;
+    const size = Math.max(32, Math.min(54, plant.capacity / 12));
+
+    return L.divIcon({
+        className: 'plant-marker',
+        html: `<div style="
+            width: ${size}px; height: ${size}px;
+            border-radius: 50%;
+            background: ${color}33;
+            border: 2.5px solid ${color};
+            display: flex; align-items: center; justify-content: center;
+            font-size: ${size * 0.35}px;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 12px ${color}44;
+        ">${plant.type === 'hydro' ? '&#x25B2;' : '&#x26A1;'}</div>
+        <div style="
+            position: absolute; top: ${size + 4}px; left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 10px; color: ${color};
+            font-family: 'JetBrains Mono', monospace; font-weight: 600;
+            letter-spacing: 0.02em;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        ">${plant.capacity} MW</div>`,
+        iconSize: [size, size + 20],
+        iconAnchor: [size/2, size/2],
+    });
+}
+
+function createSubstationIcon(sub) {
+    const colors = {
+        operational: '#3b82f6',
+        destroyed: '#ff4466',
+        degraded: '#f59e0b',
+        offline: '#6b7280',
+    };
+    const color = colors[sub.status] || colors.operational;
+
+    return L.divIcon({
+        className: 'sub-marker',
+        html: `<div style="
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: ${color}44;
+            border: 2px solid ${color};
+            transition: all 0.4s ease;
+            box-shadow: 0 0 8px ${color}33;
+        "></div>
+        <div style="
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 10px; color: ${sub.status === 'operational' ? '#9ca3af' : color};
+            font-family: 'Inter', sans-serif; font-weight: 500;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        ">${sub.name}</div>`,
+        iconSize: [14, 32],
+        iconAnchor: [7, 7],
+    });
+}
+
+function getPopupContent(node) {
+    const statusLabel = node.status.charAt(0).toUpperCase() + node.status.slice(1);
+    let details = '';
+    if (node.nodeType === 'plant') {
+        details = `<div class="popup-detail">Type: ${node.type.replace('_',' ')}</div>
+                   <div class="popup-detail">Capacity: ${node.capacity} MW</div>`;
+    } else {
+        details = `<div class="popup-detail">Load demand: ${node.demand} MW</div>`;
+    }
+    return `<div class="popup-title">${node.name}</div>${details}<div class="popup-status ${node.status}">${statusLabel}</div>`;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+
+function renderMap() {
+    Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+    Object.values(mapLines).forEach(l => map.removeLayer(l));
+    mapMarkers = {};
+    mapLines = {};
+
+    const flow = calculatePowerFlow();
+
+    LINES.forEach(line => {
+        const fromNode = allNodes[line.from];
+        const toNode = allNodes[line.to];
+        if (!fromNode || !toNode) return;
+
+        const isOperable = lineState[line.id].status === 'operational' &&
+                          fromNode.status === 'operational' &&
+                          toNode.status === 'operational';
+
+        const load = flow.lineLoads[line.id] || 0;
+        const loadPct = line.capacity > 0 ? load / line.capacity : 0;
+
+        let color, weight, opacity, dashArray;
+        if (!isOperable) {
+            color = '#ff4466'; weight = 1.5; opacity = 0.3; dashArray = '4 8';
+        } else if (loadPct > 0.8) {
+            color = '#ff4466'; weight = line.voltage === 220 ? 4 : 2.5; opacity = 0.9; dashArray = null;
+        } else if (loadPct > 0.5) {
+            color = '#f59e0b'; weight = line.voltage === 220 ? 3.5 : 2.5; opacity = 0.8; dashArray = null;
+        } else {
+            color = '#6b7280'; weight = line.voltage === 220 ? 2.5 : 1.5; opacity = 0.5; dashArray = null;
+        }
+
+        const polyline = L.polyline(
+            [[fromNode.lat, fromNode.lng], [toNode.lat, toNode.lng]],
+            { color, weight, opacity, dashArray, lineCap: 'round' }
+        ).addTo(map);
+
+        if (isOperable && loadPct > 0.1) {
+            const flowLine = L.polyline(
+                [[fromNode.lat, fromNode.lng], [toNode.lat, toNode.lng]],
+                { color: '#f59e0b', weight: 1, opacity: 0.2, dashArray: '4 12', lineCap: 'round', className: 'flow-line' }
+            ).addTo(map);
+            mapLines[line.id + '_flow'] = flowLine;
+        }
+
+        const loadStr = isOperable ? `${Math.round(load)} / ${line.capacity} MW (${Math.round(loadPct*100)}%)` : 'OFFLINE';
+        polyline.bindTooltip(`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg);">
+            ${allNodes[line.from].name} &rarr; ${allNodes[line.to].name}<br>
+            ${line.voltage}kV | ${loadStr}
+        </div>`, { className: 'dark-tooltip', sticky: true });
+
+        mapLines[line.id] = polyline;
+    });
+
+    PLANTS.forEach(plant => {
+        const node = allNodes[plant.id];
+        const marker = L.marker([node.lat, node.lng], {
+            icon: createPlantIcon(node), zIndexOffset: 1000
+        }).addTo(map);
+        marker.bindPopup(getPopupContent(node));
+        mapMarkers[plant.id] = marker;
+    });
+
+    SUBSTATIONS.forEach(sub => {
+        const node = allNodes[sub.id];
+        const marker = L.marker([node.lat, node.lng], {
+            icon: createSubstationIcon(node), zIndexOffset: 500
+        }).addTo(map);
+        marker.bindPopup(getPopupContent(node));
+        mapMarkers[sub.id] = marker;
+    });
+}
+
+function updateStats() {
+    const flow = calculatePowerFlow();
+    const vulns = findArticulationPoints();
+
+    // Generation
+    document.getElementById('mv-gen').textContent = flow.totalGeneration.toLocaleString();
+    document.getElementById('ms-gen').textContent = `MW of ${TOTAL_DEMAND.toLocaleString()} MW demand`;
+
+    // Demand met
+    const pct = flow.demandPercent;
+    const demandEl = document.getElementById('mv-demand');
+    demandEl.textContent = pct.toFixed(1) + '%';
+    demandEl.className = 'metric-value ' + (pct > 60 ? 'good' : pct > 30 ? 'warn' : 'bad');
+    document.getElementById('ms-demand').textContent = `${Math.round(flow.totalDemandMet).toLocaleString()} MW supplied`;
+
+    // Connectivity
+    const totalNodes = Object.values(allNodes).filter(n => n.status === 'operational').length;
+    const mainComponent = flow.components.reduce((max, c) => c.length > max.length ? c : max, []);
+    const connPct = totalNodes > 0 ? (mainComponent.length / totalNodes * 100) : 0;
+    const connEl = document.getElementById('mv-conn');
+    connEl.textContent = connPct.toFixed(0) + '%';
+    connEl.className = 'metric-value ' + (connPct > 80 ? 'good' : connPct > 50 ? 'warn' : 'bad');
+    document.getElementById('ms-conn').textContent = `${flow.components.length} component${flow.components.length !== 1 ? 's' : ''}`;
+
+    // Isolated
+    const isoEl = document.getElementById('mv-iso');
+    isoEl.textContent = flow.isolatedCount;
+    isoEl.className = 'metric-value ' + (flow.isolatedCount === 0 ? 'good' : flow.isolatedCount <= 2 ? 'warn' : 'bad');
+
+    // Critical node
+    if (vulns.length > 0) {
+        document.getElementById('mv-crit').textContent = vulns[0].name;
+        document.getElementById('ms-crit').textContent = `Loss = ${vulns[0].score} MW disruption`;
+    }
+
+    // Critical card highlight
+    document.getElementById('mc-demand').className = 'metric-card' + (pct < 40 ? ' critical' : '');
+    document.getElementById('mc-iso').className = 'metric-card' + (flow.isolatedCount > 0 ? ' critical' : '');
+
+    renderVulnerability(vulns);
+
+    // Cascading failures
+    if (flow.cascadeOccurred) {
+        flow.cascadeLines.forEach(l => {
+            lineState[l.id].status = 'tripped';
+            reconfigLog.push(`<span class="warning">CASCADE</span>: Line ${allNodes[l.from].name} &rarr; ${allNodes[l.to].name} tripped (overloaded)`);
+        });
+        showNotification('Cascading failure detected -- overloaded lines tripped', 'cascade');
+        setTimeout(() => { renderMap(); updateStats(); renderInfra(); renderAnalysis(); }, 800);
+    }
+
+    if (flow.suggestions.length > 0) {
+        flow.suggestions.forEach(s => { if (!reconfigLog.includes(s)) reconfigLog.push(s); });
+    }
+
+    // Reconfiguration section
+    updateReconfig();
+}
+
+function renderVulnerability(vulns) {
+    const container = document.getElementById('vulnPanel');
+    const top5 = vulns.slice(0, 7);
+    const maxScore = top5.length > 0 ? top5[0].score : 1;
+
+    container.innerHTML = top5.map(v => {
+        const pct = (v.score / maxScore * 100);
+        const color = pct > 75 ? 'var(--destructive)' : pct > 50 ? 'var(--amber)' : 'var(--accent)';
+        return `<div class="vuln-item">
+            <span class="vuln-name">${v.name}</span>
+            <div class="vuln-bar"><div class="vuln-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+            <span class="vuln-score" style="color:${color}">${v.score} MW</span>
+        </div>`;
+    }).join('');
+}
+
+// ============================================================
+// TABS & SIDEBAR
+// ============================================================
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === tab);
+    });
+    if (tab === 'tab-analysis') renderAnalysis();
+}
+
+function renderInfra() {
+    const grid = document.getElementById('infraGrid');
+    const flow = calculatePowerFlow();
+
+    let plantsHtml = '<div><div class="infra-group-title">Power Plants</div>';
+    PLANTS.forEach(p => {
+        const node = allNodes[p.id];
+        const isDestroyed = node.status === 'destroyed';
+        plantsHtml += `<div class="infra-item ${isDestroyed ? 'destroyed' : ''}">
+            <div class="infra-left">
+                <div class="infra-dot ${node.status}"></div>
+                <div>
+                    <div class="infra-name">${node.name}</div>
+                    <div class="infra-detail">${node.type.replace('_',' ')} | ${node.capacity} MW</div>
+                </div>
+            </div>
+            ${isDestroyed
+                ? `<button class="btn-restore" onclick="restoreNode('${p.id}')">Restore</button>`
+                : `<button class="btn-destroy" onclick="destroyNode('${p.id}')">Destroy</button>`
+            }
+        </div>`;
+    });
+    plantsHtml += '</div>';
+
+    let subsHtml = '<div><div class="infra-group-title">Substations / Distribution</div>';
+    SUBSTATIONS.forEach(s => {
+        const node = allNodes[s.id];
+        const isDestroyed = node.status === 'destroyed';
+        const zs = flow.zoneStatus[s.id];
+        let statusClass = node.status;
+        if (node.status === 'operational' && zs && !zs.hasGenerator) statusClass = 'degraded';
+
+        subsHtml += `<div class="infra-item ${isDestroyed ? 'destroyed' : (statusClass === 'degraded' ? 'degraded' : '')}">
+            <div class="infra-left">
+                <div class="infra-dot ${statusClass}"></div>
+                <div>
+                    <div class="infra-name">${node.name}</div>
+                    <div class="infra-detail">${node.demand} MW demand${zs && zs.hasGenerator ? '' : ' | ISOLATED'}</div>
+                </div>
+            </div>
+            ${isDestroyed
+                ? `<button class="btn-restore" onclick="restoreNode('${s.id}')">Restore</button>`
+                : `<button class="btn-destroy" onclick="destroyNode('${s.id}')">Destroy</button>`
+            }
+        </div>`;
+    });
+    subsHtml += '</div>';
+
+    grid.innerHTML = plantsHtml + subsHtml;
+}
+
+function renderAnalysis() {
+    const content = document.getElementById('analysisContent');
+    const flow = calculatePowerFlow();
+
+    let html = `<div class="reconfig-log">
+        <div class="reconfig-log-title">Power Flow Analysis</div>
+        <div class="reconfig-entry">Total generation: <span class="highlight">${flow.totalGeneration.toLocaleString()} MW</span></div>
+        <div class="reconfig-entry">Total demand: <span class="highlight">${TOTAL_DEMAND.toLocaleString()} MW</span></div>
+        <div class="reconfig-entry">Supply ratio: <span class="${flow.demandPercent > 50 ? 'ok' : 'warning'}">${flow.demandPercent.toFixed(1)}%</span></div>
+        <div class="reconfig-entry">Network components: <span class="${flow.components.length === 1 ? 'ok' : 'warning'}">${flow.components.length}</span></div>
+        <div class="reconfig-entry">Isolated zones: <span class="${flow.isolatedCount === 0 ? 'ok' : 'warning'}">${flow.isolatedCount}</span></div>
+    </div>`;
+
+    html += `<div class="reconfig-log">
+        <div class="reconfig-log-title">Transmission Line Status</div>`;
+    LINES.forEach(l => {
+        const load = flow.lineLoads[l.id] || 0;
+        const isOp = lineState[l.id].status === 'operational' &&
+                     allNodes[l.from].status === 'operational' &&
+                     allNodes[l.to].status === 'operational';
+        if (!isOp) {
+            html += `<div class="reconfig-entry"><span class="warning">${allNodes[l.from].name} &rarr; ${allNodes[l.to].name}</span>: OFFLINE</div>`;
+        } else {
+            const p = Math.round((load / l.capacity) * 100);
+            const cls = p > 90 ? 'warning' : p > 60 ? 'highlight' : 'ok';
+            html += `<div class="reconfig-entry">${allNodes[l.from].name} &rarr; ${allNodes[l.to].name}: <span class="${cls}">${p}%</span> (${Math.round(load)}/${l.capacity} MW)</div>`;
+        }
+    });
+    html += '</div>';
+
+    if (reconfigLog.length > 0) {
+        html += `<div class="reconfig-log">
+            <div class="reconfig-log-title">Event Log</div>
+            ${reconfigLog.map(e => `<div class="reconfig-entry">${e}</div>`).join('')}
+        </div>`;
+    }
+
+    content.innerHTML = html;
+}
+
+function renderScenarios() {
+    const grid = document.getElementById('scenariosGrid');
+    grid.innerHTML = SCENARIOS.map(sc => {
+        const affectedMW = sc.targets.reduce((sum, t) => {
+            const node = allNodes[t];
+            return sum + (node.nodeType === 'plant' ? node.capacity : node.demand);
+        }, 0);
+        return `<div class="scenario-card ${activeScenario === sc.id ? 'active' : ''}" onclick="runScenario('${sc.id}')">
+            <div class="scenario-title">${sc.title}</div>
+            <div class="scenario-desc">${sc.desc}</div>
+            <div class="scenario-impact">
+                <div class="scenario-impact-item"><span class="val" style="color:var(--destructive)">${sc.targets.length}</span> targets</div>
+                <div class="scenario-impact-item"><span class="val">${affectedMW}</span> MW affected</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function updateReconfig() {
+    const section = document.getElementById('reconfigSection');
+    const content = document.getElementById('reconfigContent');
+    const flow = calculatePowerFlow();
+
+    if (flow.suggestions.length === 0 && reconfigLog.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+
+    let html = '';
+    if (flow.suggestions.length > 0) {
+        html += `<div class="reconfig-log">
+            <div class="reconfig-log-title">Suggested Actions</div>
+            ${flow.suggestions.map(s => `<div class="reconfig-entry">${s}</div>`).join('')}
+        </div>`;
+    }
+    if (reconfigLog.length > 0) {
+        html += `<div class="reconfig-log">
+            <div class="reconfig-log-title">Event Log</div>
+            ${reconfigLog.map(e => `<div class="reconfig-entry">${e}</div>`).join('')}
+        </div>`;
+    }
+    content.innerHTML = html;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+
+function destroyNode(nodeId) {
+    if (allNodes[nodeId].status === 'destroyed') return;
+    allNodes[nodeId].status = 'destroyed';
+    reconfigLog.push(`<span class="warning">STRIKE</span>: ${allNodes[nodeId].name} destroyed`);
+    showNotification(`${allNodes[nodeId].name} -- DESTROYED`, 'attack');
+    renderMap(); updateStats(); renderInfra(); renderScenarios(); renderAnalysis();
+}
+
+function restoreNode(nodeId) {
+    allNodes[nodeId].status = 'operational';
+    LINES.forEach(l => {
+        if ((l.from === nodeId || l.to === nodeId) && lineState[l.id].status === 'tripped') {
+            lineState[l.id].status = 'operational';
+        }
+    });
+    reconfigLog.push(`<span class="ok">RESTORED</span>: ${allNodes[nodeId].name} back online`);
+    renderMap(); updateStats(); renderInfra(); renderScenarios(); renderAnalysis();
+}
+
+function runScenario(scenarioId) {
+    resetAll(true);
+    activeScenario = scenarioId;
+    const scenario = SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    reconfigLog.push(`<span class="highlight">SCENARIO</span>: ${scenario.title}`);
+
+    let delay = 0;
+    scenario.targets.forEach((target, i) => {
+        setTimeout(() => {
+            allNodes[target].status = 'destroyed';
+            reconfigLog.push(`<span class="warning">STRIKE ${i+1}</span>: ${allNodes[target].name} destroyed`);
+            renderMap(); updateStats(); renderInfra(); renderScenarios(); renderAnalysis();
+            if (i === 0) showNotification(`Scenario: ${scenario.title}`, 'attack');
+        }, delay);
+        delay += 500;
+    });
+}
+
+function resetAll(silent) {
+    PLANTS.forEach(p => { allNodes[p.id].status = 'operational'; });
+    SUBSTATIONS.forEach(s => { allNodes[s.id].status = 'operational'; });
+    LINES.forEach(l => { lineState[l.id].status = 'operational'; });
+    reconfigLog = [];
+    activeScenario = null;
+    renderMap(); updateStats(); renderInfra(); renderScenarios(); renderAnalysis();
+    if (!silent) showNotification('All infrastructure restored', 'ok');
+}
+
+function showNotification(msg, type) {
+    const el = document.getElementById('notification');
+    el.textContent = msg;
+    el.className = 'notification show';
+    el.style.color = type === 'ok' ? 'var(--accent)' : 'var(--destructive)';
+    el.style.borderColor = type === 'ok' ? 'var(--accent)' : (type === 'cascade' ? 'var(--amber)' : 'var(--destructive)');
+    setTimeout(() => { el.classList.remove('show'); }, 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+initState();
+renderMap();
+updateStats();
+renderInfra();
+renderScenarios();
+renderAnalysis();
+
+// Flow animation
+setInterval(() => {
+    const svgPaths = document.querySelectorAll('.leaflet-overlay-pane path');
+    svgPaths.forEach(path => {
+        const style = path.getAttribute('stroke-dasharray');
+        if (style && style.includes('4') && style.includes('12')) {
+            const offset = parseFloat(path.getAttribute('stroke-dashoffset') || 0);
+            path.setAttribute('stroke-dashoffset', offset - 1);
+        }
+    });
+}, 50);
+
+</script>
+</body>
+</html>

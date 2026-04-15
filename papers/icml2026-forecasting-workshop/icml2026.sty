@@ -1,0 +1,44 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{icml2026}[2026/04/13 Minimal local ICML-style package]
+
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{xcolor}
+
+\newif\ificmlaccepted
+\DeclareOption{accepted}{\icmlacceptedtrue}
+\DeclareOption{preprint}{\icmlacceptedfalse}
+\ExecuteOptions{preprint}
+\ProcessOptions\relax
+
+\setlength\columnsep{0.25in}
+\setlength\parindent{0pt}
+\setlength\parskip{4pt}
+\setlength\headheight{14pt}
+\setlength\headsep{18pt}
+\setlength\footskip{24pt}
+\setlength\textheight{9in}
+\setlength\textwidth{6.75in}
+\setlength\oddsidemargin{-0.125in}
+\setlength\evensidemargin{-0.125in}
+\setlength\topmargin{-0.45in}
+
+\pagestyle{fancy}
+\fancyhf{}
+\ificmlaccepted
+  \fancyhead[C]{\small Proceedings of the ICML 2026 Workshop on Statistical Frameworks for Uncertainty in Agentic Systems}
+\else
+  \fancyhead[C]{\small Under review for an ICML 2026 workshop}
+\fi
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 0.3ex minus 0.2ex}{0.7ex}
+\titlespacing*{\subsection}{0pt}{1.2ex plus 0.2ex minus 0.1ex}{0.5ex}
+\titlespacing*{\subsubsection}{0pt}{1ex}{0.4ex}
+
+\newcommand{\icmltitlerunning}[1]{}

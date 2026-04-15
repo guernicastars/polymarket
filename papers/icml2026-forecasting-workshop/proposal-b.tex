@@ -1,0 +1,198 @@
+\documentclass[10pt]{article}
+\usepackage[accepted]{icml2026}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black
+}
+
+\newcommand{\RESULTPENDING}{\textcolor{red!70!black}{\textbf{RESULT PENDING}}}
+
+\icmltitlerunning{PolyBench}
+
+\title{\textbf{PolyBench: A Real-Time Prediction Market Benchmark for AI Forecasting Agents}}
+\author{}
+\date{}
+
+\begin{document}
+
+\twocolumn[
+\maketitle
+\begin{center}
+\vspace{-1.75em}
+\begin{minipage}{0.92\textwidth}
+\begin{abstract}
+Current AI forecasting benchmarks mostly evaluate forecasters on static question
+sets with delayed feedback and no continuously updating market baseline.
+Prediction markets offer a different regime: probabilities update in real time,
+settlement is objective, and the benchmark includes a strong crowd-implied
+reference forecast at every evaluation point. We propose PolyBench, a benchmark
+for forecasting agents built on a live Polymarket data stack. The underlying
+repository already ingests market metadata, trades, orderbooks, wallet activity,
+and derived analytics into ClickHouse; it also contains calibration tracking,
+backtesting, and signal infrastructure that can be repurposed for agent
+evaluation. PolyBench evaluates an agent not only by proper scoring rules such
+as Brier score and log score, but also by \emph{informational alpha}: the
+marginal value of an agent relative to the market-implied baseline at the moment
+the forecast is made. The current draft defines the benchmark task, scoring
+protocol, and minimum viable implementation path for a workshop submission.
+\end{abstract}
+\end{minipage}
+\end{center}
+\vspace{0.6em}
+]
+
+\section{Introduction}
+
+Forecasting benchmarks have improved quickly, but they still leave an important
+gap between forecasting as a question-answering task and forecasting as a live
+decision problem. ForecastBench is valuable because it is dynamic and
+leakage-resistant, but it does not provide a continuously updating market
+baseline \citep{karger2024forecastbench}. PredictionMarketBench moves closer to
+market realism by replaying exchange data for trading agents, but it focuses on
+execution-realistic backtesting rather than on a general benchmark for
+probability forecasters operating against a live crowd baseline
+\citep{arora2026predictionmarketbench}.
+
+PolyBench targets the missing middle:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item a real-time benchmark;
+  \item objective resolution;
+  \item a strong crowd-implied baseline at every timestamp;
+  \item difficulty stratification by liquidity, spread, and horizon;
+  \item evaluation that rewards \emph{useful} disagreement with the market.
+\end{itemize}
+
+\section{Benchmark Task}
+
+At time $t$, an agent observes a benchmark market and emits a probability
+forecast $p_{\text{agent}}(t)$ for the event's positive outcome. For each
+forecast event, PolyBench records:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item market identifier and timestamp;
+  \item market-implied probability at that timestamp;
+  \item spread, depth, and other liquidity-quality features when available;
+  \item category and horizon metadata;
+  \item the agent forecast;
+  \item the eventual resolved outcome.
+\end{itemize}
+
+The benchmark is designed to support two modes:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item \textbf{live mode}, where agents forecast active markets;
+  \item \textbf{replay mode}, where historical market states are served
+  deterministically for reproducible evaluation.
+\end{itemize}
+
+\section{Scoring}
+
+PolyBench uses standard proper scoring rules plus a differential metric that
+explicitly measures value added over the market.
+
+\paragraph{Core metrics.}
+We report Brier score, log score, Expected Calibration Error, and slice-level
+coverage across domain and horizon \citep{brier1950verification}.
+
+\paragraph{Informational alpha.}
+For forecast instance $i$, define
+\[
+\alpha_i = (p_{\text{market},i} - y_i)^2 - (p_{\text{agent},i} - y_i)^2,
+\]
+where $y_i$ is the realized binary outcome. Positive alpha means the agent beat
+the market on that forecast; negative alpha means it added noise rather than
+information. The benchmark should report:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item mean informational alpha;
+  \item disagreement-conditioned alpha for forecasts with
+  $|p_{\text{agent}} - p_{\text{market}}| \ge \tau$;
+  \item liquidity-stratified alpha;
+  \item category-stratified alpha.
+\end{itemize}
+
+\section{Why The Repo Makes This Feasible}
+
+The local \texttt{polymarket} repository already contains most of the data
+substrate needed for a benchmark:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item continuous ingestion of market metadata, trades, orderbooks, and
+  WebSocket events;
+  \item derived tables for OHLCV, latest prices, wallet activity, arbitrage,
+  composite signals, and market similarity;
+  \item calibration tracking code in
+  \texttt{pipeline/bayesian/calibration.py};
+  \item backtesting and calibration analysis code in
+  \texttt{network/backtest.py}.
+\end{itemize}
+
+What does \emph{not} yet exist as a polished benchmark artifact is just as
+important:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item a stable benchmark episode specification;
+  \item a public agent interface;
+  \item dedicated baseline-agent runners;
+  \item a canonical replay service.
+\end{itemize}
+This means the workshop paper should be framed as a systems and benchmark paper
+with a minimum viable implementation rather than as a mature public benchmark.
+
+\section{Baseline Agents}
+
+The first submission needs only a small set of transparent baselines.
+
+\paragraph{Market Echo.}
+Always predict the current market-implied probability. This is the zero-alpha
+reference point and the benchmark baseline to beat.
+
+\paragraph{Momentum.}
+Use recent market movement and activity features to shift the forecast away from
+the market when short-term price dynamics imply continued drift. The current
+repo already exposes candidate inputs for such a baseline through one-day price
+change, trade imbalance, and signal-compositor outputs.
+
+\paragraph{LLM-RAG forecaster.}
+This is the most interesting long-run baseline, but it is not required for the
+first paper. Proposal B remains valuable even if the initial submission only
+contains Market Echo and Momentum plus the benchmark specification.
+
+\section{Current Status}
+
+The benchmark framing is concrete, but the benchmark-specific empirics are still
+behind Proposal A:
+\begin{itemize}[leftmargin=1.5em,itemsep=0.2em]
+  \item replay episode schema: \RESULTPENDING
+  \item Market Echo baseline run: \RESULTPENDING
+  \item Momentum baseline run: \RESULTPENDING
+  \item category- and liquidity-sliced alpha table: \RESULTPENDING
+\end{itemize}
+
+The right sequencing is therefore to use Proposal A as the primary empirical
+submission while building Proposal B in parallel as the systems companion.
+
+\section{Conclusion}
+
+Prediction markets enable a benchmark regime that standard forecasting datasets
+do not: agents can be evaluated against a continuously updating crowd baseline
+with objective settlement and natural difficulty variation across liquidity,
+horizon, and category. The local Polymarket stack already contains most of the
+required data machinery. The main remaining work is packaging that machinery
+into a clean replay benchmark with a transparent baseline suite and a scoring
+protocol centered on informational alpha.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

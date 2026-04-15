@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-04-14T16:15:29.386280+00:00",
+  "config": {
+    "min_trades": 10,
+    "chunk_size": 400,
+    "horizons": {
+      "final": null,
+      "6h": 6,
+      "24h": 24,
+      "168h": 168
+    }
+  },
+  "dataset": {
+    "n_markets": 51023,
+    "n_categories": 343,
+    "positive_rate": 0.36532544146757345,
+    "median_trades": 59.0,
+    "median_volume_total": 5627.031074,
+    "median_duration_days": 4.3003064236111115,
+    "coverage": {
+      "final": 45506,
+      "6h": 35488,
+      "24h": 25231,
+      "168h": 6585
+    }
+  },
+  "overall": {
+    "final": {
+      "n": 45506,
+      "positive_rate": 0.34973410099767066,
+      "mean_pred": 0.33366572239954484,
+      "brier": 0.06899817092287887,
+      "log_loss": 0.2080181918939108,
+      "ece_10": 0.019624517516843045
+    },
+    "6h": {
+      "n": 35488,
+      "positive_rate": 0.30576532912533816,
+      "mean_pred": 0.29762635995008396,
+      "brier": 0.08958356667043918,
+      "log_loss": 0.2683638161097439,
+      "ece_10": 0.01772127210149574
+    },
+    "24h": {
+      "n": 25231,
+      "positive_rate": 0.24125084221790655,
+      "mean_pred": 0.24942612888024637,
+      "brier": 0.05492938793841355,
+      "log_loss": 0.17642285479430084,
+      "ece_10": 0.019326233305976933
+    },
+    "168h": {
+      "n": 6585,
+      "positive_rate": 0.2633257403189066,
+      "mean_pred": 0.26531392905230633,
+      "brier": 0.0798557399130898,
+      "log_loss": 0.24366176766171724,
+      "ece_10": 0.009455570380533553
+    }
+  },
+  "artifacts": {
+    "market_level_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/market_level.csv",
+    "category_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/category_metrics.csv",
+    "trade_bin_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/trade_bin_metrics.csv",
+    "volume_quartile_metrics_csv": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/volume_quartile_metrics.csv",
+    "reliability_bins": {
+      "final": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/reliability_final.csv",
+      "6h": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/reliability_6h.csv",
+      "24h": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/reliability_24h.csv",
+      "168h": "/Users/meuge/coding/maynard/polymarket/experiments/results/calibration_study/reliability_168h.csv"
+    }
+  }
+}
